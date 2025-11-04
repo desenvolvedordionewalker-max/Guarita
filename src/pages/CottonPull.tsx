@@ -20,6 +20,8 @@ const CottonPull = () => {
   const { producers, loading: loadingProducers } = useProducers();
   const [selectedRecord, setSelectedRecord] = useState<CottonPullRecord | null>(null);
   const [exitModalOpen, setExitModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingRecord, setEditingRecord] = useState<CottonPullRecord | null>(null);
   const [exitRecordId, setExitRecordId] = useState<string>("");
   const [exitTime, setExitTime] = useState("");
   
@@ -50,10 +52,36 @@ const CottonPull = () => {
   const totalRolls = records.reduce((sum, record) => sum + record.rolls, 0);
 
   const handleEditRecord = (record: CottonPullRecord) => {
-    toast({
-      title: "Funcionalidade em desenvolvimento",
-      description: "Edição de registros será implementada em breve",
-    });
+    setEditingRecord(record);
+    setEditModalOpen(true);
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingRecord) return;
+    
+    const formData = new FormData(e.currentTarget);
+    const updates = {
+      producer: formData.get("farm") as string,
+      farm: formData.get("farm") as string,
+      talhao: formData.get("talhao") as string || "",
+      plate: formData.get("plate") as string,
+      driver: formData.get("driver") as string,
+      rolls: parseInt(formData.get("rolls") as string),
+      observations: formData.get("observations") as string,
+    };
+
+    try {
+      await updateRecord(editingRecord.id, updates);
+      setEditModalOpen(false);
+      setEditingRecord(null);
+      toast({
+        title: "Registro atualizado!",
+        description: "Alterações salvas com sucesso.",
+      });
+    } catch (error) {
+      console.error('Erro ao editar registro:', error);
+    }
   };
 
   const handleDeleteRecord = async (id: string, plate: string) => {
@@ -464,6 +492,104 @@ const CottonPull = () => {
               Confirmar Saída
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Edição */}
+      <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Registro de Algodão</DialogTitle>
+            <DialogDescription>
+              Edite as informações do registro de puxe de algodão.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {editingRecord && (
+            <form onSubmit={handleSaveEdit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-farm">Fazenda/Produtor</Label>
+                <Select name="farm" defaultValue={editingRecord.farm}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {farms.map(farm => (
+                      <SelectItem key={farm} value={farm}>{farm}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-talhao">Talhão (opcional)</Label>
+                <Input
+                  id="edit-talhao"
+                  name="talhao"
+                  defaultValue={editingRecord.talhao || ""}
+                  placeholder="Ex: T001, T002..."
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-plate">Placa</Label>
+                <Input
+                  id="edit-plate"
+                  name="plate"
+                  defaultValue={editingRecord.plate}
+                  placeholder="XXX-0000"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-driver">Motorista</Label>
+                <Input
+                  id="edit-driver"
+                  name="driver"
+                  defaultValue={editingRecord.driver}
+                  placeholder="Nome do motorista"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-rolls">Quantidade de Rolos</Label>
+                <Input
+                  id="edit-rolls"
+                  name="rolls"
+                  type="number"
+                  defaultValue={editingRecord.rolls}
+                  min="1"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-observations">Observações</Label>
+                <Textarea
+                  id="edit-observations"
+                  name="observations"
+                  defaultValue={editingRecord.observations || ""}
+                  placeholder="Observações adicionais"
+                  rows={3}
+                />
+              </div>
+
+              <DialogFooter className="gap-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setEditModalOpen(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit">
+                  Salvar Alterações
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
         </DialogContent>
       </Dialog>
     </div>

@@ -25,11 +25,22 @@ import logo from "@/assets/BF_logo.png";
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { vehicles, loading: loadingVehicles } = useVehicles();
+  const { vehicles, loading: loadingVehicles, updateVehicle } = useVehicles();
   const { records: cottonRecords, loading: loadingCotton } = useCottonPull();
   const { records: rainRecords, loading: loadingRain } = useRainRecords();
   const { records: equipmentRecords, loading: loadingEquipment } = useEquipment();
   const { records: loadingRecords, loading: loadingCarregamentos } = useLoadingRecords();
+
+  const handleRegisterVehicleExit = async (id: string) => {
+    const now = new Date();
+    const exitTime = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    
+    try {
+      await updateVehicle(id, { exit_time: exitTime });
+    } catch (error) {
+      console.error('Erro ao registrar saída:', error);
+    }
+  };
 
   useEffect(() => {
     const isAuthenticated = localStorage.getItem("isAuthenticated");
@@ -569,6 +580,7 @@ const Dashboard = () => {
                         <th className="text-left p-2 font-semibold">Entrada</th>
                         <th className="text-left p-2 font-semibold">Saída</th>
                         <th className="text-left p-2 font-semibold">Status</th>
+                        <th className="text-left p-2 font-semibold">Ação</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -589,6 +601,18 @@ const Dashboard = () => {
                             }`}>
                               {vehicle.exit_time ? 'Saiu' : 'No Pátio'}
                             </span>
+                          </td>
+                          <td className="p-2">
+                            {!vehicle.exit_time && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleRegisterVehicleExit(vehicle.id)}
+                                className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                              >
+                                Registrar Saída
+                              </Button>
+                            )}
                           </td>
                         </tr>
                       ))}

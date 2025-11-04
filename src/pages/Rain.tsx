@@ -3,14 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Plus, CloudRain, Droplets, Calendar, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, CloudRain, Droplets, Calendar, Loader2, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRainRecords } from "@/hooks/use-supabase";
 
 const Rain = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { records, loading, addRecord } = useRainRecords();
+  const { records, loading, addRecord, updateRecord, deleteRecord } = useRainRecords();
 
   const today = new Date().toISOString().split('T')[0];
   const currentMonth = new Date().getMonth();
@@ -44,6 +44,23 @@ const Rain = () => {
       e.currentTarget.reset();
     } catch (error) {
       // Erro já tratado no hook
+    }
+  };
+
+  const handleEditRecord = (record: { id: string; date: string }) => {
+    toast({
+      title: "Funcionalidade em desenvolvimento",
+      description: "Edição de registro de chuva será implementada em breve",
+    });
+  };
+
+  const handleDeleteRecord = async (id: string, date: string) => {
+    if (confirm(`Tem certeza que deseja excluir o registro de chuva de ${new Date(date).toLocaleDateString('pt-BR')}?`)) {
+      try {
+        await deleteRecord(id);
+      } catch (error) {
+        console.error('Erro ao excluir registro:', error);
+      }
     }
   };
 
@@ -194,9 +211,31 @@ const Rain = () => {
                         </p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-bold text-info">{record.millimeters}</p>
-                      <p className="text-xs text-muted-foreground">milímetros</p>
+                    <div className="text-right flex flex-col items-end gap-2">
+                      <div>
+                        <p className="text-2xl font-bold text-info">{record.millimeters}</p>
+                        <p className="text-xs text-muted-foreground">milímetros</p>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditRecord(record)}
+                          className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                          title="Editar"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDeleteRecord(record.id, record.date)}
+                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          title="Excluir"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </CardContent>

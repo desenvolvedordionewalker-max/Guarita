@@ -40,11 +40,23 @@ const Vehicles = () => {
   };
 
   const handleRegisterExit = async (id: string) => {
-    // Implement exit registration logic
-    toast({
-      title: "Funcionalidade em desenvolvimento",
-      description: "Registro de saída será implementado em breve",
-    });
+    const now = new Date();
+    const exitTime = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    
+    try {
+      await updateVehicle(id, { exit_time: exitTime });
+      toast({
+        title: "Saída registrada!",
+        description: `Saída registrada às ${exitTime}`,
+      });
+    } catch (error) {
+      console.error('Erro ao registrar saída:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao registrar saída do veículo",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleEditVehicle = (vehicle: Vehicle) => {
@@ -321,7 +333,7 @@ const Vehicles = () => {
 
       {/* Modal de Edição */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Veículo</DialogTitle>
             <DialogDescription>

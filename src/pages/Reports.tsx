@@ -5,10 +5,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, BarChart3, Download, Share2, Loader2, Filter } from "lucide-react";
+import { ArrowLeft, BarChart3, Download, Share2, Loader2, Filter, FileSpreadsheet, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useVehicles, useCottonPull, useRainRecords, useEquipment, useLoadingRecords } from "@/hooks/use-supabase";
 import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
+
+// Extend jsPDF interface for autoTable
+interface jsPDFWithAutoTable extends jsPDF {
+  autoTable: typeof autoTable;
+  lastAutoTable: {
+    finalY: number;
+  };
+}
 
 const Reports = () => {
   const navigate = useNavigate();
@@ -47,6 +57,148 @@ const Reports = () => {
   const yearRain = rainRecords
     .filter(r => new Date(r.date).getFullYear() === currentYear)
     .reduce((sum, r) => sum + r.millimeters, 0);
+
+  // Funções de exportação
+  const exportToExcel = () => {
+    const wb = XLSX.utils.book_new();
+    
+    // Aba Carregamentos
+    const loadingData = loadingRecords.map(record => ({
+      'Data': record.date,
+      'Horário': record.time,
+      'Produto': record.product,
+      'Safra': record.harvest_year,
+      'Tipo Caminhão': record.truck_type,
+      'Sider': record.is_sider ? 'Sim' : 'Não',
+      'Transportadora': record.carrier,
+      'Destino': record.destination,
+      'Placa': record.plate,
+      'Motorista': record.driver,
+      'Fardos': record.bales,
+      'Peso': record.weight,
+      'Observações': record.notes || ''
+    }));
+    const wsLoading = XLSX.utils.json_to_sheet(loadingData);
+    XLSX.utils.book_append_sheet(wb, wsLoading, "Carregamentos");
+
+    // Aba Puxe de Algodão
+    const cottonData = cottonRecords.map(record => ({
+      'Data': record.date,
+      'Entrada': record.entry_time,
+      'Saída': record.exit_time || '',
+      'Produtor': record.producer,
+      'Fazenda': record.farm,
+      'Talhão': record.talhao || '',
+      'Placa': record.plate,
+      'Motorista': record.driver,
+      'Rolos': record.rolls,
+      'Observações': record.observations || ''
+    }));
+    const wsCotton = XLSX.utils.json_to_sheet(cottonData);
+    XLSX.utils.book_append_sheet(wb, wsCotton, "Puxe Algodão");
+
+    // Aba Chuva
+    const rainData = rainRecords.map(record => ({
+      'Data': record.date,
+      'Horário Início': record.start_time || record.time || '',
+      'Horário Fim': record.end_time || '',
+      'Milímetros': record.millimeters,
+      'Local': record.location || '',
+      'Observações': record.notes || ''
+    }));
+    const wsRain = XLSX.utils.json_to_sheet(rainData);
+    XLSX.utils.book_append_sheet(wb, wsRain, "Chuva");
+
+    // Aba Veículos
+    const vehicleData = vehicles.map(record => ({
+      'Data': record.date,
+      'Tipo': record.type,
+      'Entrada': record.entry_time,
+      'Saída': record.exit_time || '',
+      'Placa': record.plate,
+      'Motorista': record.driver,
+      'Tipo Veículo': record.vehicle_type,
+      'Finalidade': record.purpose || '',
+      'Produtor': record.producer_name || '',
+      'Observações': record.observations || ''
+    }));
+    const wsVehicles = XLSX.utils.json_to_sheet(vehicleData);
+    XLSX.utils.book_append_sheet(wb, wsVehicles, "Veículos");
+
+    XLSX.writeFile(wb, `Relatorio_Guarita_${new Date().toISOString().split('T')[0]}.xlsx`);
+    
+    toast({
+      title: "Relatório exportado!",
+      description: "Arquivo Excel baixado com sucesso.",
+    });
+  };
+
+  const exportToPDF = () => {
+    const doc = new jsPDF() as jsPDFWithAutoTable;
+    
+    // Título do relatório
+    doc.setFontSize(16);
+    doc.text('Relatório Sistema Guarita', 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 25);
+    
+    let yPosition = 35;
+
+    // Carregamentos
+    if (loadingRecords.length > 0) {
+      doc.setFontSize(12);
+      doc.text('Carregamentos', 14, yPosition);
+      yPosition += 10;
+      
+      const loadingTableData = loadingRecords.slice(0, 20).map(record => [
+        record.date,
+        record.product,
+        record.plate,
+        record.driver,
+        record.destination
+      ]);
+      
+      doc.autoTable({
+        head: [['Data', 'Produto', 'Placa', 'Motorista', 'Destino']],
+        body: loadingTableData,
+        startY: yPosition,
+        theme: 'grid',
+        styles: { fontSize: 8 }
+      });
+      
+      yPosition = doc.lastAutoTable.finalY + 10;
+    }
+
+    // Puxe de Algodão
+    if (cottonRecords.length > 0 && yPosition < 250) {
+      doc.setFontSize(12);
+      doc.text('Puxe de Algodão', 14, yPosition);
+      yPosition += 10;
+      
+      const cottonTableData = cottonRecords.slice(0, 15).map(record => [
+        record.date,
+        record.producer,
+        record.plate,
+        record.rolls.toString(),
+        record.entry_time
+      ]);
+      
+      doc.autoTable({
+        head: [['Data', 'Produtor', 'Placa', 'Rolos', 'Entrada']],
+        body: cottonTableData,
+        startY: yPosition,
+        theme: 'grid',
+        styles: { fontSize: 8 }
+      });
+    }
+
+    doc.save(`Relatorio_Guarita_${new Date().toISOString().split('T')[0]}.pdf`);
+    
+    toast({
+      title: "Relatório exportado!",
+      description: "Arquivo PDF baixado com sucesso.",
+    });
+  };
     
   const equipmentsSaidas = equipmentRecords.length;
 
@@ -213,95 +365,9 @@ Autorizado por: ${todayEquipment.authorized_by}` : ''}
     });
   };
 
-  const exportToPDF = () => {
-    const doc = new jsPDF();
-    const today = new Date().toLocaleDateString('pt-BR');
-    
-    // Header
-    doc.setFontSize(18);
-    doc.text("IBA Santa Luzia - Controle Guarita", 20, 20);
-    doc.setFontSize(12);
-    doc.text(`Relatório Gerencial - ${today}`, 20, 30);
-    
-    // Stats
-    doc.setFontSize(14);
-    doc.text("Indicadores Gerais", 20, 45);
-    doc.setFontSize(10);
-    let y = 55;
-    stats.forEach(stat => {
-      doc.text(`${stat.label}: ${stat.value} (${stat.change})`, 20, y);
-      y += 8;
-    });
-    
-    // Top Producers
-    y += 10;
-    doc.setFontSize(14);
-    doc.text("Top 5 Produtoras", 20, y);
-    doc.setFontSize(10);
-    y += 10;
-    topProducers.forEach((producer, index) => {
-      doc.text(`${index + 1}. ${producer.name}: ${producer.rolls} rolos`, 20, y);
-      y += 8;
-    });
-    
-    // Loading by Truck Type
-    y += 10;
-    doc.setFontSize(14);
-    doc.text("Carregamentos por Tipo de Caminhão", 20, y);
-    doc.setFontSize(10);
-    y += 10;
-    loadingByTruck.forEach(item => {
-      doc.text(`${item.type}: ${item.count} carretas`, 20, y);
-      y += 8;
-    });
-    
-    // Footer
-    doc.setFontSize(8);
-    doc.text("Gerado automaticamente pelo Sistema Controle Guarita", 20, 280);
-    
-    doc.save(`relatorio-guarita-${new Date().getTime()}.pdf`);
-    
-    toast({
-      title: "PDF gerado!",
-      description: "O relatório foi baixado com sucesso.",
-    });
-  };
 
-  const exportToExcel = () => {
-    let csvContent = "data:text/csv;charset=utf-8,";
-    csvContent += "IBA Santa Luzia - Controle Guarita\n";
-    csvContent += `Relatório gerado em: ${new Date().toLocaleString('pt-BR')}\n\n`;
-    
-    csvContent += "Indicador,Valor,Variação\n";
-    stats.forEach(stat => {
-      csvContent += `"${stat.label}","${stat.value}","${stat.change}"\n`;
-    });
-    
-    csvContent += "\n\nTop 5 Produtoras\n";
-    csvContent += "Posição,Nome,Rolos\n";
-    topProducers.forEach((producer, index) => {
-      csvContent += `${index + 1},"${producer.name}",${producer.rolls}\n`;
-    });
-    
-    csvContent += "\n\nCarregamentos por Tipo de Caminhão\n";
-    csvContent += "Tipo,Quantidade\n";
-    loadingByTruck.forEach(item => {
-      csvContent += `"${item.type}",${item.count}\n`;
-    });
-    
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `relatorio-guarita-${new Date().getTime()}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    toast({
-      title: "Excel gerado!",
-      description: "O arquivo CSV foi baixado com sucesso.",
-    });
-  };
+
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
@@ -321,12 +387,12 @@ Autorizado por: ${todayEquipment.authorized_by}` : ''}
           </div>
           <div className="hidden sm:flex gap-2">
             <Button variant="outline" size="sm" onClick={exportToExcel}>
-              <Download className="w-4 h-4 mr-2" />
-              Excel
+              <FileSpreadsheet className="w-4 h-4 mr-2" />
+              Excel Completo
             </Button>
             <Button variant="outline" size="sm" onClick={exportToPDF}>
-              <Download className="w-4 h-4 mr-2" />
-              PDF
+              <FileText className="w-4 h-4 mr-2" />
+              PDF Tabelas
             </Button>
           </div>
         </div>
