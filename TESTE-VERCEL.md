@@ -1,14 +1,14 @@
 # ✅ CHECKLIST - VERIFICAR MELHORIAS NO VERCEL
 
 ## 🔗 **SEU SISTEMA ESTÁ EM:**
-https://guarita-ibasantaluzia.vercel.app
+https://guaritaibasantaluzia.vercel.app
 
 ---
 
 ## 📋 **TESTE CADA FUNCIONALIDADE:**
 
 ### 1. 🏠 **DASHBOARD PRINCIPAL**
-**URL:** https://guarita-ibasantaluzia.vercel.app/dashboard
+**URL:** https://guaritaibasantaluzia.vercel.app/dashboard
 
 **❌ ANTES:** "Total Veículos: 0"  
 **✅ AGORA:** Deve mostrar "Total Carregamentos: X"
@@ -21,7 +21,7 @@ https://guarita-ibasantaluzia.vercel.app
 ---
 
 ### 2. 🌾 **PUXE DE ALGODÃO**
-**URL:** https://guarita-ibasantaluzia.vercel.app/cotton-pull
+**URL:** https://guaritaibasantaluzia.vercel.app/cotton-pull
 
 **❌ ANTES:** Sem campo Talhão  
 **✅ AGORA:** Campo "Talhão" no formulário
@@ -35,7 +35,7 @@ https://guarita-ibasantaluzia.vercel.app
 ---
 
 ### 3. 🚛 **SISTEMA DE CARREGAMENTO**
-**URL:** https://guarita-ibasantaluzia.vercel.app/loading
+**URL:** https://guaritaibasantaluzia.vercel.app/loading
 
 **❌ ANTES:** Formulário sempre visível  
 **✅ AGORA:** Formulário só aparece ao clicar "Novo"
@@ -49,7 +49,7 @@ https://guarita-ibasantaluzia.vercel.app
 ---
 
 ### 4. 📺 **MODO TV (DASHBOARD PORTARIA)**
-**URL:** https://guarita-ibasantaluzia.vercel.app/dashboard-portaria
+**URL:** https://guaritaibasantaluzia.vercel.app/dashboard-portaria
 
 **❌ ANTES:** Cards escritos "CARREGA"  
 **✅ AGORA:** Cards escritos "Carregando"
@@ -63,7 +63,7 @@ https://guarita-ibasantaluzia.vercel.app
 ---
 
 ### 5. 🚗 **CONTROLE DE VEÍCULOS**
-**URL:** https://guarita-ibasantaluzia.vercel.app/vehicles
+**URL:** https://guaritaibasantaluzia.vercel.app/vehicles
 
 **❌ ANTES:** Data de saída obrigatória  
 **✅ AGORA:** Data de saída opcional

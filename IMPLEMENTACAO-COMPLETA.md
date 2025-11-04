@@ -47,7 +47,7 @@ O arquivo `setup_delete_policies.sql` está na raiz do projeto com todas as pol�
 ## 🎯 **TESTAR NO VERCEL:**
 
 Após configurar o banco, teste no seu sistema:
-**URL**: https://guarita-ibasantaluzia.vercel.app
+**URL**: https://guaritaibasantaluzia.vercel.app
 
 ### ✅ **Verificar:**
 1. **Favicon**: Ícone de caminhão na aba do navegador
