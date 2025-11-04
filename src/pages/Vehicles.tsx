@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Plus, Truck, Clock, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, Truck, Clock, Loader2, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useVehicles, useProducers } from "@/hooks/use-supabase";
@@ -14,7 +14,7 @@ import { useVehicles, useProducers } from "@/hooks/use-supabase";
 const Vehicles = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { vehicles, loading, addVehicle } = useVehicles();
+  const { vehicles, loading, addVehicle, deleteVehicle } = useVehicles();
   const { producers, loading: loadingProducers } = useProducers();
   
   // Verificar se veio da página de carregamentos
@@ -24,6 +24,16 @@ const Vehicles = () => {
   const [savedPlates, setSavedPlates] = useState<string[]>([]);
   const [savedDrivers, setSavedDrivers] = useState<string[]>([]);
   const [savedVehicleTypes, setSavedVehicleTypes] = useState<string[]>(["Carreta", "Caminhão", "Van"]);
+
+  const handleDeleteVehicle = async (id: string, plate: string) => {
+    if (confirm(`Tem certeza que deseja excluir o veículo ${plate}?`)) {
+      try {
+        await deleteVehicle(id);
+      } catch (error) {
+        console.error('Erro ao excluir veículo:', error);
+      }
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -205,12 +215,13 @@ const Vehicles = () => {
                       <TableHead>Entrada</TableHead>
                       <TableHead>Saída</TableHead>
                       <TableHead>Tempo</TableHead>
+                      <TableHead>Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {todayVehicles.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                           Nenhum veículo registrado hoje
                         </TableCell>
                       </TableRow>
@@ -222,6 +233,16 @@ const Vehicles = () => {
                           <TableCell>{vehicle.entry_time}</TableCell>
                           <TableCell>{vehicle.exit_time || "-"}</TableCell>
                           <TableCell>{calculateInternalTime(vehicle.entry_time, vehicle.exit_time)}</TableCell>
+                          <TableCell>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDeleteVehicle(vehicle.id, vehicle.plate)}
+                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       ))
                     )}

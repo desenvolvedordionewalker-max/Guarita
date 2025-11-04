@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, Plus, Settings, Image as ImageIcon, CheckCircle, Loader2, Camera } from "lucide-react";
+import { ArrowLeft, Plus, Settings, Image as ImageIcon, CheckCircle, Loader2, Camera, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useEquipment } from "@/hooks/use-supabase";
@@ -15,9 +15,19 @@ import type { Equipment as EquipmentType } from "@/lib/supabase";
 const Equipment = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { records, loading, addRecord, updateRecord } = useEquipment();
+  const { records, loading, addRecord, updateRecord, deleteRecord } = useEquipment();
   const [selectedEquipment, setSelectedEquipment] = useState<EquipmentType | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const handleDeleteEquipment = async (id: string, name: string) => {
+    if (confirm(`Tem certeza que deseja excluir o equipamento "${name}"?`)) {
+      try {
+        await deleteRecord(id);
+      } catch (error) {
+        console.error('Erro ao excluir equipamento:', error);
+      }
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -248,9 +258,22 @@ const Equipment = () => {
                                 </span>
                               </div>
                             </div>
-                            <p className="text-sm text-muted-foreground">
-                              {new Date(record.date).toLocaleDateString('pt-BR')}
-                            </p>
+                            <div className="flex items-start gap-2">
+                              <p className="text-sm text-muted-foreground">
+                                {new Date(record.date).toLocaleDateString('pt-BR')}
+                              </p>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteEquipment(record.id, record.name);
+                                }}
+                                className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </div>
                           <div className="space-y-1 text-sm mt-3">
                             <p><span className="text-muted-foreground">Destino/Prestador:</span> {record.destination}</p>
@@ -296,9 +319,19 @@ const Equipment = () => {
                                 </span>
                               </div>
                             </div>
-                            <p className="text-sm text-muted-foreground">
-                              {new Date(record.date).toLocaleDateString('pt-BR')}
-                            </p>
+                            <div className="flex items-start gap-2">
+                              <p className="text-sm text-muted-foreground">
+                                {new Date(record.date).toLocaleDateString('pt-BR')}
+                              </p>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDeleteEquipment(record.id, record.name)}
+                                className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </div>
                           <div className="space-y-1 text-sm mt-3">
                             <p><span className="text-muted-foreground">Destino/Prestador:</span> {record.destination}</p>

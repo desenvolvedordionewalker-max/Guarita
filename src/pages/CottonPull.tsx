@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Plus, Package, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, Package, Loader2, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useCottonPull, useProducers } from "@/hooks/use-supabase";
 import { supabase, CottonPull as CottonPullRecord } from "@/lib/supabase";
@@ -16,7 +16,7 @@ const CottonPull = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
-  const { records, loading, addRecord, updateRecord } = useCottonPull();
+  const { records, loading, addRecord, updateRecord, deleteRecord } = useCottonPull();
   const { producers, loading: loadingProducers } = useProducers();
   const [selectedRecord, setSelectedRecord] = useState<CottonPullRecord | null>(null);
   const [exitModalOpen, setExitModalOpen] = useState(false);
@@ -50,6 +50,16 @@ const CottonPull = () => {
   const totalRolls = records.reduce((sum, record) => sum + record.rolls, 0);
   const pendingExits = records.filter(record => !record.exit_time);
   const completed = records.filter(record => record.exit_time);
+
+  const handleDeleteRecord = async (id: string, plate: string) => {
+    if (confirm(`Tem certeza que deseja excluir o registro da placa ${plate}?`)) {
+      try {
+        await deleteRecord(id);
+      } catch (error) {
+        console.error('Erro ao excluir registro:', error);
+      }
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -271,13 +281,23 @@ const CottonPull = () => {
                             Entrada: {record.entry_time} | Permanência: {diffHours}h {diffMins}min
                           </p>
                         </div>
-                        <Button 
-                          onClick={() => handleExit(record.id)}
-                          size="sm"
-                          className="bg-green-600 hover:bg-green-700"
-                        >
-                          Registrar Saída
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteRecord(record.id, record.plate)}
+                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            onClick={() => handleExit(record.id)}
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            Registrar Saída
+                          </Button>
+                        </div>
                       </div>
                     );
                   })}
