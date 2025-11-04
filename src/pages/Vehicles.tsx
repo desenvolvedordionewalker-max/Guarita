@@ -6,15 +6,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ArrowLeft, Plus, Truck, Clock, Loader2, Trash2, Edit, LogOut as Exit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useVehicles, useProducers } from "@/hooks/use-supabase";
+import { Vehicle } from "@/lib/supabase";
 
 const Vehicles = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { vehicles, loading, addVehicle, deleteVehicle } = useVehicles();
+  const { vehicles, loading, addVehicle, updateVehicle, deleteVehicle } = useVehicles();
   const { producers, loading: loadingProducers } = useProducers();
   
   // Verificar se veio da página de carregamentos
@@ -23,22 +25,16 @@ const Vehicles = () => {
   
   const [savedPlates, setSavedPlates] = useState<string[]>([]);
   const [savedDrivers, setSavedDrivers] = useState<string[]>([]);
-  const [savedVehicleTypes, setSavedVehicleTypes] = useState<string[]>(["Carreta", "Caminhão", "Van"]);
+  const [savedVehicleTypes, setSavedVehicleTypes] = useState<string[]>(["Carreta", "Caminhão", "Van", "Carro", "Moto"]);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
 
     const handleDeleteVehicle = async (id: string, plate: string) => {
     if (window.confirm(`Tem certeza que deseja excluir o veículo ${plate}?`)) {
-      const success = await deleteVehicle(id);
-      if (success) {
-        toast({
-          title: "Sucesso",
-          description: "Veículo excluído com sucesso",
-        });
-      } else {
-        toast({
-          title: "Erro",
-          description: "Erro ao excluir veículo",
-          variant: "destructive",
-        });
+      try {
+        await deleteVehicle(id);
+      } catch (error) {
+        console.error('Erro ao excluir veículo:', error);
       }
     }
   };
@@ -51,12 +47,34 @@ const Vehicles = () => {
     });
   };
 
-  const handleEditVehicle = (vehicle: { id: string; plate: string; driver: string; producer: string }) => {
-    // Implement edit logic
-    toast({
-      title: "Funcionalidade em desenvolvimento", 
-      description: "Edição de veículo será implementada em breve",
-    });
+  const handleEditVehicle = (vehicle: Vehicle) => {
+    setEditingVehicle(vehicle);
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingVehicle) return;
+    
+    const formData = new FormData(e.currentTarget);
+    const updates = {
+      type: formData.get("type") as string,
+      plate: formData.get("plate") as string,
+      driver: formData.get("driver") as string,
+      vehicle_type: formData.get("vehicleType") as string,
+      purpose: formData.get("purpose") as string,
+      producer_name: formData.get("producer") as string,
+      observations: formData.get("observations") as string,
+      exit_time: formData.get("exitTime") as string || undefined,
+    };
+
+    try {
+      await updateVehicle(editingVehicle.id, updates);
+      setIsEditModalOpen(false);
+      setEditingVehicle(null);
+    } catch (error) {
+      console.error('Erro ao editar veículo:', error);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -300,6 +318,126 @@ const Vehicles = () => {
           </div>
         </div>
       </main>
+
+      {/* Modal de Edição */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Veículo</DialogTitle>
+            <DialogDescription>
+              Edite as informações do veículo abaixo.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {editingVehicle && (
+            <form onSubmit={handleSaveEdit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-type">Tipo</Label>
+                  <Select name="type" defaultValue={editingVehicle.type}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="entrada">Entrada</SelectItem>
+                      <SelectItem value="saida">Saída</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-plate">Placa</Label>
+                  <Input
+                    id="edit-plate"
+                    name="plate"
+                    defaultValue={editingVehicle.plate}
+                    placeholder="XXX-0000"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-driver">Motorista</Label>
+                <Input
+                  id="edit-driver"
+                  name="driver"
+                  defaultValue={editingVehicle.driver}
+                  placeholder="Nome do motorista"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-vehicleType">Tipo de Veículo</Label>
+                <Select name="vehicleType" defaultValue={editingVehicle.vehicle_type}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {savedVehicleTypes.map(type => (
+                      <SelectItem key={type} value={type}>{type}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-purpose">Finalidade</Label>
+                <Input
+                  id="edit-purpose"
+                  name="purpose"
+                  defaultValue={editingVehicle.purpose || ""}
+                  placeholder="Motivo da visita"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-producer">Produtor</Label>
+                <Input
+                  id="edit-producer"
+                  name="producer"
+                  defaultValue={editingVehicle.producer_name || ""}
+                  placeholder="Nome do produtor"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-exitTime">Horário de Saída (opcional)</Label>
+                <Input
+                  id="edit-exitTime"
+                  name="exitTime"
+                  type="time"
+                  defaultValue={editingVehicle.exit_time || ""}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-observations">Observações</Label>
+                <Textarea
+                  id="edit-observations"
+                  name="observations"
+                  defaultValue={editingVehicle.observations || ""}
+                  placeholder="Observações adicionais"
+                  rows={3}
+                />
+              </div>
+
+              <DialogFooter className="gap-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setIsEditModalOpen(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit">
+                  Salvar Alterações
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

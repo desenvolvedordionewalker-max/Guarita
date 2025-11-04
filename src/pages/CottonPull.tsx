@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Plus, Package, Loader2, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, Package, Loader2, Trash2, Edit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useCottonPull, useProducers } from "@/hooks/use-supabase";
 import { supabase, CottonPull as CottonPullRecord } from "@/lib/supabase";
@@ -48,6 +48,23 @@ const CottonPull = () => {
   }, [searchParams, records, setSearchParams, updateRecord, toast]);
 
   const totalRolls = records.reduce((sum, record) => sum + record.rolls, 0);
+
+  const handleEditRecord = (record: CottonPullRecord) => {
+    toast({
+      title: "Funcionalidade em desenvolvimento",
+      description: "Edição de registros será implementada em breve",
+    });
+  };
+
+  const handleDeleteRecord = async (id: string, plate: string) => {
+    if (confirm(`Tem certeza que deseja excluir o registro da placa ${plate}?`)) {
+      try {
+        await deleteRecord(id);
+      } catch (error) {
+        console.error('Erro ao excluir registro:', error);
+      }
+    }
+  };
   const pendingExits = records.filter(record => !record.exit_time);
   const completed = records.filter(record => record.exit_time);
 
@@ -398,6 +415,26 @@ const CottonPull = () => {
                         <p className="text-sm italic">{record.observations}</p>
                       </div>
                     )}
+                    <div className="flex gap-2 pt-2 border-t">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditRecord(record)}
+                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                      >
+                        <Edit className="h-4 w-4 mr-1" />
+                        Editar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteRecord(record.id, record.plate)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Excluir
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
