@@ -217,7 +217,12 @@ const Dashboard = () => {
                 <span className="text-xs">Versão TV</span>
               </Button>
               <span className="text-xs md:text-sm text-muted-foreground hidden sm:inline tv-text">
-                Olá, <span className="font-semibold text-foreground">{username?.split(' ')[0] || username}</span>
+                Olá, <span className="font-semibold text-foreground">
+                  {username?.includes('dione') 
+                    ? 'Dione' 
+                    : username?.split(' ')[0] || username
+                  }
+                </span>
               </span>
               <Button variant="outline" size="sm" onClick={handleLogout} className="mobile-full-btn sm:w-auto">
                 <LogOut className="w-4 h-4 mr-1 md:mr-2" />
@@ -327,10 +332,13 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <Card>
             <CardContent className="flex items-center p-4">
-              <Truck className="w-6 h-6 text-primary mr-3" />
+              <Container className="w-6 h-6 text-primary mr-3" />
               <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Veículos</p>
-                <p className="text-xl font-bold">{loadingVehicles ? "..." : todayVehicles.length}</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Carregamentos</p>
+                <p className="text-xl font-bold">{loadingCarregamentos ? "..." : todayLoadings.length}</p>
+                <div className="text-xs text-muted-foreground mt-1">
+                  Fila: {totalFila} | Carregando: {totalCarregando} | Concluído: {totalConcluidos}
+                </div>
               </div>
             </CardContent>
           </Card>

@@ -58,12 +58,12 @@ const Loading = () => {
       truck_type: formData.get("truckType") as string,
       is_sider: formData.get("isSider") === "on",
       carrier: formData.get("carrier") as string,
-      destination: "",
+      destination: formData.get("destination") as string || "",
       plate: formData.get("plate") as string,
       driver: formData.get("driver") as string,
-      bales: 0,
-      weight: 0,
-      notes: ""
+      bales: parseInt(formData.get("bales") as string) || 0,
+      weight: parseFloat(formData.get("weight") as string) || 0,
+      notes: formData.get("notes") as string || ""
     };
     
     try {

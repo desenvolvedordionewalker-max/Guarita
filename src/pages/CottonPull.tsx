@@ -367,12 +367,22 @@ const CottonPull = () => {
                           <p className="text-sm text-muted-foreground">Permanência</p>
                           <p className="font-medium">
                             {(() => {
-                              const entryTime = new Date(`2000-01-01T${record.entry_time}:00`);
-                              const exitTime = new Date(`2000-01-01T${record.exit_time}:00`);
-                              const diffMs = exitTime.getTime() - entryTime.getTime();
-                              const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-                              const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-                              return `${diffHours}h ${diffMins}min`;
+                              try {
+                                const entryTime = new Date(`1970-01-01T${record.entry_time}`);
+                                const exitTime = new Date(`1970-01-01T${record.exit_time}`);
+                                let diffMs = exitTime.getTime() - entryTime.getTime();
+                                
+                                // Se a diferença for negativa (saída no dia seguinte), adicionar 24h
+                                if (diffMs < 0) {
+                                  diffMs += 24 * 60 * 60 * 1000;
+                                }
+                                
+                                const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                                const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                                return `${diffHours}h ${diffMins}min`;
+                              } catch (error) {
+                                return "Erro no cálculo";
+                              }
                             })()}
                           </p>
                         </div>

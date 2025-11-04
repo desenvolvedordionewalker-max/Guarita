@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Plus, Truck, Clock, Loader2, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, Truck, Clock, Loader2, Trash2, Edit, LogOut as Exit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useVehicles, useProducers } from "@/hooks/use-supabase";
@@ -25,14 +25,38 @@ const Vehicles = () => {
   const [savedDrivers, setSavedDrivers] = useState<string[]>([]);
   const [savedVehicleTypes, setSavedVehicleTypes] = useState<string[]>(["Carreta", "Caminhão", "Van"]);
 
-  const handleDeleteVehicle = async (id: string, plate: string) => {
-    if (confirm(`Tem certeza que deseja excluir o veículo ${plate}?`)) {
-      try {
-        await deleteVehicle(id);
-      } catch (error) {
-        console.error('Erro ao excluir veículo:', error);
+    const handleDeleteVehicle = async (id: string, plate: string) => {
+    if (window.confirm(`Tem certeza que deseja excluir o veículo ${plate}?`)) {
+      const success = await deleteVehicle(id);
+      if (success) {
+        toast({
+          title: "Sucesso",
+          description: "Veículo excluído com sucesso",
+        });
+      } else {
+        toast({
+          title: "Erro",
+          description: "Erro ao excluir veículo",
+          variant: "destructive",
+        });
       }
     }
+  };
+
+  const handleRegisterExit = async (id: string) => {
+    // Implement exit registration logic
+    toast({
+      title: "Funcionalidade em desenvolvimento",
+      description: "Registro de saída será implementado em breve",
+    });
+  };
+
+  const handleEditVehicle = (vehicle: { id: string; plate: string; driver: string; producer: string }) => {
+    // Implement edit logic
+    toast({
+      title: "Funcionalidade em desenvolvimento", 
+      description: "Edição de veículo será implementada em breve",
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -234,14 +258,37 @@ const Vehicles = () => {
                           <TableCell>{vehicle.exit_time || "-"}</TableCell>
                           <TableCell>{calculateInternalTime(vehicle.entry_time, vehicle.exit_time)}</TableCell>
                           <TableCell>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDeleteVehicle(vehicle.id, vehicle.plate)}
-                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            <div className="flex gap-1">
+                              {!vehicle.exit_time && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleRegisterExit(vehicle.id)}
+                                  className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                  title="Registrar Saída"
+                                >
+                                  <Exit className="h-4 w-4" />
+                                </Button>
+                              )}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEditVehicle(vehicle)}
+                                className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                title="Editar"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDeleteVehicle(vehicle.id, vehicle.plate)}
+                                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                title="Excluir"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))
