@@ -217,7 +217,7 @@ const Dashboard = () => {
                 <span className="text-xs">Versão TV</span>
               </Button>
               <span className="text-xs md:text-sm text-muted-foreground hidden sm:inline tv-text">
-                Olá, <span className="font-semibold text-foreground">{username}</span>
+                Olá, <span className="font-semibold text-foreground">{username?.split(' ')[0] || username}</span>
               </span>
               <Button variant="outline" size="sm" onClick={handleLogout} className="mobile-full-btn sm:w-auto">
                 <LogOut className="w-4 h-4 mr-1 md:mr-2" />

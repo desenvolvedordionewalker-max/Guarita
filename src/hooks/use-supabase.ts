@@ -81,6 +81,30 @@ export const useVehicles = () => {
     }
   }
 
+  const deleteVehicle = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('vehicles')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+      
+      setVehicles(prev => prev.filter(v => v.id !== id))
+      toast({
+        title: "Veículo excluído!",
+        description: "Registro removido com sucesso.",
+      })
+    } catch (error) {
+      console.error('Erro ao excluir veículo:', error)
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir o veículo.",
+        variant: "destructive"
+      })
+    }
+  }
+
   useEffect(() => {
     fetchVehicles()
   }, [fetchVehicles])
@@ -90,6 +114,7 @@ export const useVehicles = () => {
     loading,
     addVehicle,
     updateVehicle,
+    deleteVehicle,
     refetch: fetchVehicles
   }
 }
@@ -149,6 +174,30 @@ export const useCottonPull = () => {
     }
   }
 
+  const deleteRecord = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('cotton_pull')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+      
+      setRecords(prev => prev.filter(r => r.id !== id))
+      toast({
+        title: "Registro excluído!",
+        description: "Puxe de algodão removido com sucesso.",
+      })
+    } catch (error) {
+      console.error('Erro ao excluir registro de algodão:', error)
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir o registro.",
+        variant: "destructive"
+      })
+    }
+  }
+
   useEffect(() => {
     fetchRecords()
   }, [fetchRecords])
@@ -157,6 +206,7 @@ export const useCottonPull = () => {
     records,
     loading,
     addRecord,
+    deleteRecord,
     refetch: fetchRecords
   }
 }
@@ -308,6 +358,30 @@ export const useEquipment = () => {
     }
   }
 
+  const deleteRecord = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('equipment')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+      
+      setRecords(prev => prev.filter(r => r.id !== id))
+      toast({
+        title: "Equipamento excluído!",
+        description: "Equipamento removido com sucesso.",
+      })
+    } catch (error) {
+      console.error('Erro ao excluir equipamento:', error)
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir o equipamento.",
+        variant: "destructive"
+      })
+    }
+  }
+
   useEffect(() => {
     fetchRecords()
   }, [fetchRecords])
@@ -317,6 +391,7 @@ export const useEquipment = () => {
     loading,
     addRecord,
     updateRecord,
+    deleteRecord,
     refetch: fetchRecords
   }
 }
