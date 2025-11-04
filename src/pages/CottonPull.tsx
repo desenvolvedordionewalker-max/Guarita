@@ -65,18 +65,9 @@ const CottonPull = () => {
       }
     }
   };
+  
   const pendingExits = records.filter(record => !record.exit_time);
   const completed = records.filter(record => record.exit_time);
-
-  const handleDeleteRecord = async (id: string, plate: string) => {
-    if (confirm(`Tem certeza que deseja excluir o registro da placa ${plate}?`)) {
-      try {
-        await deleteRecord(id);
-      } catch (error) {
-        console.error('Erro ao excluir registro:', error);
-      }
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
