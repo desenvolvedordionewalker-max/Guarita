@@ -6,7 +6,7 @@
 ✅ **Sistema pronto para deploy**
 
 ## 📦 Repositório
-https://github.com/desenvolvedordionewalker-max/Guarita
+https://github.com/dionewalkerinvestimentos-blip/guarita
 
 ## 🛠️ Opções de Deploy
 
@@ -15,7 +15,7 @@ https://github.com/desenvolvedordionewalker-max/Guarita
 #### Deploy Automático:
 1. Acesse: https://vercel.com/dione-luis-walkers-projects
 2. Clique em "Add New..." → "Project"
-3. Importe o repositório: `desenvolvedordionewalker-max/Guarita`
+3. Importe o repositório: `dionewalkerinvestimentos-blip/guarita`
 4. Configure as variáveis de ambiente:
    ```
    VITE_SUPABASE_URL=sua_url_do_supabase
@@ -25,7 +25,7 @@ https://github.com/desenvolvedordionewalker-max/Guarita
 6. ✅ Deploy automático concluído!
 
 #### Link direto para import:
-https://vercel.com/new/clone?repository-url=https://github.com/desenvolvedordionewalker-max/Guarita
+https://vercel.com/new/clone?repository-url=https://github.com/dionewalkerinvestimentos-blip/guarita
 
 ### 2. Netlify (Alternativo - Gratuito)
 
