@@ -13,16 +13,19 @@ https://github.com/desenvolvedordionewalker-max/Guarita
 ### 1. Vercel (Recomendado - Gratuito)
 
 #### Deploy Automático:
-1. Acesse [vercel.com](https://vercel.com)
-2. Faça login com GitHub
-3. Clique em "New Project"
-4. Importe: `desenvolvedordionewalker-max/Guarita`
-5. Configure as variáveis de ambiente:
+1. Acesse: https://vercel.com/dione-luis-walkers-projects
+2. Clique em "Add New..." → "Project"
+3. Importe o repositório: `desenvolvedordionewalker-max/Guarita`
+4. Configure as variáveis de ambiente:
    ```
    VITE_SUPABASE_URL=sua_url_do_supabase
    VITE_SUPABASE_ANON_KEY=sua_chave_anonima
    ```
-6. Deploy automático!
+5. Clique em "Deploy"
+6. ✅ Deploy automático concluído!
+
+#### Link direto para import:
+https://vercel.com/new/clone?repository-url=https://github.com/desenvolvedordionewalker-max/Guarita
 
 ### 2. Netlify (Alternativo - Gratuito)
 
