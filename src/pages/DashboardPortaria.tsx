@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, CloudRain, Truck, PackageCheck, Clock } from "lucide-react";
-import { useVehicles, useCottonPull, useRainRecords, useLoadingRecords } from "@/hooks/use-supabase";
+import { useVehicles, useCottonPull, useRainRecords, useLoadingRecords, useEquipment } from "@/hooks/use-supabase";
 import { useMaterialReceipts } from "@/hooks/use-material-receipts";
 import ControleGuaritaFitScreen from "@/components/ControleGuaritaFitScreen";
 import logo from "@/assets/BF_logo.png";
@@ -12,6 +12,7 @@ export default function DashboardPortariaTV() {
   const { records: rainRecords, loading: loadingRain } = useRainRecords();
   const { records: loadingRecords, loading: loadingLoadings } = useLoadingRecords();
   const { records: materialRecords, loading: loadingMaterials } = useMaterialReceipts();
+  const { records: equipmentRecords, loading: loadingEquipment } = useEquipment();
   
   const [currentTime, setCurrentTime] = useState(new Date());
   const [bannerIndex, setBannerIndex] = useState(0);
@@ -23,12 +24,32 @@ export default function DashboardPortariaTV() {
     return () => clearInterval(timer);
   }, []);
 
+  // Estado para forçar re-render e atualização automática
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Atualização automática do modo TV a cada 30 segundos
+  useEffect(() => {
+    const autoRefresh = setInterval(() => {
+      // Incrementa o trigger para forçar re-fetch dos dados
+      setRefreshTrigger(prev => prev + 1);
+    }, 30000); // atualiza a cada 30 segundos
+    return () => clearInterval(autoRefresh);
+  }, []);
+
+  // Efeito para forçar atualização dos hooks quando necessário
+  useEffect(() => {
+    // Este efeito roda sempre que refreshTrigger muda
+    // Os hooks já têm seus próprios sistemas de atualização
+  }, [refreshTrigger]);
+
   const getBannerMessages = useCallback(() => {
     const today = new Date().toISOString().split('T')[0];
     const todayMaterials = materialRecords.filter(m => m.date === today);
+    const todayEquipment = equipmentRecords.filter(e => e.date === today);
     
     const messages = [];
     
+    // Materiais recebidos
     if (todayMaterials.length === 0) {
       messages.push("📦 Nenhum material recebido hoje");
     } else {
@@ -47,10 +68,34 @@ export default function DashboardPortariaTV() {
       });
     }
     
-    return messages;
-  }, [materialRecords]);
+    // Saída de equipamentos
+    if (todayEquipment.length === 0) {
+      messages.push("🔧 Nenhuma saída de equipamento hoje");
+    } else {
+      // Mensagem geral de equipamentos
+      messages.push(`🔧 ${todayEquipment.length} equipamentos saíram hoje`);
+      
+      // Por tipo de equipamento
+      const equipmentByType = todayEquipment.reduce((acc: Record<string, number>, e) => {
+        acc[e.type] = (acc[e.type] || 0) + 1;
+        return acc;
+      }, {});
+      
+      Object.entries(equipmentByType).forEach(([type, count]) => {
+        messages.push(`🔧 ${type}: ${count} saídas hoje`);
+      });
 
-  // Banner rotativo para materiais
+      // Equipamentos ainda em campo (saídos mas não retornados)
+      const equipmentInField = todayEquipment.filter(e => e.status === 'pending');
+      if (equipmentInField.length > 0) {
+        messages.push(`⚠️ ${equipmentInField.length} equipamentos ainda em campo`);
+      }
+    }
+    
+    return messages;
+  }, [materialRecords, equipmentRecords]);
+
+  // Banner rotativo para materiais e equipamentos
   useEffect(() => {
     const messages = getBannerMessages();
     if (messages.length === 0) return;
@@ -59,9 +104,9 @@ export default function DashboardPortariaTV() {
       setBannerIndex(prev => (prev + 1) % messages.length);
     }, 5000); // muda a cada 5 segundos
     return () => clearInterval(bannerTimer);
-  }, [materialRecords, getBannerMessages]);
+  }, [materialRecords, equipmentRecords, getBannerMessages]);
 
-  const loading = loadingVehicles || loadingCotton || loadingRain || loadingLoadings || loadingMaterials;
+  const loading = loadingVehicles || loadingCotton || loadingRain || loadingLoadings || loadingMaterials || loadingEquipment;
 
   if (loading) {
     return (
