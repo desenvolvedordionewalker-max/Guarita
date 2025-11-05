@@ -103,12 +103,12 @@ export default function DashboardPortariaTV() {
     .slice(0, 8);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-emerald-800 text-emerald-100 p-2 sm:p-4 lg:p-6">
-      {/* Header responsivo */}
-      <div className="bg-black/60 backdrop-blur-lg rounded-lg p-3 sm:p-4 lg:p-6 mb-4 border border-emerald-600/30">
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-          <div className="flex items-center gap-3 sm:gap-4">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 xl:w-28 xl:h-28">
+    <div className="tv-mode min-h-screen bg-gradient-to-br from-black via-gray-900 to-emerald-800 text-emerald-100 p-[clamp(0.5rem,1vw,2rem)]">
+      {/* Header responsivo para TV */}
+      <div className="bg-black/60 backdrop-blur-lg rounded-lg p-[clamp(0.75rem,1.5vw,3rem)] mb-[clamp(1rem,1.5vw,2rem)] border border-emerald-600/30">
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-[clamp(1rem,2vw,3rem)]">
+          <div className="flex items-center gap-[clamp(0.75rem,1.5vw,2.5rem)]">
+            <div className="w-[clamp(4rem,6vw,8rem)] h-[clamp(4rem,6vw,8rem)]">
               <img 
                 src={logo}
                 alt="Bom Futuro Logo" 
@@ -116,27 +116,27 @@ export default function DashboardPortariaTV() {
               />
             </div>
             <div className="text-center sm:text-left">
-              <h1 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-emerald-400">
+              <h1 className="text-[clamp(1.5rem,3vw,4rem)] font-bold text-emerald-400 leading-tight">
                 CONTROLE GUARITA
               </h1>
-              <p className="text-xs sm:text-sm lg:text-base text-emerald-300">
+              <p className="text-[clamp(0.875rem,1.2vw,1.5rem)] text-emerald-300">
                 Sistema de Monitoramento em Tempo Real
               </p>
             </div>
           </div>
           <div className="text-center sm:text-right">
-            <p className="text-lg sm:text-xl lg:text-2xl font-mono text-emerald-400">
+            <p className="text-[clamp(1.25rem,2.5vw,3rem)] font-mono text-emerald-400">
               {currentTime.toLocaleTimeString('pt-BR')}
             </p>
-            <p className="text-xs sm:text-sm text-emerald-300">
+            <p className="text-[clamp(0.875rem,1.2vw,1.5rem)] text-emerald-300">
               {currentTime.toLocaleDateString('pt-BR')}
             </p>
           </div>
         </div>
       </div>
 
-      {/* CARDS POR PRODUTO - Grid Responsivo */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-2 sm:gap-3 lg:gap-4 mb-4 sm:mb-6 overflow-hidden">
+      {/* CARDS POR PRODUTO - Grid Responsivo para TV */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 3xl:grid-cols-8 gap-[clamp(0.5rem,1vw,1.5rem)] mb-[clamp(1rem,2vw,3rem)] overflow-hidden">
         {produtos.map((produto) => {
           const filaCount = fila.filter(l => l.product.toUpperCase() === produto).length;
           const carregandoCount = carregando.filter(l => l.product.toUpperCase() === produto).length;
@@ -144,60 +144,60 @@ export default function DashboardPortariaTV() {
           const carregandoItems = carregando.filter(l => l.product.toUpperCase() === produto);
 
           return (
-            <Card key={produto} className="bg-black/60 backdrop-blur-lg text-emerald-100 border-emerald-600/30 hover:border-emerald-500/50 transition-colors min-w-0 flex flex-col h-full">
-              <CardHeader className="border-b border-emerald-600/30 pb-2 flex-shrink-0">
-                <CardTitle className="text-xs sm:text-sm lg:text-base font-bold flex flex-col gap-1">
-                  <span className="flex items-center gap-1 sm:gap-2 min-w-0">
-                    <PackageCheck className="w-3 h-3 sm:w-4 sm:h-4 text-emerald-400 flex-shrink-0" />
+            <Card key={produto} className="bg-black/60 backdrop-blur-lg text-emerald-100 border-emerald-600/30 hover:border-emerald-500/50 transition-colors min-w-0 flex flex-col h-[clamp(12rem,20vh,24rem)]">
+              <CardHeader className="border-b border-emerald-600/30 pb-[clamp(0.5rem,1vh,1rem)] flex-shrink-0">
+                <CardTitle className="text-[clamp(0.875rem,1.2vw,1.25rem)] font-bold flex flex-col gap-[clamp(0.25rem,0.5vh,0.5rem)]">
+                  <span className="flex items-center gap-[clamp(0.25rem,0.5vw,0.75rem)] min-w-0">
+                    <PackageCheck className="w-[clamp(1rem,1.5vw,2rem)] h-[clamp(1rem,1.5vw,2rem)] text-emerald-400 flex-shrink-0" />
                     <span className="text-emerald-400 truncate">{produto}</span>
                   </span>
-                  <span className="text-xs text-emerald-300 font-normal">Tempo real</span>
+                  <span className="text-[clamp(0.75rem,1vw,1rem)] text-emerald-300 font-normal">Tempo real</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-2 sm:p-3 flex-1 flex flex-col min-w-0">
+              <CardContent className="p-[clamp(0.5rem,1vw,1rem)] flex-1 flex flex-col min-w-0">
                 {/* Contadores */}
-                <div className="grid grid-cols-3 gap-1 mb-2 sm:mb-3">
-                  <div className="bg-orange-500/20 border border-orange-500/30 rounded p-1 text-center min-w-0">
+                <div className="grid grid-cols-3 gap-[clamp(0.25rem,0.5vw,0.5rem)] mb-[clamp(0.5rem,1vh,1rem)]">
+                  <div className="bg-orange-500/20 border border-orange-500/30 rounded p-[clamp(0.25rem,0.5vw,0.75rem)] text-center min-w-0">
                     <div className="flex flex-col items-center">
-                      <Clock className="w-3 h-3 text-orange-400 mb-1" />
-                      <span className="text-xs font-semibold text-orange-300 truncate">FILA</span>
-                      <p className="text-sm sm:text-lg font-bold text-orange-400">{filaCount}</p>
+                      <Clock className="w-[clamp(0.75rem,1vw,1.5rem)] h-[clamp(0.75rem,1vw,1.5rem)] text-orange-400 mb-[clamp(0.25rem,0.5vh,0.5rem)]" />
+                      <span className="text-[clamp(0.625rem,0.8vw,1rem)] font-semibold text-orange-300 truncate">FILA</span>
+                      <p className="text-[clamp(1rem,1.5vw,2rem)] font-bold text-orange-400">{filaCount}</p>
                     </div>
                   </div>
-                  <div className="bg-blue-500/20 border border-blue-500/30 rounded p-1 text-center min-w-0">
+                  <div className="bg-blue-500/20 border border-blue-500/30 rounded p-[clamp(0.25rem,0.5vw,0.75rem)] text-center min-w-0">
                     <div className="flex flex-col items-center">
-                      <Truck className="w-3 h-3 text-blue-400 mb-1" />
-                      <span className="text-xs font-semibold text-blue-300 truncate">Carregando</span>
-                      <p className="text-sm sm:text-lg font-bold text-blue-400">{carregandoCount}</p>
+                      <Truck className="w-[clamp(0.75rem,1vw,1.5rem)] h-[clamp(0.75rem,1vw,1.5rem)] text-blue-400 mb-[clamp(0.25rem,0.5vh,0.5rem)]" />
+                      <span className="text-[clamp(0.625rem,0.8vw,1rem)] font-semibold text-blue-300 truncate">Carregando</span>
+                      <p className="text-[clamp(1rem,1.5vw,2rem)] font-bold text-blue-400">{carregandoCount}</p>
                     </div>
                   </div>
-                  <div className="bg-emerald-500/20 border border-emerald-500/30 rounded p-1 text-center min-w-0">
+                  <div className="bg-emerald-500/20 border border-emerald-500/30 rounded p-[clamp(0.25rem,0.5vw,0.75rem)] text-center min-w-0">
                     <div className="flex flex-col items-center">
-                      <PackageCheck className="w-3 h-3 text-emerald-400 mb-1" />
-                      <span className="text-xs font-semibold text-emerald-300 truncate">OK</span>
-                      <p className="text-sm sm:text-lg font-bold text-emerald-400">{concluidosCount}</p>
+                      <PackageCheck className="w-[clamp(0.75rem,1vw,1.5rem)] h-[clamp(0.75rem,1vw,1.5rem)] text-emerald-400 mb-[clamp(0.25rem,0.5vh,0.5rem)]" />
+                      <span className="text-[clamp(0.625rem,0.8vw,1rem)] font-semibold text-emerald-300 truncate">OK</span>
+                      <p className="text-[clamp(1rem,1.5vw,2rem)] font-bold text-emerald-400">{concluidosCount}</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Detalhes dos carregamentos em andamento */}
                 <div className="flex-1 min-h-0">
-                  <p className="text-emerald-300 text-xs mb-1 font-semibold truncate">🚛 Carregando:</p>
-                  <div className="bg-black/30 border border-emerald-600/20 rounded p-1 sm:p-2 flex-1 overflow-hidden">
+                  <p className="text-emerald-300 text-[clamp(0.75rem,1vw,1rem)] mb-[clamp(0.25rem,0.5vh,0.5rem)] font-semibold truncate">🚛 Carregando:</p>
+                  <div className="bg-black/30 border border-emerald-600/20 rounded p-[clamp(0.25rem,0.5vw,0.75rem)] flex-1 overflow-hidden">
                     {carregandoItems.length > 0 ? (
-                      <div className="space-y-1 max-h-16 sm:max-h-20 overflow-y-auto">
+                      <div className="space-y-[clamp(0.25rem,0.5vh,0.5rem)] max-h-[clamp(4rem,8vh,6rem)] overflow-y-auto">
                         {carregandoItems.slice(0, 2).map((item) => (
-                          <div key={item.id} className="text-xs">
+                          <div key={item.id} className="text-[clamp(0.75rem,1vw,1rem)]">
                             <span className="font-semibold text-emerald-400 block truncate">{item.plate}</span>
-                            <span className="text-emerald-300 text-xs truncate block">{item.truck_type} - {item.carrier}</span>
+                            <span className="text-emerald-300 text-[clamp(0.625rem,0.8vw,0.875rem)] truncate block">{item.truck_type} - {item.carrier}</span>
                           </div>
                         ))}
                         {carregandoItems.length > 2 && (
-                          <div className="text-emerald-400 text-center text-xs">+{carregandoItems.length - 2} mais</div>
+                          <div className="text-emerald-400 text-center text-[clamp(0.625rem,0.8vw,0.875rem)]">+{carregandoItems.length - 2} mais</div>
                         )}
                       </div>
                     ) : (
-                      <p className="text-emerald-400 text-center text-xs">Nenhum ativo</p>
+                      <p className="text-emerald-400 text-center text-[clamp(0.75rem,1vw,1rem)]">Nenhum ativo</p>
                     )}
                   </div>
                 </div>
@@ -207,33 +207,33 @@ export default function DashboardPortariaTV() {
         })}
       </div>
 
-      {/* ROLOS E CHUVA - Seção Responsiva */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+      {/* ROLOS E CHUVA - Seção Responsiva para TV */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-[clamp(1rem,2vw,2rem)]">
         {/* Movimentação de Rolos */}
         <Card className="bg-black/60 backdrop-blur-lg text-emerald-100 border-emerald-600/30">
           <CardHeader className="border-b border-emerald-600/30">
-            <CardTitle className="text-lg sm:text-xl lg:text-2xl font-bold flex items-center gap-2">
-              <Truck className="text-emerald-400" /> 
+            <CardTitle className="text-[clamp(1.25rem,2vw,2.5rem)] font-bold flex items-center gap-[clamp(0.5rem,1vw,1rem)]">
+              <Truck className="text-emerald-400 w-[clamp(1.5rem,2vw,2.5rem)] h-[clamp(1.5rem,2vw,2.5rem)]" /> 
               <span className="text-emerald-400">Ranking de Rolos por Placa</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-3 sm:p-4">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <CardContent className="p-[clamp(0.75rem,1.5vw,2rem)]">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-[clamp(1rem,2vw,2rem)]">
               {/* Ranking do Dia */}
               <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                  <h3 className="font-semibold text-emerald-400">🏆 TOP ROLOS - HOJE</h3>
+                <div className="flex items-center gap-[clamp(0.5rem,1vw,1rem)] mb-[clamp(0.75rem,1.5vw,1.5rem)]">
+                  <div className="w-[clamp(0.75rem,1vw,1rem)] h-[clamp(0.75rem,1vw,1rem)] bg-yellow-500 rounded-full"></div>
+                  <h3 className="font-semibold text-emerald-400 text-[clamp(1rem,1.3vw,1.5rem)]">🏆 TOP ROLOS - HOJE</h3>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-[clamp(0.5rem,1vw,1rem)]">
                   {rankingDiaArray.length > 0 ? (
                     rankingDiaArray.map((item, index) => (
                       <div
                         key={item.plate}
-                        className="bg-black/40 border border-emerald-600/20 rounded-lg p-2 flex justify-between items-center hover:border-emerald-500/40 transition-colors"
+                        className="bg-black/40 border border-emerald-600/20 rounded-lg p-[clamp(0.5rem,1vw,1rem)] flex justify-between items-center hover:border-emerald-500/40 transition-colors"
                       >
-                        <div className="flex items-center gap-2">
-                          <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                        <div className="flex items-center gap-[clamp(0.5rem,1vw,1rem)]">
+                          <span className={`w-[clamp(1.5rem,2vw,2.5rem)] h-[clamp(1.5rem,2vw,2.5rem)] rounded-full flex items-center justify-center text-[clamp(0.75rem,1vw,1.25rem)] font-bold ${
                             index === 0 ? 'bg-yellow-500 text-black' :
                             index === 1 ? 'bg-gray-400 text-black' :
                             index === 2 ? 'bg-orange-500 text-black' :
@@ -242,38 +242,38 @@ export default function DashboardPortariaTV() {
                             {index + 1}
                           </span>
                           <div>
-                            <p className="font-semibold text-emerald-400 text-sm">{item.plate}</p>
-                            <p className="text-xs text-emerald-300">{item.driver}</p>
-                            <p className="text-xs text-emerald-300">{item.producer}</p>
+                            <p className="font-semibold text-emerald-400 text-[clamp(0.875rem,1.2vw,1.25rem)]">{item.plate}</p>
+                            <p className="text-[clamp(0.75rem,1vw,1rem)] text-emerald-300">{item.driver}</p>
+                            <p className="text-[clamp(0.75rem,1vw,1rem)] text-emerald-300">{item.producer}</p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="font-bold text-emerald-400">{item.rolos.toLocaleString('pt-BR')}</p>
-                          <p className="text-xs text-emerald-300">{item.viagens} viagens</p>
+                          <p className="font-bold text-emerald-400 text-[clamp(1rem,1.3vw,1.5rem)]">{item.rolos.toLocaleString('pt-BR')}</p>
+                          <p className="text-[clamp(0.75rem,1vw,1rem)] text-emerald-300">{item.viagens} viagens</p>
                         </div>
                       </div>
                     ))
                   ) : (
-                    <p className="text-emerald-400 text-center py-4">Nenhum rolo hoje</p>
+                    <p className="text-emerald-400 text-center py-[clamp(1rem,2vw,2rem)] text-[clamp(1rem,1.3vw,1.5rem)]">Nenhum rolo hoje</p>
                   )}
                 </div>
               </div>
 
               {/* Ranking do Mês */}
               <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                  <h3 className="font-semibold text-emerald-400">📅 TOP ROLOS - MÊS ATUAL</h3>
+                <div className="flex items-center gap-[clamp(0.5rem,1vw,1rem)] mb-[clamp(0.75rem,1.5vw,1.5rem)]">
+                  <div className="w-[clamp(0.75rem,1vw,1rem)] h-[clamp(0.75rem,1vw,1rem)] bg-blue-500 rounded-full"></div>
+                  <h3 className="font-semibold text-emerald-400 text-[clamp(1rem,1.3vw,1.5rem)]">📅 TOP ROLOS - MÊS ATUAL</h3>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-[clamp(0.5rem,1vw,1rem)]">
                   {rankingMesArray.length > 0 ? (
                     rankingMesArray.map((item, index) => (
                       <div
                         key={item.plate}
-                        className="bg-black/40 border border-emerald-600/20 rounded-lg p-2 flex justify-between items-center hover:border-emerald-500/40 transition-colors"
+                        className="bg-black/40 border border-emerald-600/20 rounded-lg p-[clamp(0.5rem,1vw,1rem)] flex justify-between items-center hover:border-emerald-500/40 transition-colors"
                       >
-                        <div className="flex items-center gap-2">
-                          <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                        <div className="flex items-center gap-[clamp(0.5rem,1vw,1rem)]">
+                          <span className={`w-[clamp(1.5rem,2vw,2.5rem)] h-[clamp(1.5rem,2vw,2.5rem)] rounded-full flex items-center justify-center text-[clamp(0.75rem,1vw,1.25rem)] font-bold ${
                             index === 0 ? 'bg-yellow-500 text-black' :
                             index === 1 ? 'bg-gray-400 text-black' :
                             index === 2 ? 'bg-orange-500 text-black' :
@@ -282,19 +282,19 @@ export default function DashboardPortariaTV() {
                             {index + 1}
                           </span>
                           <div>
-                            <p className="font-semibold text-emerald-400 text-sm">{item.plate}</p>
-                            <p className="text-xs text-emerald-300">{item.driver}</p>
-                            <p className="text-xs text-emerald-300">{item.producer}</p>
+                            <p className="font-semibold text-emerald-400 text-[clamp(0.875rem,1.2vw,1.25rem)]">{item.plate}</p>
+                            <p className="text-[clamp(0.75rem,1vw,1rem)] text-emerald-300">{item.driver}</p>
+                            <p className="text-[clamp(0.75rem,1vw,1rem)] text-emerald-300">{item.producer}</p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="font-bold text-emerald-400">{item.rolos.toLocaleString('pt-BR')}</p>
-                          <p className="text-xs text-emerald-300">{item.viagens} viagens</p>
+                          <p className="font-bold text-emerald-400 text-[clamp(1rem,1.3vw,1.5rem)]">{item.rolos.toLocaleString('pt-BR')}</p>
+                          <p className="text-[clamp(0.75rem,1vw,1rem)] text-emerald-300">{item.viagens} viagens</p>
                         </div>
                       </div>
                     ))
                   ) : (
-                    <p className="text-emerald-400 text-center py-4">Nenhum rolo neste mês</p>
+                    <p className="text-emerald-400 text-center py-[clamp(1rem,2vw,2rem)] text-[clamp(1rem,1.3vw,1.5rem)]">Nenhum rolo neste mês</p>
                   )}
                 </div>
               </div>
@@ -305,45 +305,45 @@ export default function DashboardPortariaTV() {
         {/* Monitoramento de Chuvas */}
         <Card className="bg-black/60 backdrop-blur-lg text-emerald-100 border-emerald-600/30">
           <CardHeader className="border-b border-emerald-600/30">
-            <CardTitle className="text-lg sm:text-xl lg:text-2xl font-bold flex items-center gap-2">
-              <CloudRain className="text-blue-400" /> 
+            <CardTitle className="text-[clamp(1.25rem,2vw,2.5rem)] font-bold flex items-center gap-[clamp(0.5rem,1vw,1rem)]">
+              <CloudRain className="text-blue-400 w-[clamp(1.5rem,2vw,2.5rem)] h-[clamp(1.5rem,2vw,2.5rem)]" /> 
               <span className="text-emerald-400">Monitoramento de Chuvas</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-3 sm:p-4">
-            <div className="space-y-4">
+          <CardContent className="p-[clamp(0.75rem,1.5vw,2rem)]">
+            <div className="space-y-[clamp(1rem,2vw,2rem)]">
               {/* Estatísticas de Chuva */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 text-center">
-                  <p className="text-xs text-blue-300 mb-1">HOJE</p>
-                  <p className="text-lg sm:text-xl font-bold text-blue-400">{chuvaHoje.toFixed(1)}</p>
-                  <p className="text-xs text-blue-300">mm</p>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-[clamp(0.75rem,1.5vw,1.5rem)]">
+                <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-[clamp(0.75rem,1.5vw,1.5rem)] text-center">
+                  <p className="text-[clamp(0.75rem,1vw,1rem)] text-blue-300 mb-[clamp(0.25rem,0.5vh,0.5rem)]">HOJE</p>
+                  <p className="text-[clamp(1.25rem,2vw,2.5rem)] font-bold text-blue-400">{chuvaHoje.toFixed(1)}</p>
+                  <p className="text-[clamp(0.75rem,1vw,1rem)] text-blue-300">mm</p>
                 </div>
-                <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 text-center">
-                  <p className="text-xs text-blue-300 mb-1">SEMANA</p>
-                  <p className="text-lg sm:text-xl font-bold text-blue-400">{chuvaSemana.toFixed(1)}</p>
-                  <p className="text-xs text-blue-300">mm</p>
+                <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-[clamp(0.75rem,1.5vw,1.5rem)] text-center">
+                  <p className="text-[clamp(0.75rem,1vw,1rem)] text-blue-300 mb-[clamp(0.25rem,0.5vh,0.5rem)]">SEMANA</p>
+                  <p className="text-[clamp(1.25rem,2vw,2.5rem)] font-bold text-blue-400">{chuvaSemana.toFixed(1)}</p>
+                  <p className="text-[clamp(0.75rem,1vw,1rem)] text-blue-300">mm</p>
                 </div>
-                <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 text-center">
-                  <p className="text-xs text-blue-300 mb-1">MÊS</p>
-                  <p className="text-lg sm:text-xl font-bold text-blue-400">{chuvaMes.toFixed(1)}</p>
-                  <p className="text-xs text-blue-300">mm</p>
+                <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-[clamp(0.75rem,1.5vw,1.5rem)] text-center">
+                  <p className="text-[clamp(0.75rem,1vw,1rem)] text-blue-300 mb-[clamp(0.25rem,0.5vh,0.5rem)]">MÊS</p>
+                  <p className="text-[clamp(1.25rem,2vw,2.5rem)] font-bold text-blue-400">{chuvaMes.toFixed(1)}</p>
+                  <p className="text-[clamp(0.75rem,1vw,1rem)] text-blue-300">mm</p>
                 </div>
-                <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 text-center">
-                  <p className="text-xs text-blue-300 mb-1">ANO</p>
-                  <p className="text-lg sm:text-xl font-bold text-blue-400">{chuvaAno.toFixed(1)}</p>
-                  <p className="text-xs text-blue-300">mm</p>
+                <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-[clamp(0.75rem,1.5vw,1.5rem)] text-center">
+                  <p className="text-[clamp(0.75rem,1vw,1rem)] text-blue-300 mb-[clamp(0.25rem,0.5vh,0.5rem)]">ANO</p>
+                  <p className="text-[clamp(1.25rem,2vw,2.5rem)] font-bold text-blue-400">{chuvaAno.toFixed(1)}</p>
+                  <p className="text-[clamp(0.75rem,1vw,1rem)] text-blue-300">mm</p>
                 </div>
               </div>
 
               {/* Última Chuva */}
               {ultimaChuva && (
-                <div className="bg-black/40 border border-emerald-600/20 rounded-lg p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <CloudRain className="w-5 h-5 text-blue-400" />
-                    <span className="font-semibold text-emerald-400">Última Chuva Registrada</span>
+                <div className="bg-black/40 border border-emerald-600/20 rounded-lg p-[clamp(1rem,2vw,2rem)]">
+                  <div className="flex items-center gap-[clamp(0.5rem,1vw,1rem)] mb-[clamp(0.5rem,1vw,1rem)]">
+                    <CloudRain className="w-[clamp(1.25rem,2vw,2rem)] h-[clamp(1.25rem,2vw,2rem)] text-blue-400" />
+                    <span className="font-semibold text-emerald-400 text-[clamp(1rem,1.3vw,1.5rem)]">Última Chuva Registrada</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-[clamp(1rem,2vw,2rem)] text-[clamp(0.875rem,1.2vw,1.25rem)]">
                     <div>
                       <p className="text-emerald-300">Data:</p>
                       <p className="font-semibold text-emerald-400">
@@ -359,8 +359,8 @@ export default function DashboardPortariaTV() {
               )}
               
               {!ultimaChuva && (
-                <div className="text-center py-4">
-                  <p className="text-emerald-400">Nenhuma chuva registrada</p>
+                <div className="text-center py-[clamp(1rem,2vw,2rem)]">
+                  <p className="text-emerald-400 text-[clamp(1rem,1.3vw,1.5rem)]">Nenhuma chuva registrada</p>
                 </div>
               )}
             </div>

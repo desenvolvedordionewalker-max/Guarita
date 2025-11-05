@@ -137,3 +137,50 @@ All colors MUST be HSL.
     color: rgb(117 83 57);
   }
 }
+
+/* TV Mode Optimizations */
+@media screen and (min-width: 1920px) {
+  /* Para TVs Full HD e maiores */
+  .tv-mode {
+    font-size: clamp(1rem, 0.8vw, 1.5rem);
+  }
+  
+  .tv-mode .card-title {
+    font-size: clamp(1.2rem, 1vw, 2rem);
+  }
+  
+  .tv-mode .card-content {
+    padding: clamp(1rem, 1.5vw, 2rem);
+  }
+  
+  .tv-mode .icon-size {
+    width: clamp(1.5rem, 2vw, 3rem);
+    height: clamp(1.5rem, 2vw, 3rem);
+  }
+}
+
+@media screen and (min-width: 2560px) {
+  /* Para TVs 2K */
+  .tv-mode {
+    font-size: clamp(1.2rem, 0.9vw, 1.8rem);
+  }
+  
+  .tv-mode .card-title {
+    font-size: clamp(1.5rem, 1.2vw, 2.5rem);
+  }
+}
+
+@media screen and (min-width: 3840px) {
+  /* Para TVs 4K */
+  .tv-mode {
+    font-size: clamp(1.5rem, 1vw, 2.2rem);
+  }
+  
+  .tv-mode .card-title {
+    font-size: clamp(2rem, 1.5vw, 3rem);
+  }
+  
+  .tv-mode .grid-tv {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  }
+}

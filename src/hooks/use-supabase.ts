@@ -164,15 +164,33 @@ export const useCottonPull = () => {
       
       return data
     } catch (error: unknown) {
-      console.error('Erro detalhado ao adicionar registro:', error)
-      console.error('Dados enviados:', recordData)
+      console.error('=== ERRO NO SUPABASE ===');
+      console.error('Erro completo:', error);
+      console.error('Dados enviados para o banco:', recordData);
+      console.error('Tabela: cotton_pull');
+      console.error('Operação: INSERT');
       
-      const errorObj = error as { message?: string; details?: string; hint?: string; code?: string };
+      const errorObj = error as { 
+        message?: string; 
+        details?: string; 
+        hint?: string; 
+        code?: string;
+        statusCode?: number;
+        statusText?: string;
+      };
+      
       const errorMessage = errorObj?.message || errorObj?.details || errorObj?.hint || "Erro desconhecido";
-      const errorCode = errorObj?.code || "N/A";
+      const errorCode = errorObj?.code || errorObj?.statusCode || "N/A";
       
-      console.error('Código do erro:', errorCode);
+      console.error('Código HTTP/Postgres:', errorCode);
       console.error('Mensagem do erro:', errorMessage);
+      console.error('Status Text:', errorObj?.statusText);
+      
+      // Tentar extrair mais informações do Supabase
+      if (typeof error === 'object' && error !== null) {
+        console.error('Propriedades do erro:', Object.keys(error));
+        console.error('Erro serializado:', JSON.stringify(error, null, 2));
+      }
       
       toast({
         title: "Erro",

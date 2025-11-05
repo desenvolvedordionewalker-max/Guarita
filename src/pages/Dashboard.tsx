@@ -259,7 +259,7 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-white to-neutral-50 flex flex-col items-center">
       {/* Header */}
-      <header className="w-full px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 2xl:px-16 py-3 flex justify-between items-center bg-card/50 backdrop-blur-sm shadow-sm sticky top-0 z-50 border-b">
+      <header className="w-full px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 2xl:px-16 py-3 flex justify-between items-center bg-white shadow-md sticky top-0 z-50 border-b">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden">
             <img 

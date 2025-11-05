@@ -141,20 +141,42 @@ const CottonPull = () => {
       observations: (formData.get("observations") as string) || "",
     };
     
+    console.log('=== DEBUG COTTON PULL ===');
+    console.log('FormData completo:', Object.fromEntries(formData.entries()));
     console.log('Dados que serão enviados:', recordData);
+    console.log('Tipos dos dados:', {
+      date: typeof recordData.date,
+      entry_time: typeof recordData.entry_time,
+      producer: typeof recordData.producer,
+      farm: typeof recordData.farm,
+      plate: typeof recordData.plate,
+      driver: typeof recordData.driver,
+      rolls: typeof recordData.rolls,
+      observations: typeof recordData.observations
+    });
     
     try {
       await addRecord(recordData);
-      e.currentTarget.reset();
+      // Reset do formulário de forma segura
+      const form = e.currentTarget;
+      if (form) {
+        form.reset();
+      }
       toast({
         title: "Sucesso!",
         description: "Registro de algodão adicionado com sucesso.",
       });
     } catch (error) {
-      console.error('Erro detalhado:', error);
+      console.error('=== ERRO DETALHADO ===');
+      console.error('Erro completo:', error);
+      console.error('Erro JSON:', JSON.stringify(error, null, 2));
+      if (error instanceof Error) {
+        console.error('Message:', error.message);
+        console.error('Stack:', error.stack);
+      }
       toast({
         title: "Erro",
-        description: "Não foi possível adicionar o registro. Tente novamente.",
+        description: "Não foi possível adicionar o registro. Verifique o console para detalhes.",
         variant: "destructive"
       });
     }
@@ -219,7 +241,7 @@ const CottonPull = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-secondary/5 via-background to-accent/5">
-      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+      <header className="border-b bg-white shadow-md sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
             <ArrowLeft className="w-5 h-5" />
@@ -428,8 +450,8 @@ const CottonPull = () => {
                         <p className="font-medium">{record.plate}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Entrada</p>
-                        <p className="font-medium">{record.entry_time}</p>
+                        <p className="text-sm text-muted-foreground">Data/Entrada</p>
+                        <p className="font-medium">{new Date(record.date).toLocaleDateString('pt-BR')} - {record.entry_time}</p>
                       </div>
                     </div>
                     {record.exit_time && (
