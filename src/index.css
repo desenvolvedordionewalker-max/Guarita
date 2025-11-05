@@ -184,3 +184,24 @@ All colors MUST be HSL.
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   }
 }
+
+/* Sistema de Cards Inteligentes */
+.card-info-high {
+  /* Muita informação - texto menor, cards mais compactos */
+  line-height: 1.2;
+}
+
+.card-info-medium {
+  /* Informação média - balance */
+  line-height: 1.3;
+}
+
+.card-info-low {
+  /* Pouca informação - texto maior, mais espaçado */
+  line-height: 1.4;
+}
+
+/* Animações suaves para transições */
+.tv-mode * {
+  transition: font-size 0.3s ease, padding 0.3s ease, line-height 0.3s ease;
+}

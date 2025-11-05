@@ -97,6 +97,7 @@ export interface LoadingRecord {
   destination: string
   plate: string
   driver: string
+  client?: string
   entry_date?: string
   entry_time?: string
   exit_date?: string

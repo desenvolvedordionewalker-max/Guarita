@@ -61,6 +61,7 @@ const Loading = () => {
       destination: formData.get("destination") as string || "",
       plate: formData.get("plate") as string,
       driver: formData.get("driver") as string,
+      client: formData.get("client") as string || "",
       bales: parseInt(formData.get("bales") as string) || 0,
       weight: parseFloat(formData.get("weight") as string) || 0,
       notes: formData.get("notes") as string || "",
@@ -291,10 +292,11 @@ const Loading = () => {
                   </div>
                 </div>
               </div>
-              <div className="grid sm:grid-cols-1 gap-4">
+              <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>Transportadora</Label><Input name="carrier" list="carriers-list" required />
                   <datalist id="carriers-list">{carriers.map(c => <option key={c} value={c} />)}</datalist>
                 </div>
+                <div className="space-y-2"><Label>Cliente (opcional)</Label><Input name="client" placeholder="Nome do cliente" /></div>
               </div>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>Placa</Label><Input name="plate" required /></div>
@@ -573,16 +575,22 @@ const Loading = () => {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label>Transportadora</Label>
-                <Select name="carrier" defaultValue={selectedLoading.carrier} required>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {carriers.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Transportadora</Label>
+                  <Select name="carrier" defaultValue={selectedLoading.carrier} required>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {carriers.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Cliente (opcional)</Label>
+                  <Input name="client" defaultValue={selectedLoading.client || ""} placeholder="Nome do cliente" />
+                </div>
               </div>
 
               <div className="space-y-2">
