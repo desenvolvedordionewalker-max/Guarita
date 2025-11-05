@@ -37,19 +37,37 @@ const Rain = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    
+    const mmValue = formData.get("mm") as string;
+    const endTimeValue = formData.get("endTime") as string;
+    const startTimeValue = formData.get("startTime") as string;
+
     const recordData = {
       date: formData.get("date") as string,
-      start_time: formData.get("startTime") as string,
-      end_time: formData.get("endTime") as string || null,
-      millimeters: parseFloat(formData.get("mm") as string),
+      start_time: startTimeValue,
+      time: startTimeValue, // Adicionado para preencher a coluna NOT NULL
+      end_time: endTimeValue || null,
+      millimeters: mmValue ? parseFloat(mmValue) : null,
     };
-    
+
+    // Validação para evitar NaN
+    if (mmValue && isNaN(recordData.millimeters)) {
+        toast({
+            title: "Valor inválido",
+            description: "Por favor, insira um número válido para os milímetros.",
+            variant: "destructive",
+        });
+        return;
+    }
+
     try {
       await addRecord(recordData);
       e.currentTarget.reset();
+      toast({
+        title: "Registro de chuva adicionado!",
+        description: "A medição foi salva com sucesso.",
+      });
     } catch (error) {
-      // Erro já tratado no hook
+      // O erro já é tratado e exibido pelo hook use-supabase
     }
   };
 
@@ -63,12 +81,27 @@ const Rain = () => {
     if (!editingRecord) return;
 
     const formData = new FormData(e.currentTarget);
+    const mmValue = formData.get("editMm") as string;
+    const endTimeValue = formData.get("editEndTime") as string;
+    const startTimeValue = formData.get("editStartTime") as string;
+
     const updatedData = {
       date: formData.get("editDate") as string,
-      start_time: formData.get("editStartTime") as string,
-      end_time: formData.get("editEndTime") as string || null,
-      millimeters: parseFloat(formData.get("editMm") as string),
+      start_time: startTimeValue,
+      time: startTimeValue, // Adicionado para preencher a coluna NOT NULL
+      end_time: endTimeValue || null,
+      millimeters: mmValue ? parseFloat(mmValue) : null,
     };
+    
+    // Validação para evitar NaN
+    if (mmValue && isNaN(updatedData.millimeters)) {
+        toast({
+            title: "Valor inválido",
+            description: "O campo milímetros deve ser um número.",
+            variant: "destructive",
+        });
+        return;
+    }
 
     try {
       await updateRecord(editingRecord.id, updatedData);
@@ -198,16 +231,9 @@ const Rain = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="mm">Milímetros (mm)</Label>
-                  <Input 
-                    type="number" 
-                    name="mm" 
-                    placeholder="0.0" 
-                    step="0.1" 
-                    min="0" 
-                    required 
-                  />
+                  <Input type="number" name="mm" step="0.1" placeholder="Opcional no início" />
                 </div>
-                <Button type="submit" className="w-full bg-info hover:bg-info/90">
+                <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">
                   <Plus className="w-4 h-4 mr-2" />
                   Registrar Medição
                 </Button>
@@ -327,7 +353,7 @@ const Rain = () => {
                   type="number" 
                   step="0.1" 
                   min="0" 
-                  defaultValue={editingRecord.millimeters}
+                  defaultValue={editingRecord.millimeters ?? ""}
                   required 
                   placeholder="0.0"
                 />
