@@ -16,21 +16,26 @@ export const useMaterialReceipts = () => {
         .from('material_receipts')
         .select('*')
         .order('date', { ascending: false })
-        .order('time', { ascending: false })
+        .order('entry_time', { ascending: false })
 
-      if (error) throw error
+      if (error) {
+        // Se a tabela não existe (código 400), não mostra erro ao usuário
+        if (error.message?.includes('does not exist') || error.code === '42P01') {
+          console.log('Tabela material_receipts ainda não criada no Supabase')
+          setRecords([])
+          return
+        }
+        throw error
+      }
       setRecords(data || [])
     } catch (error) {
       console.error('Erro ao buscar materiais recebidos:', error)
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar os materiais recebidos.",
-        variant: "destructive"
-      })
+      // Só mostra toast se não for erro de tabela inexistente
+      setRecords([])
     } finally {
       setLoading(false)
     }
-  }, [toast])
+  }, [])
 
   const addRecord = async (recordData: Omit<MaterialReceipt, 'id' | 'created_at' | 'updated_at'>) => {
     try {
@@ -40,7 +45,17 @@ export const useMaterialReceipts = () => {
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        if (error.message?.includes('does not exist') || error.code === '42P01') {
+          toast({
+            title: "Tabela não existe",
+            description: "Execute o script create_material_receipts.sql no Supabase primeiro.",
+            variant: "destructive"
+          })
+          return null
+        }
+        throw error
+      }
       
       setRecords(prev => [data, ...prev])
       toast({

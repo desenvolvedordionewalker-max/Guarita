@@ -27,6 +27,16 @@ const CottonPull = () => {
   
   const farms = ["CARAJAS", "VENTANIA", "SIMARELLI", "MAMOSE", "JUCARA", "SANTA LUZIA", "TALHAO"];
 
+  // Sistema de autocomplete
+  const [savedPlates, setSavedPlates] = useState<string[]>(() => {
+    const saved = localStorage.getItem('guarita_saved_plates');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [savedDrivers, setSavedDrivers] = useState<string[]>(() => {
+    const saved = localStorage.getItem('guarita_saved_drivers');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   // Detectar se veio do Dashboard para marcar saída
   useEffect(() => {
     const exitId = searchParams.get('exit');
@@ -94,9 +104,9 @@ const CottonPull = () => {
     }
   };
   
-  // Temporário: até que exit_time seja adicionado no banco
-  const pendingExits = records; // Todos os registros por enquanto
-  const completed: CottonPullRecord[] = []; // Nenhum completo por enquanto
+  // Separar registros por status de exit_time
+  const pendingExits = records.filter(record => !record.exit_time);
+  const completed = records.filter(record => record.exit_time);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -155,6 +165,18 @@ const CottonPull = () => {
       observations: typeof recordData.observations
     });
     
+    // Salvar dados para autocomplete
+    if (plate && !savedPlates.includes(plate.toUpperCase())) {
+      const newPlates = [...savedPlates, plate.toUpperCase()];
+      setSavedPlates(newPlates);
+      localStorage.setItem('guarita_saved_plates', JSON.stringify(newPlates));
+    }
+    if (driver && !savedDrivers.includes(driver)) {
+      const newDrivers = [...savedDrivers, driver];
+      setSavedDrivers(newDrivers);
+      localStorage.setItem('guarita_saved_drivers', JSON.stringify(newDrivers));
+    }
+
     try {
       await addRecord(recordData);
       // Reset do formulário de forma segura
@@ -200,13 +222,8 @@ const CottonPull = () => {
     }
 
     try {
-      // Atualizar record com exit_time
-      const { error } = await supabase
-        .from('cotton_pull')
-        .update({ exit_time: exitTime })
-        .eq('id', exitRecordId);
-
-      if (error) throw error;
+      // Usar o hook updateRecord ao invés do supabase direto
+      await updateRecord(exitRecordId, { exit_time: exitTime });
 
       toast({
         title: "Saída registrada",
@@ -217,9 +234,8 @@ const CottonPull = () => {
       setExitRecordId("");
       setExitTime("");
       
-      // Recarregar dados
-      window.location.reload();
     } catch (error) {
+      console.error('Erro ao registrar saída:', error);
       toast({
         title: "Erro ao registrar saída",
         description: "Não foi possível registrar a saída do veículo.",
@@ -329,11 +345,28 @@ const CottonPull = () => {
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="plate">Placa do Caminhão</Label>
-                    <Input name="plate" placeholder="ABC-1234" required />
+                    <Input 
+                      name="plate" 
+                      placeholder="ABC-1234" 
+                      required 
+                      list="plates-list"
+                      style={{ textTransform: 'uppercase' }}
+                    />
+                    <datalist id="plates-list">
+                      {savedPlates.map((plate) => <option key={plate} value={plate} />)}
+                    </datalist>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="driver">Nome do Motorista</Label>
-                    <Input name="driver" placeholder="Nome completo" required />
+                    <Input 
+                      name="driver" 
+                      placeholder="Nome completo" 
+                      required 
+                      list="drivers-list"
+                    />
+                    <datalist id="drivers-list">
+                      {savedDrivers.map((driver) => <option key={driver} value={driver} />)}
+                    </datalist>
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -408,118 +441,108 @@ const CottonPull = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Registros de Hoje</CardTitle>
-                <CardDescription>{records.length} puxes realizados</CardDescription>
+                <CardDescription>{records.length} puxes realizados - Total: {totalRolls} rolos</CardDescription>
               </CardHeader>
-            </Card>
-            {records.length === 0 ? (
-              <Card>
-                <CardContent className="py-8">
-                  <p className="text-center text-muted-foreground">
-                    Nenhum registro de algodão encontrado
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              records.map((record) => (
-              <Card key={record.id} className="border-secondary/20">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center justify-between">
-                    <span>PUXE DE ALGODÃO</span>
-                    <span className="text-secondary">{record.rolls} rolos</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Produtora</p>
-                      <p className="font-semibold">{record.producer}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Fazenda</p>
-                      <p className="font-semibold">{record.farm}</p>
-                    </div>
-                    {record.talhao && (
-                      <div>
-                        <p className="text-sm text-muted-foreground">Talhão</p>
-                        <p className="font-semibold">{record.talhao}</p>
-                      </div>
-                    )}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Placa</p>
-                        <p className="font-medium">{record.plate}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Data/Entrada</p>
-                        <p className="font-medium">{new Date(record.date).toLocaleDateString('pt-BR')} - {record.entry_time}</p>
-                      </div>
-                    </div>
-                    {record.exit_time && (
-                      <div className="grid grid-cols-2 gap-4 pt-2 border-t">
-                        <div>
-                          <p className="text-sm text-muted-foreground">Saída</p>
-                          <p className="font-medium text-green-600">{record.exit_time}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Permanência</p>
-                          <p className="font-medium">
-                            {(() => {
-                              try {
-                                const entryTime = new Date(`1970-01-01T${record.entry_time}`);
-                                const exitTime = new Date(`1970-01-01T${record.exit_time}`);
-                                let diffMs = exitTime.getTime() - entryTime.getTime();
-                                
-                                // Se a diferença for negativa (saída no dia seguinte), adicionar 24h
-                                if (diffMs < 0) {
-                                  diffMs += 24 * 60 * 60 * 1000;
-                                }
-                                
-                                const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-                                const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-                                return `${diffHours}h ${diffMins}min`;
-                              } catch (error) {
-                                return "Erro no cálculo";
-                              }
-                            })()}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    <div>
-                      <p className="text-sm text-muted-foreground">Motorista</p>
-                      <p className="font-medium">{record.driver}</p>
-                    </div>
-                    {record.observations && (
-                      <div>
-                        <p className="text-sm text-muted-foreground">Observações</p>
-                        <p className="text-sm italic">{record.observations}</p>
-                      </div>
-                    )}
-                    <div className="flex gap-2 pt-2 border-t">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEditRecord(record)}
-                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                      >
-                        <Edit className="h-4 w-4 mr-1" />
-                        Editar
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDeleteRecord(record.id, record.plate)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4 mr-1" />
-                        Excluir
-                      </Button>
-                    </div>
+              <CardContent>
+                {records.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Package className="w-12 h-12 mx-auto mb-4" />
+                    <p>Nenhum registro de algodão encontrado</p>
                   </div>
-                </CardContent>
-              </Card>
-              ))
-            )}
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left p-3 font-semibold">Data</th>
+                          <th className="text-left p-3 font-semibold">Entrada</th>
+                          <th className="text-left p-3 font-semibold">Saída</th>
+                          <th className="text-left p-3 font-semibold">Permanência</th>
+                          <th className="text-left p-3 font-semibold">Placa</th>
+                          <th className="text-left p-3 font-semibold">Motorista</th>
+                          <th className="text-left p-3 font-semibold">Produtor/Fazenda</th>
+                          <th className="text-center p-3 font-semibold">Rolos</th>
+                          <th className="text-center p-3 font-semibold">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {records.map((record) => {
+                          const permanencia = record.exit_time ? (() => {
+                            try {
+                              const entryTime = new Date(`1970-01-01T${record.entry_time}`);
+                              const exitTime = new Date(`1970-01-01T${record.exit_time}`);
+                              let diffMs = exitTime.getTime() - entryTime.getTime();
+                              
+                              if (diffMs < 0) {
+                                diffMs += 24 * 60 * 60 * 1000;
+                              }
+                              
+                              const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                              const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                              return `${diffHours}h ${diffMins}min`;
+                            } catch (error) {
+                              return "Erro";
+                            }
+                          })() : '-';
+
+                          return (
+                            <tr key={record.id} className="border-b hover:bg-muted/50 transition-colors">
+                              <td className="p-3 font-medium">
+                                {new Date(record.date).toLocaleDateString('pt-BR')}
+                              </td>
+                              <td className="p-3">{record.entry_time}</td>
+                              <td className="p-3">
+                                {record.exit_time ? (
+                                  <span className="text-green-600 font-medium">{record.exit_time}</span>
+                                ) : (
+                                  <span className="text-orange-600">Em andamento</span>
+                                )}
+                              </td>
+                              <td className="p-3 text-green-600 font-medium">{permanencia}</td>
+                              <td className="p-3 font-medium">{record.plate}</td>
+                              <td className="p-3">{record.driver}</td>
+                              <td className="p-3">
+                                <div>
+                                  <span className="font-medium">{record.producer}</span>
+                                  <br />
+                                  <span className="text-muted-foreground text-xs">{record.farm}</span>
+                                  {record.talhao && <span className="text-muted-foreground text-xs"> - {record.talhao}</span>}
+                                </div>
+                              </td>
+                              <td className="p-3 text-center">
+                                <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">
+                                  {record.rolls}
+                                </span>
+                              </td>
+                              <td className="p-3">
+                                <div className="flex gap-1">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleEditRecord(record)}
+                                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 h-7 px-2"
+                                  >
+                                    <Edit className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleDeleteRecord(record.id, record.plate)}
+                                    className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 px-2"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </div>
       </main>

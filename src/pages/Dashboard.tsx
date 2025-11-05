@@ -33,7 +33,7 @@ import logo from "@/assets/BF_logo.png";
 const Dashboard = () => {
   const navigate = useNavigate();
   const { vehicles, loading: loadingVehicles, updateVehicle } = useVehicles();
-  const { records: cottonRecords, loading: loadingCotton } = useCottonPull();
+  const { records: cottonRecords, loading: loadingCotton, updateRecord: updateCottonRecord } = useCottonPull();
   const { records: rainRecords, loading: loadingRain } = useRainRecords();
   const { records: equipmentRecords, loading: loadingEquipment } = useEquipment();
   const { records: loadingRecords, loading: loadingCarregamentos, updateRecord } = useLoadingRecords();
@@ -68,19 +68,20 @@ const Dashboard = () => {
     );
   };
 
-  const handleStartLoading = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleStartLoading = async (event: React.FormEvent) => {
+    event.preventDefault();
     if (!selectedLoading) return;
-    
-    const formData = new FormData(e.currentTarget);
-    const entryDate = formData.get("entryDate") as string;
-    const entryTime = formData.get("entryTime") as string;
-    
+
+    const formData = new FormData(event.target as HTMLFormElement);
+    const entryDate = formData.get('entryDate') as string;
+    const entryTime = formData.get('entryTime') as string;
+
     try {
       await updateRecord(selectedLoading.id, {
         entry_date: entryDate,
         entry_time: entryTime
       });
+      
       setIsManageModalOpen(false);
       setSelectedLoading(null);
     } catch (error) {
@@ -88,7 +89,28 @@ const Dashboard = () => {
     }
   };
 
-  const getProductColor = (product: string) => {
+  const handleFinishLoading = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!selectedLoading) return;
+
+    const formData = new FormData(event.target as HTMLFormElement);
+    const exitDate = formData.get('exitDate') as string;
+    const exitTime = formData.get('exitTime') as string;
+    const invoiceNumber = formData.get('invoiceNumber') as string;
+
+    try {
+      await updateRecord(selectedLoading.id, {
+        exit_date: exitDate,
+        exit_time: exitTime,
+        invoice_number: invoiceNumber
+      });
+      
+      setIsManageModalOpen(false);
+      setSelectedLoading(null);
+    } catch (error) {
+      console.error('Erro ao finalizar carregamento:', error);
+    }
+  };  const getProductColor = (product: string) => {
     switch (product) {
       case 'Pluma':
         return 'border-l-yellow-500 bg-yellow-50 text-yellow-800';
@@ -144,9 +166,11 @@ const Dashboard = () => {
     const now = new Date();
     const exitTime = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     
-    // Aqui você pode implementar a lógica para atualizar o registro
-    // Por enquanto vamos apenas navegar para a tela de Cotton Pull
-    navigate(`/cotton-pull?exit=${cottonPullId}`);
+    try {
+      await updateCottonRecord(cottonPullId, { exit_time: exitTime });
+    } catch (error) {
+      console.error('Erro ao registrar saída do algodão:', error);
+    }
   };  const modules = [
     {
       title: "Veículos", 
@@ -496,10 +520,10 @@ const Dashboard = () => {
 
         {/* Detailed Information Section */}
         <div className="space-y-6">
-          {/* Algodão - Cards Lado a Lado */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Algodão - Layout Otimizado */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             {/* Veículos na Algodoeira */}
-            <Card>
+            <Card className="lg:col-span-4">
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -552,7 +576,7 @@ const Dashboard = () => {
             </Card>
 
             {/* Veículos que Concluíram */}
-            <Card>
+            <Card className="lg:col-span-8">
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -569,31 +593,56 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent>
                 {algodaoConcluido.length > 0 ? (
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {algodaoConcluido
-                      .sort((a, b) => new Date(b.exit_time!).getTime() - new Date(a.exit_time!).getTime())
-                      .slice(0, 10)
-                      .map((cotton) => (
-                        <Card key={cotton.id} className="border-green-200">
-                          <CardContent className="p-3">
-                            <div className="flex justify-between items-start mb-2">
-                              <div>
-                                <p className="font-semibold">{cotton.plate}</p>
-                                <p className="text-sm text-muted-foreground">{cotton.driver}</p>
-                              </div>
-                              <CheckCircle className="w-4 h-4 text-green-500" />
-                            </div>
-                            <div className="text-xs text-muted-foreground space-y-1">
-                              <p><span className="font-medium">Produtor:</span> {cotton.producer}</p>
-                              <p><span className="font-medium">Fazenda:</span> {cotton.farm}</p>
-                              <p><span className="font-medium">Rolos:</span> {cotton.rolls}</p>
-                              <p className="text-green-600 font-medium">
-                                Saída: {cotton.exit_time || '-'}
-                              </p>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
+                  <div className="overflow-x-auto max-h-96 overflow-y-auto">
+                    <table className="w-full text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b bg-gray-50">
+                          <th className="p-2 font-semibold text-left">Placa</th>
+                          <th className="p-2 font-semibold text-left">Motorista</th>
+                          <th className="p-2 font-semibold text-left">Fazenda</th>
+                          <th className="p-2 font-semibold text-left">Talhão</th>
+                          <th className="p-2 font-semibold text-center">Rolos</th>
+                          <th className="p-2 font-semibold text-left">Entrada</th>
+                          <th className="p-2 font-semibold text-left">Saída</th>
+                          <th className="p-2 font-semibold text-left">Permanência</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {algodaoConcluido
+                          .sort((a, b) => new Date(b.exit_time!).getTime() - new Date(a.exit_time!).getTime())
+                          .slice(0, 20)
+                          .map((cotton) => (
+                            <tr key={cotton.id} className="border-b hover:bg-green-50 transition-colors">
+                              <td className="p-2 font-medium border border-gray-200">{cotton.plate}</td>
+                              <td className="p-2 border border-gray-200 truncate max-w-24">{cotton.driver}</td>
+                              <td className="p-2 border border-gray-200 truncate max-w-24">{cotton.farm}</td>
+                              <td className="p-2 border border-gray-200">{cotton.talhao || '-'}</td>
+                              <td className="p-2 border border-gray-200 font-medium text-center">{cotton.rolls}</td>
+                              <td className="p-2 border border-gray-200">{cotton.entry_time || '-'}</td>
+                              <td className="p-2 border border-gray-200">{cotton.exit_time || '-'}</td>
+                              <td className="p-2 border border-gray-200 text-green-600 font-medium">
+                                {cotton.entry_time && cotton.exit_time ? (() => {
+                                  try {
+                                    const entryTime = new Date(`1970-01-01T${cotton.entry_time}`);
+                                    const exitTime = new Date(`1970-01-01T${cotton.exit_time}`);
+                                    let diffMs = exitTime.getTime() - entryTime.getTime();
+                                    
+                                    if (diffMs < 0) {
+                                      diffMs += 24 * 60 * 60 * 1000;
+                                    }
+                                    
+                                    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                                    const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                                    return `${diffHours}h ${diffMins}min`;
+                                  } catch (error) {
+                                    return "Erro";
+                                  }
+                                })() : '-'}
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
                   </div>
                 ) : (
                   <div className="text-center py-6 text-muted-foreground text-sm">
@@ -604,10 +653,10 @@ const Dashboard = () => {
             </Card>
           </div>
 
-          {/* Fila de Carregamento - 3 Cards Lado a Lado */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Fila de Carregamento - Layout Otimizado */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             {/* Fila de Carregamento */}
-            <Card>
+            <Card className="lg:col-span-3">
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -624,10 +673,9 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent>
                 {!loadingCarregamentos && loadingsFila.length > 0 ? (
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
                     {loadingsFila
                       .sort((a, b) => new Date(a.created_at!).getTime() - new Date(b.created_at!).getTime())
-                      .slice(0, 5)
                       .map((loading) => {
                         const { position } = getQueuePosition(loading);
                         return (
@@ -642,7 +690,7 @@ const Dashboard = () => {
                                   <div className="flex items-center gap-2 mb-2">
                                     <span className={`px-2 py-1 rounded text-xs font-bold ${
                                       loading.product === 'Pluma' ? 'bg-yellow-100 text-yellow-800' :
-                                      loading.product === 'Caroço' ? 'bg-amber-100 text-amber-800' :
+                                      loading.product === 'Caroço' ? 'bg-red-100 text-red-800' :
                                       loading.product === 'Fibrilha' ? 'bg-green-100 text-green-800' :
                                       loading.product === 'Briquete' ? 'bg-purple-100 text-purple-800' :
                                       loading.product === 'Reciclados' ? 'bg-blue-100 text-blue-800' :
@@ -690,7 +738,7 @@ const Dashboard = () => {
             </Card>
 
             {/* Carregando */}
-            <Card>
+            <Card className="lg:col-span-3">
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -707,18 +755,21 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent>
                 {!loadingCarregamentos && loadingsCarregando.length > 0 ? (
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
                     {loadingsCarregando
-                      .slice(0, 5)
                       .map((loading) => (
-                        <Card key={loading.id} className="relative border-orange-200">
+                        <Card 
+                          key={loading.id} 
+                          className="relative border-orange-200 cursor-pointer hover:shadow-md transition-shadow"
+                          onClick={() => handleLoadingCardClick(loading)}
+                        >
                           <CardContent className="p-3">
                             <div className="flex justify-between items-start mb-2">
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-2">
                                   <span className={`px-2 py-1 rounded text-xs font-bold ${
                                     loading.product === 'Pluma' ? 'bg-yellow-100 text-yellow-800' :
-                                    loading.product === 'Caroço' ? 'bg-amber-100 text-amber-800' :
+                                    loading.product === 'Caroço' ? 'bg-red-100 text-red-800' :
                                     loading.product === 'Fibrilha' ? 'bg-green-100 text-green-800' :
                                     loading.product === 'Briquete' ? 'bg-purple-100 text-purple-800' :
                                     loading.product === 'Reciclados' ? 'bg-blue-100 text-blue-800' :
@@ -765,7 +816,7 @@ const Dashboard = () => {
             </Card>
 
             {/* Concluídos */}
-            <Card>
+            <Card className="lg:col-span-6">
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -782,51 +833,61 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent>
                 {!loadingCarregamentos && loadingsConcluidos.length > 0 ? (
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {loadingsConcluidos
-                      .sort((a, b) => new Date(b.exit_time!).getTime() - new Date(a.exit_time!).getTime())
-                      .slice(0, 5)
-                      .map((loading) => (
-                        <Card key={loading.id} className="relative border-green-200">
-                          <CardContent className="p-3">
-                            <div className="flex justify-between items-start mb-2">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <span className={`px-2 py-1 rounded text-xs font-bold ${
+                  <div className="overflow-x-auto max-h-96 overflow-y-auto">
+                    <table className="w-full text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b bg-gray-50">
+                          <th className="p-2 font-semibold text-left">Placa</th>
+                          <th className="p-2 font-semibold text-left">Motorista</th>
+                          <th className="p-2 font-semibold text-left">Produto</th>
+                          <th className="p-2 font-semibold text-left">H.Entrada</th>
+                          <th className="p-2 font-semibold text-left">H.Saída</th>
+                          <th className="p-2 font-semibold text-center">Permanência</th>
+                          <th className="p-2 font-semibold text-center">Peso/Fardos</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {loadingsConcluidos
+                          .sort((a, b) => new Date(b.exit_time!).getTime() - new Date(a.exit_time!).getTime())
+                          .slice(0, 10)
+                          .map((loading) => {
+                            const entryTime = loading.entry_time;
+                            const exitTime = loading.exit_time;
+                            const permanencia = entryTime && exitTime ? 
+                              (() => {
+                                const [entryH, entryM] = entryTime.split(':').map(Number);
+                                const [exitH, exitM] = exitTime.split(':').map(Number);
+                                const totalMinutes = (exitH * 60 + exitM) - (entryH * 60 + entryM);
+                                const hours = Math.floor(totalMinutes / 60);
+                                const minutes = totalMinutes % 60;
+                                return `${hours}h ${minutes}min`;
+                              })() : '-';
+                            
+                            return (
+                              <tr key={loading.id} className="border-b hover:bg-green-50 transition-colors">
+                                <td className="p-2 font-medium border border-gray-200">{loading.plate}</td>
+                                <td className="p-2 border border-gray-200 truncate max-w-24">{loading.driver}</td>
+                                <td className="p-2 border border-gray-200">
+                                  <span className={`px-2 py-1 rounded text-xs ${
                                     loading.product === 'Pluma' ? 'bg-yellow-100 text-yellow-800' :
-                                    loading.product === 'Caroço' ? 'bg-amber-100 text-amber-800' :
+                                    loading.product === 'Caroço' ? 'bg-red-100 text-red-800' :
                                     loading.product === 'Fibrilha' ? 'bg-green-100 text-green-800' :
-                                    loading.product === 'Briquete' ? 'bg-purple-100 text-purple-800' :
-                                    loading.product === 'Reciclados' ? 'bg-blue-100 text-blue-800' :
-                                    loading.product === 'Cavaco' ? 'bg-orange-100 text-orange-800' :
-                                    loading.product === 'Outros' ? 'bg-pink-100 text-pink-800' :
                                     'bg-gray-100 text-gray-800'
                                   }`}>
                                     {loading.product}
                                   </span>
-                                  <CheckCircle className="w-3 h-3 text-green-500" />
-                                </div>
-                                <p className="font-semibold">{loading.plate}</p>
-                              </div>
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              <p className="truncate">{loading.driver}</p>
-                              <p className="truncate">{loading.carrier}</p>
-                              {loading.exit_time && (
-                                <p className="text-green-600 font-medium">
-                                  Concluído: {new Date(loading.exit_time).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                                </p>
-                              )}
-                              {loading.invoice_number && (
-                                <p className="text-blue-600 font-medium">
-                                  NF: {loading.invoice_number}
-                                </p>
-                              )}
-
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
+                                </td>
+                                <td className="p-2 border border-gray-200">{entryTime || '-'}</td>
+                                <td className="p-2 border border-gray-200 text-green-600 font-medium">{exitTime || '-'}</td>
+                                <td className="p-2 border border-gray-200 text-center font-medium text-green-600">{permanencia}</td>
+                                <td className="p-2 border border-gray-200 text-center">
+                                  {loading.weight ? `${loading.weight}kg` : loading.bales ? `${loading.bales} fardos` : '-'}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                      </tbody>
+                    </table>
                   </div>
                 ) : (
                   <div className="text-center py-6 text-muted-foreground text-sm">
@@ -847,12 +908,12 @@ const Dashboard = () => {
           {/* Movimentação Geral de Veículos */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-base">
                 <Truck className="w-5 h-5 text-primary" />
-                Movimentação Geral de Veículos
+                movimentação geral de veículos
               </CardTitle>
               <CardDescription>
-                Todos os veículos que entraram hoje
+                todos os veículos que entraram hoje
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -861,23 +922,23 @@ const Dashboard = () => {
                   <table className="w-full border-collapse">
                     <thead>
                       <tr className="border-b">
-                        <th className="text-left p-2 font-semibold">Placa</th>
-                        <th className="text-left p-2 font-semibold">Motorista</th>
-                        <th className="text-left p-2 font-semibold">Tipo</th>
-                        <th className="text-left p-2 font-semibold">Finalidade</th>
-                        <th className="text-left p-2 font-semibold">Entrada</th>
-                        <th className="text-left p-2 font-semibold">Saída</th>
-                        <th className="text-left p-2 font-semibold">Status</th>
-                        <th className="text-left p-2 font-semibold">Ação</th>
+                        <th className="text-left p-2 font-semibold text-sm">placa</th>
+                        <th className="text-left p-2 font-semibold text-sm">motorista</th>
+                        <th className="text-left p-2 font-semibold text-sm">tipo</th>
+                        <th className="text-left p-2 font-semibold text-sm">finalidade</th>
+                        <th className="text-left p-2 font-semibold text-sm">entrada</th>
+                        <th className="text-left p-2 font-semibold text-sm">saída</th>
+                        <th className="text-left p-2 font-semibold text-sm">status</th>
+                        <th className="text-left p-2 font-semibold text-sm">ação</th>
                       </tr>
                     </thead>
                     <tbody>
                       {todayVehicles.slice(0, 10).map((vehicle) => (
                         <tr key={vehicle.id} className="border-b hover:bg-gray-50">
-                          <td className="p-2 font-medium">{vehicle.plate}</td>
-                          <td className="p-2">{vehicle.driver}</td>
-                          <td className="p-2">{vehicle.type}</td>
-                          <td className="p-2">{vehicle.purpose}</td>
+                          <td className="p-2 font-medium text-sm">{vehicle.plate}</td>
+                          <td className="p-2 text-sm">{vehicle.driver}</td>
+                          <td className="p-2 text-sm">{vehicle.type}</td>
+                          <td className="p-2 text-sm">{vehicle.purpose}</td>
                           <td className="p-2 text-sm">
                             {vehicle.date} {vehicle.entry_time}
                           </td>
@@ -888,7 +949,7 @@ const Dashboard = () => {
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                               vehicle.exit_time ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'
                             }`}>
-                              {vehicle.exit_time ? 'Saiu' : 'No Pátio'}
+                              {vehicle.exit_time ? 'saiu' : 'no pátio'}
                             </span>
                           </td>
                           <td className="p-2">
@@ -897,9 +958,9 @@ const Dashboard = () => {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleRegisterVehicleExit(vehicle.id)}
-                                className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                className="text-green-600 hover:text-green-700 hover:bg-green-50 text-xs"
                               >
-                                Registrar Saída
+                                registrar saída
                               </Button>
                             )}
                           </td>
@@ -909,21 +970,21 @@ const Dashboard = () => {
                   </table>
                   {todayVehicles.length > 10 && (
                     <div className="mt-4 text-center">
-                      <Button variant="outline" onClick={() => navigate('/vehicles')}>
-                        Ver todos os {todayVehicles.length} veículos
+                      <Button variant="outline" onClick={() => navigate('/vehicles')} className="text-sm">
+                        ver todos os {todayVehicles.length} veículos
                       </Button>
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
+                <div className="text-center py-8 text-muted-foreground text-sm">
                   {loadingVehicles ? (
                     <div className="flex items-center justify-center">
                       <Loader2 className="w-6 h-6 animate-spin mr-2" />
-                      Carregando...
+                      carregando...
                     </div>
                   ) : (
-                    "Nenhum veículo registrado hoje"
+                    "nenhum veículo registrado hoje"
                   )}
                 </div>
               )}
@@ -934,11 +995,14 @@ const Dashboard = () => {
 
       {/* Modal de Gerenciamento de Carregamento */}
       <Dialog open={isManageModalOpen} onOpenChange={setIsManageModalOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-sm max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Gerenciar Carregamento</DialogTitle>
             <DialogDescription>
-              Registre a data e hora de entrada para mover para "Carregando"
+              {selectedLoading && !selectedLoading.entry_date 
+                ? "Registre a data e hora de entrada para mover para \"Carregando\""
+                : "Finalize o carregamento com data, hora e nota fiscal"
+              }
             </DialogDescription>
           </DialogHeader>
           
@@ -948,8 +1012,12 @@ const Dashboard = () => {
                 <div className="flex items-center gap-2 mb-2">
                   <span className={`px-3 py-1 rounded-full text-sm font-bold ${
                     selectedLoading.product === 'Pluma' ? 'bg-yellow-100 text-yellow-800' :
-                    selectedLoading.product === 'Caroço' ? 'bg-amber-100 text-amber-800' :
+                    selectedLoading.product === 'Caroço' ? 'bg-red-100 text-red-800' :
                     selectedLoading.product === 'Fibrilha' ? 'bg-green-100 text-green-800' :
+                    selectedLoading.product === 'Briquete' ? 'bg-purple-100 text-purple-800' :
+                    selectedLoading.product === 'Reciclados' ? 'bg-blue-100 text-blue-800' :
+                    selectedLoading.product === 'Cavaco' ? 'bg-orange-100 text-orange-800' :
+                    selectedLoading.product === 'Outros' ? 'bg-pink-100 text-pink-800' :
                     'bg-gray-100 text-gray-800'
                   }`}>
                     {selectedLoading.product}
@@ -959,45 +1027,103 @@ const Dashboard = () => {
                 <p className="text-sm text-muted-foreground">
                   Motorista: {selectedLoading.driver} | {selectedLoading.carrier}
                 </p>
+                {selectedLoading.entry_date && (
+                  <p className="text-sm text-orange-600 font-medium mt-2">
+                    Carregamento iniciado: {selectedLoading.entry_date} {selectedLoading.entry_time}
+                  </p>
+                )}
               </div>
 
-              <form onSubmit={handleStartLoading} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="entryDate">Data de Entrada</Label>
-                    <Input
-                      id="entryDate"
-                      name="entryDate"
-                      type="date"
-                      defaultValue={new Date().toISOString().split('T')[0]}
-                      required
-                    />
+              {!selectedLoading.entry_date ? (
+                // Formulário para INICIAR carregamento
+                <form onSubmit={handleStartLoading} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="entryDate">Data de Entrada</Label>
+                      <Input
+                        id="entryDate"
+                        name="entryDate"
+                        type="date"
+                        defaultValue={new Date().toISOString().split('T')[0]}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="entryTime">Hora de Entrada</Label>
+                      <Input
+                        id="entryTime"
+                        name="entryTime"
+                        type="time"
+                        defaultValue={new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                        required
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="entryTime">Hora de Entrada</Label>
-                    <Input
-                      id="entryTime"
-                      name="entryTime"
-                      type="time"
-                      defaultValue={new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                      required
-                    />
-                  </div>
-                </div>
 
-                <DialogFooter className="gap-2">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={() => setIsManageModalOpen(false)}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button type="submit" className="bg-green-600 hover:bg-green-700">
-                    Iniciar Carregamento
-                  </Button>
-                </DialogFooter>
-              </form>
+                  <DialogFooter className="gap-2">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => setIsManageModalOpen(false)}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+                      Iniciar Carregamento
+                    </Button>
+                  </DialogFooter>
+                </form>
+              ) : (
+                // Formulário para FINALIZAR carregamento
+                <form onSubmit={handleFinishLoading} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="exitDate">Data de Saída</Label>
+                      <Input
+                        id="exitDate"
+                        name="exitDate"
+                        type="date"
+                        defaultValue={new Date().toISOString().split('T')[0]}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="exitTime">Hora de Saída</Label>
+                      <Input
+                        id="exitTime"
+                        name="exitTime"
+                        type="time"
+                        defaultValue={new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                        required
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="invoiceNumber">Número da Nota Fiscal *</Label>
+                    <Input
+                      id="invoiceNumber"
+                      name="invoiceNumber"
+                      type="text"
+                      placeholder="Ex: 123.456"
+                      required
+                    />
+                  </div>
+
+                  <DialogFooter className="gap-2">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => setIsManageModalOpen(false)}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button type="submit" className="bg-green-600 hover:bg-green-700">
+                      Finalizar Carregamento
+                    </Button>
+                  </DialogFooter>
+                </form>
+              )}
             </>
           )}
         </DialogContent>

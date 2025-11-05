@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, CloudRain, Truck, PackageCheck, Clock } from "lucide-react";
 import { useVehicles, useCottonPull, useRainRecords, useLoadingRecords } from "@/hooks/use-supabase";
+import { useMaterialReceipts } from "@/hooks/use-material-receipts";
 import ControleGuaritaFitScreen from "@/components/ControleGuaritaFitScreen";
 import logo from "@/assets/BF_logo.png";
 
@@ -10,8 +11,10 @@ export default function DashboardPortariaTV() {
   const { records: cottonPullRecords, loading: loadingCotton } = useCottonPull();
   const { records: rainRecords, loading: loadingRain } = useRainRecords();
   const { records: loadingRecords, loading: loadingLoadings } = useLoadingRecords();
+  const { records: materialRecords, loading: loadingMaterials } = useMaterialReceipts();
   
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [bannerIndex, setBannerIndex] = useState(0);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -20,7 +23,45 @@ export default function DashboardPortariaTV() {
     return () => clearInterval(timer);
   }, []);
 
-  const loading = loadingVehicles || loadingCotton || loadingRain || loadingLoadings;
+  const getBannerMessages = useCallback(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const todayMaterials = materialRecords.filter(m => m.date === today);
+    
+    const messages = [];
+    
+    if (todayMaterials.length === 0) {
+      messages.push("📦 Nenhum material recebido hoje");
+    } else {
+      // Mensagem geral
+      const totalWeight = todayMaterials.reduce((sum, m) => sum + m.net_weight, 0);
+      messages.push(`📦 ${todayMaterials.length} materiais recebidos hoje - Total: ${totalWeight.toFixed(1)}t`);
+      
+      // Por tipo de material
+      const materialsByType = todayMaterials.reduce((acc: Record<string, number>, m) => {
+        acc[m.material_type] = (acc[m.material_type] || 0) + m.net_weight;
+        return acc;
+      }, {});
+      
+      Object.entries(materialsByType).forEach(([type, weight]) => {
+        messages.push(`📦 ${type}: ${weight.toFixed(1)}t recebidos hoje`);
+      });
+    }
+    
+    return messages;
+  }, [materialRecords]);
+
+  // Banner rotativo para materiais
+  useEffect(() => {
+    const messages = getBannerMessages();
+    if (messages.length === 0) return;
+    
+    const bannerTimer = setInterval(() => {
+      setBannerIndex(prev => (prev + 1) % messages.length);
+    }, 5000); // muda a cada 5 segundos
+    return () => clearInterval(bannerTimer);
+  }, [materialRecords, getBannerMessages]);
+
+  const loading = loadingVehicles || loadingCotton || loadingRain || loadingLoadings || loadingMaterials;
 
   if (loading) {
     return (
@@ -190,6 +231,13 @@ export default function DashboardPortariaTV() {
               })}
             </p>
           </div>
+        </div>
+      </div>
+
+      {/* BANNER MATERIAIS RECEBIDOS */}
+      <div className="bg-gradient-to-r from-orange-600 to-orange-500 text-white px-4 py-2 overflow-hidden">
+        <div className="animate-pulse text-center font-semibold text-[clamp(0.8rem,1.2vw,1.3rem)]">
+          {getBannerMessages()[bannerIndex] || "📦 Sistema de materiais carregando..."}
         </div>
       </div>
 

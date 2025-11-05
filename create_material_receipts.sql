@@ -4,11 +4,12 @@
 CREATE TABLE IF NOT EXISTS material_receipts (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   date DATE NOT NULL DEFAULT CURRENT_DATE,
-  time TIME NOT NULL DEFAULT CURRENT_TIME,
+  entry_time TIME NOT NULL DEFAULT CURRENT_TIME,
+  exit_time TIME, -- Hora de saída
   material_type VARCHAR(50) NOT NULL, -- Areia, Cascalho, Cavaco, Pedra Brita, Pó de Pedra, Álcool
   plate VARCHAR(20) NOT NULL,
   driver VARCHAR(255) NOT NULL,
-  net_weight DECIMAL(10,3), -- Peso Líquido em toneladas
+  net_weight DECIMAL(10,3) NOT NULL, -- Peso Líquido em toneladas (OBRIGATÓRIO)
   volume_m3 DECIMAL(10,3), -- Volume em metros cúbicos
   volume_m2 DECIMAL(10,3), -- Volume em metros quadrados
   volume_liters DECIMAL(10,3), -- Volume em litros

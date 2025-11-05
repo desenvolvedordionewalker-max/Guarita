@@ -32,6 +32,16 @@ const Loading = () => {
   const [newProduct, setNewProduct] = useState("");
   const [showForm, setShowForm] = useState(false);
 
+  // Sistema de autocomplete
+  const [savedPlates, setSavedPlates] = useState<string[]>(() => {
+    const saved = localStorage.getItem('guarita_saved_plates');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [savedDrivers, setSavedDrivers] = useState<string[]>(() => {
+    const saved = localStorage.getItem('guarita_saved_drivers');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   // Detectar se veio do Dashboard para editar
   useEffect(() => {
     const editId = searchParams.get('edit');
@@ -71,6 +81,21 @@ const Loading = () => {
       exit_date: formData.get("exit_date") as string || null,
       exit_time: formData.get("exit_time") as string || null
     };
+    
+    // Salvar dados para autocomplete
+    const plate = formData.get("plate") as string;
+    const driver = formData.get("driver") as string;
+    
+    if (plate && !savedPlates.includes(plate.toUpperCase())) {
+      const newPlates = [...savedPlates, plate.toUpperCase()];
+      setSavedPlates(newPlates);
+      localStorage.setItem('guarita_saved_plates', JSON.stringify(newPlates));
+    }
+    if (driver && !savedDrivers.includes(driver)) {
+      const newDrivers = [...savedDrivers, driver];
+      setSavedDrivers(newDrivers);
+      localStorage.setItem('guarita_saved_drivers', JSON.stringify(newDrivers));
+    }
     
     try {
       if (isEditMode && selectedLoading) {
@@ -299,8 +324,29 @@ const Loading = () => {
                 <div className="space-y-2"><Label>Cliente (opcional)</Label><Input name="client" placeholder="Nome do cliente" /></div>
               </div>
               <div className="grid sm:grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>Placa</Label><Input name="plate" required /></div>
-                <div className="space-y-2"><Label>Motorista</Label><Input name="driver" required /></div>
+                <div className="space-y-2">
+                  <Label>Placa</Label>
+                  <Input 
+                    name="plate" 
+                    required 
+                    list="plates-list"
+                    style={{ textTransform: 'uppercase' }}
+                  />
+                  <datalist id="plates-list">
+                    {savedPlates.map((plate) => <option key={plate} value={plate} />)}
+                  </datalist>
+                </div>
+                <div className="space-y-2">
+                  <Label>Motorista</Label>
+                  <Input 
+                    name="driver" 
+                    required 
+                    list="drivers-list"
+                  />
+                  <datalist id="drivers-list">
+                    {savedDrivers.map((driver) => <option key={driver} value={driver} />)}
+                  </datalist>
+                </div>
               </div>
               <Button type="submit" className="w-full bg-accent hover:bg-accent/90"><Plus className="w-4 h-4 mr-2" />Adicionar à Fila</Button>
             </form>
@@ -461,7 +507,7 @@ const Loading = () => {
       </main>
 
       <Dialog open={isDialogOpen} onOpenChange={() => {setIsDialogOpen(false); setIsEditMode(false);}}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-sm max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {isEditMode ? "Editar Carregamento" : "Gerenciar Carregamento"}

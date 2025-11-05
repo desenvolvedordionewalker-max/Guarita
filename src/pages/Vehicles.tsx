@@ -23,9 +23,19 @@ const Vehicles = () => {
   const urlParams = new URLSearchParams(window.location.search);
   const isCarregamento = urlParams.get('type') === 'carregamento';
   
-  const [savedPlates, setSavedPlates] = useState<string[]>([]);
-  const [savedDrivers, setSavedDrivers] = useState<string[]>([]);
-  const [savedVehicleTypes, setSavedVehicleTypes] = useState<string[]>(["Carreta", "Caminhão", "Van", "Carro", "Moto"]);
+  // Carregar dados salvos do localStorage
+  const [savedPlates, setSavedPlates] = useState<string[]>(() => {
+    const saved = localStorage.getItem('guarita_saved_plates');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [savedDrivers, setSavedDrivers] = useState<string[]>(() => {
+    const saved = localStorage.getItem('guarita_saved_drivers');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [savedVehicleTypes, setSavedVehicleTypes] = useState<string[]>(() => {
+    const saved = localStorage.getItem('guarita_saved_vehicle_types');
+    return saved ? JSON.parse(saved) : ["Carreta", "Caminhão", "Van", "Carro", "Moto"];
+  });
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
 
@@ -69,6 +79,8 @@ const Vehicles = () => {
     if (!editingVehicle) return;
     
     const formData = new FormData(e.currentTarget);
+    const exitTime = formData.get("exitTime") as string;
+    
     const updates = {
       type: formData.get("type") as string,
       date: formData.get("date") as string,
@@ -79,7 +91,7 @@ const Vehicles = () => {
       purpose: formData.get("purpose") as string,
       producer_name: formData.get("producer") as string,
       observations: formData.get("observations") as string,
-      exit_time: formData.get("exitTime") as string || undefined,
+      exit_time: exitTime && exitTime.trim() !== "" ? exitTime : null,
     };
 
     try {
@@ -101,9 +113,21 @@ const Vehicles = () => {
     const producerName = formData.get("producer") as string;
     
     // Salvar valores para autocomplete futuro
-    if (plate && !savedPlates.includes(plate)) setSavedPlates([...savedPlates, plate]);
-    if (driver && !savedDrivers.includes(driver)) setSavedDrivers([...savedDrivers, driver]);
-    if (vehicleType && !savedVehicleTypes.includes(vehicleType)) setSavedVehicleTypes([...savedVehicleTypes, vehicleType]);
+    if (plate && !savedPlates.includes(plate)) {
+      const newPlates = [...savedPlates, plate];
+      setSavedPlates(newPlates);
+      localStorage.setItem('guarita_saved_plates', JSON.stringify(newPlates));
+    }
+    if (driver && !savedDrivers.includes(driver)) {
+      const newDrivers = [...savedDrivers, driver];
+      setSavedDrivers(newDrivers);
+      localStorage.setItem('guarita_saved_drivers', JSON.stringify(newDrivers));
+    }
+    if (vehicleType && !savedVehicleTypes.includes(vehicleType)) {
+      const newVehicleTypes = [...savedVehicleTypes, vehicleType];
+      setSavedVehicleTypes(newVehicleTypes);
+      localStorage.setItem('guarita_saved_vehicle_types', JSON.stringify(newVehicleTypes));
+    }
     
     const vehicleData = {
       type: formData.get("type") as string,
@@ -347,14 +371,20 @@ const Vehicles = () => {
             <form onSubmit={handleSaveEdit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="edit-type">Tipo</Label>
+                  <Label htmlFor="edit-type">Tipo de Entrada</Label>
                   <Select name="type" defaultValue={editingVehicle.type}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="entrada">Entrada</SelectItem>
-                      <SelectItem value="saida">Saída</SelectItem>
+                      <SelectItem value="Carregamento">Carregamento</SelectItem>
+                      <SelectItem value="Colaborador">Colaborador</SelectItem>
+                      <SelectItem value="Visitante">Visitante</SelectItem>
+                      <SelectItem value="Fornecedor">Fornecedor</SelectItem>
+                      <SelectItem value="Prestador">Prestador</SelectItem>
+                      <SelectItem value="Diretoria">Diretoria</SelectItem>
+                      <SelectItem value="Regional">Regional</SelectItem>
+                      <SelectItem value="Cliente">Cliente</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

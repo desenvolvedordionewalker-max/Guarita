@@ -37,26 +37,27 @@ const MaterialReceipts = () => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     
-    const recordData = {
+    const quantity = parseFloat(formData.get("quantity") as string);
+    const unitType = formData.get("unit_type") as MaterialReceipt['unit_type'];
+    
+    const recordData: Omit<MaterialReceipt, 'id' | 'created_at' | 'updated_at'> = {
       date: formData.get("date") as string,
-      time: formData.get("time") as string,
+      entry_time: formData.get("time") as string,
       material_type: formData.get("material_type") as string,
       plate: formData.get("plate") as string,
       driver: formData.get("driver") as string,
-      unit_type: formData.get("unit_type") as MaterialReceipt['unit_type'],
-      observations: formData.get("observations") as string,
+      unit_type: unitType,
+      observations: (formData.get("observations") as string) || "",
+      net_weight: quantity, // Sempre obrigatório
     };
 
     // Adicionar quantidade baseada no tipo de unidade
-    const quantity = parseFloat(formData.get("quantity") as string);
-    if (recordData.unit_type === "KG") {
-      Object.assign(recordData, { net_weight: quantity });
-    } else if (recordData.unit_type === "M3") {
-      Object.assign(recordData, { volume_m3: quantity });
-    } else if (recordData.unit_type === "M2") {
-      Object.assign(recordData, { volume_m2: quantity });
-    } else if (recordData.unit_type === "LITROS") {
-      Object.assign(recordData, { volume_liters: quantity });
+    if (unitType === "M3") {
+      recordData.volume_m3 = quantity;
+    } else if (unitType === "M2") {
+      recordData.volume_m2 = quantity;
+    } else if (unitType === "LITROS") {
+      recordData.volume_liters = quantity;
     }
 
     try {
@@ -80,6 +81,17 @@ const MaterialReceipts = () => {
       } catch (error) {
         console.error('Erro ao deletar:', error);
       }
+    }
+  };
+
+  const handleMarkExit = async (id: string) => {
+    const now = new Date();
+    const exitTime = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    
+    try {
+      await updateRecord(id, { exit_time: exitTime });
+    } catch (error) {
+      console.error('Erro ao marcar saída:', error);
     }
   };
 
@@ -185,7 +197,14 @@ const MaterialReceipts = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {records.map((record) => (
+              {records
+                .sort((a, b) => {
+                  // Pendentes primeiro, depois por data/hora mais recente
+                  if (!a.exit_time && b.exit_time) return -1;
+                  if (a.exit_time && !b.exit_time) return 1;
+                  return new Date(`${b.date} ${b.entry_time}`).getTime() - new Date(`${a.date} ${a.entry_time}`).getTime();
+                })
+                .map((record) => (
                 <div key={record.id} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
                   <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                     <div className="flex-1 space-y-2">
@@ -194,14 +213,22 @@ const MaterialReceipts = () => {
                           {record.material_type}
                         </Badge>
                         <Badge variant="secondary">{formatQuantity(record)}</Badge>
+                        <Badge variant={record.exit_time ? "default" : "destructive"}>
+                          {record.exit_time ? "Concluído" : "Pendente"}
+                        </Badge>
                         <span className="text-sm text-muted-foreground">
-                          {new Date(record.date).toLocaleDateString('pt-BR')} às {record.time}
+                          {new Date(record.date).toLocaleDateString('pt-BR')} às {record.entry_time}
                         </span>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                         <div><span className="font-medium">Placa:</span> {record.plate}</div>
                         <div><span className="font-medium">Motorista:</span> {record.driver}</div>
                       </div>
+                      {record.exit_time && (
+                        <div className="text-sm text-green-600 bg-green-50 p-2 rounded">
+                          <span className="font-medium">Saída:</span> {record.exit_time}
+                        </div>
+                      )}
                       {record.observations && (
                         <div className="text-sm text-muted-foreground">
                           <span className="font-medium">Obs:</span> {record.observations}
@@ -209,6 +236,17 @@ const MaterialReceipts = () => {
                       )}
                     </div>
                     <div className="flex gap-2">
+                      {!record.exit_time && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleMarkExit(record.id)}
+                          className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                        >
+                          <Clock className="w-3 h-3 mr-1" />
+                          Marcar Saída
+                        </Button>
+                      )}
                       <Button
                         variant="outline"
                         size="sm"
@@ -268,7 +306,7 @@ const MaterialReceipts = () => {
                 <Input 
                   name="time" 
                   type="time" 
-                  defaultValue={selectedRecord?.time || new Date().toTimeString().slice(0,5)}
+                  defaultValue={selectedRecord?.entry_time || new Date().toTimeString().slice(0,5)}
                   required 
                 />
               </div>

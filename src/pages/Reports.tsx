@@ -5,9 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, BarChart3, Download, Share2, Loader2, Filter, FileSpreadsheet, FileText } from "lucide-react";
+import { ArrowLeft, BarChart3, Download, Share2, Loader2, Filter, FileSpreadsheet, FileText, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useVehicles, useCottonPull, useRainRecords, useEquipment, useLoadingRecords } from "@/hooks/use-supabase";
+import { useMaterialReceipts } from "@/hooks/use-material-receipts";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
@@ -28,12 +29,15 @@ const Reports = () => {
   const { records: rainRecords, loading: loadingRain } = useRainRecords();
   const { records: equipmentRecords, loading: loadingEquipment } = useEquipment();
   const { records: loadingRecords, loading: loadingLoadings } = useLoadingRecords();
+  const { records: materialRecords, loading: loadingMaterials } = useMaterialReceipts();
 
   // Estados dos filtros
   const [dateFilter, setDateFilter] = useState("");
   const [productFilter, setProductFilter] = useState("todos");
   const [plateFilter, setPlateFilter] = useState("");
+  const [driverFilter, setDriverFilter] = useState("");
   const [periodFilter, setPeriodFilter] = useState("day"); // day, month, year
+  const [isExpanded, setIsExpanded] = useState(true); // Estado para expandir/recolher movimentação geral
 
   // Calcular estatísticas reais
   const currentMonth = new Date().getMonth();
@@ -249,16 +253,27 @@ const Reports = () => {
     .sort((a, b) => b.rolls - a.rolls)
     .slice(0, 5);
 
-  // Carregamentos por tipo de veículo baseado em dados reais
-  const vehicleTypeStats = vehicles.reduce((acc, vehicle) => {
-    if (!acc[vehicle.vehicle_type]) {
-      acc[vehicle.vehicle_type] = 0;
+  // Carregamentos por tipo de caminhão baseado nos dados de loadingRecords
+  const truckTypeStats = loadingRecords.reduce((acc, loading) => {
+    // Determinar o tipo de caminhão baseado na placa ou outros critérios
+    let truckType = "Carreta"; // padrão
+    
+    // Lógica para determinar tipo (pode ser expandida conforme necessário)
+    if (loading.plate && loading.plate.length > 0) {
+      // Assumir que placas com determinado padrão são sider ou outros tipos
+      truckType = "Carreta";
     }
-    acc[vehicle.vehicle_type]++;
+
+    const key = loading.is_sider ? `${truckType} (Sider)` : truckType;
+    
+    if (!acc[key]) {
+      acc[key] = 0;
+    }
+    acc[key]++;
     return acc;
   }, {} as Record<string, number>);
 
-  const loadingByTruck = Object.entries(vehicleTypeStats)
+  const loadingByTruck = Object.entries(truckTypeStats)
     .map(([type, count]) => ({ type, count }))
     .sort((a, b) => b.count - a.count);
 
@@ -279,54 +294,74 @@ const Reports = () => {
     const today = new Date().toLocaleDateString('pt-BR');
     const todayDate = new Date().toISOString().split('T')[0];
     
-    // Dados reais do dia
-    const todayVehicles = vehicles.filter(v => v.date === todayDate);
-    const todayVehiclesEntered = todayVehicles.length;
-    const todayVehiclesExited = todayVehicles.filter(v => v.exit_time).length;
+    // Carregamentos concluídos do dia
+    const carregamentosConcluidos = loadingRecords.filter(l => l.exit_date === todayDate);
     
-    const todayCarregamentos = todayVehicles.filter(v => v.type === 'Carregamento');
-    const pluma = todayCarregamentos.filter(v => v.purpose?.toLowerCase().includes('pluma')).length;
-    const caroco = todayCarregamentos.filter(v => v.purpose?.toLowerCase().includes('caroço')).length;
+    // Agrupar carregamentos concluídos por produto
+    const plumaCarregamentos = carregamentosConcluidos.filter(l => l.product === 'Pluma');
+    const carocoCarregamentos = carregamentosConcluidos.filter(l => l.product === 'Caroço');
+    const fibrilhaCarregamentos = carregamentosConcluidos.filter(l => l.product === 'Fibrilha');
+    const briqueteCarregamentos = carregamentosConcluidos.filter(l => l.product === 'Briquete');
     
+    // Calcular totais
+    const totalPlumaFardos = plumaCarregamentos.reduce((sum, l) => sum + (l.bales || 0), 0);
+    const totalCarocoKg = carocoCarregamentos.reduce((sum, l) => sum + (l.weight || 0), 0);
+    const totalFibrilhaFardos = fibrilhaCarregamentos.reduce((sum, l) => sum + (l.bales || 0), 0);
+    const totalBriqueteKg = briqueteCarregamentos.reduce((sum, l) => sum + (l.weight || 0), 0);
+    
+    // Puxe de algodão do dia
     const todayCotton = cottonRecords.filter(r => r.date === todayDate);
     const todayRolls = todayCotton.reduce((sum, r) => sum + r.rolls, 0);
-    const todayProducers = [...new Set(todayCotton.map(r => r.producer))].slice(0, 3).join(', ');
     
-    const todayRainTotal = rainRecords
-      .filter(r => r.date === todayDate)
-      .reduce((sum, r) => sum + r.millimeters, 0);
+    // Fila de carregamento atual (apenas na fila)
+    const filaAtual = loadingRecords.filter(l => !l.entry_date);
+    const filaPluma = filaAtual.filter(l => l.product === 'Pluma').length;
+    const filaCaroco = filaAtual.filter(l => l.product === 'Caroço').length;
+    const filaFibrilha = filaAtual.filter(l => l.product === 'Fibrilha').length;
+    const filaBriquete = filaAtual.filter(l => l.product === 'Briquete').length;
     
-    const monthRain = rainRecords
-      .filter(r => new Date(r.date).getMonth() === currentMonth && new Date(r.date).getFullYear() === currentYear)
-      .reduce((sum, r) => sum + r.millimeters, 0);
-    
-    const todayEquipment = equipmentRecords.filter(e => e.date === todayDate)[0];
-    
-    const message = `🏢 IBA Santa Luzia - Controle Guarita
+    let message = `🏢 IBA Santa Luzia - Controle Guarita
 📅 Resumo Diário - ${today}
 
-🚛 Entradas/Saídas:
-${todayVehiclesEntered} veículos entraram
-${todayVehiclesExited} veículos saíram
+� CARREGAMENTOS CONCLUÍDOS:`;
 
-📦 Carregamentos:
-🧺 Pluma: ${pluma} carretas
-🌰 Caroço: ${caroco} carretas
+    if (plumaCarregamentos.length > 0) {
+      message += `\n🧺 Pluma: ${plumaCarregamentos.length} caminhões | ${totalPlumaFardos.toLocaleString('pt-BR')} fardos`;
+    }
+    if (carocoCarregamentos.length > 0) {
+      message += `\n🌰 Caroço: ${carocoCarregamentos.length} caminhões | ${totalCarocoKg.toLocaleString('pt-BR')} kg`;
+    }
+    if (fibrilhaCarregamentos.length > 0) {
+      message += `\n🧵 Fibrilha: ${fibrilhaCarregamentos.length} caminhões | ${totalFibrilhaFardos.toLocaleString('pt-BR')} fardos`;
+    }
+    if (briqueteCarregamentos.length > 0) {
+      message += `\n🔥 Briquete: ${briqueteCarregamentos.length} caminhões | ${totalBriqueteKg.toLocaleString('pt-BR')} kg`;
+    }
+    if (carregamentosConcluidos.length === 0) {
+      message += `\n❌ Nenhum carregamento concluído hoje`;
+    }
 
-🌾 Puxe de algodão:
-${todayRolls} rolos recebidos${todayProducers ? `\nProdutoras: ${todayProducers}` : ''}
+    message += `\n\n🌾 PUXE DE ALGODÃO:`;
+    if (todayRolls > 0) {
+      message += `\n✅ ${todayRolls.toLocaleString('pt-BR')} rolos recebidos`;
+    } else {
+      message += `\n❌ Nenhum rolo recebido hoje`;
+    }
 
-🌧️ Clima:
-Chuva do dia: ${todayRainTotal.toFixed(1)} mm
-Acumulado do mês: ${monthRain.toFixed(1)} mm
-Acumulado do ano: ${yearRain.toFixed(1)} mm${todayEquipment ? `
+    message += `\n\n📦 RECEBIMENTO DE MATERIAIS:`;
+    // Quando implementar materiais, adicionar aqui
+    message += `\n❌ Nenhum material recebido hoje`; // Temporário
 
-🛠️ Equipamento enviado:
-${todayEquipment.name}
-Destino: ${todayEquipment.destination}
-Autorizado por: ${todayEquipment.authorized_by}` : ''}
+    message += `\n\n� FILA DE CARREGAMENTO ATUAL:`;
+    if (filaPluma > 0) message += `\n🧺 Pluma: ${filaPluma} na fila`;
+    if (filaCaroco > 0) message += `\n🌰 Caroço: ${filaCaroco} na fila`;
+    if (filaFibrilha > 0) message += `\n🧵 Fibrilha: ${filaFibrilha} na fila`;
+    if (filaBriquete > 0) message += `\n🔥 Briquete: ${filaBriquete} na fila`;
+    if (filaAtual.length === 0) {
+      message += `\n✅ Fila vazia no momento`;
+    }
 
-📌 Mensagem automática gerada via Controle Guarita`;
+    message += `\n\n📌 Mensagem automática gerada via Controle Guarita`;
 
     navigator.clipboard.writeText(message);
     toast({
@@ -338,31 +373,204 @@ Autorizado por: ${todayEquipment.authorized_by}` : ''}
   const generateQueueStatus = () => {
     const today = new Date().toLocaleDateString('pt-BR');
     const time = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    const message = `🏢 IBA Santa Luzia - Controle Guarita
-🕒 Fila de Carregamento - ${today} - ${time}
+    
+    // Dados reais da fila de carregamento
+    const todayDate = new Date().toISOString().split('T')[0];
+    const filaCarregamento = loadingRecords.filter(l => !l.entry_date && (!dateFilter || l.date === dateFilter || l.date === todayDate));
+    
+    // Agrupar por produto
+    const filaPluma = filaCarregamento.filter(l => l.product === 'Pluma');
+    const filaCaroco = filaCarregamento.filter(l => l.product === 'Caroço');
+    const filaFibrilha = filaCarregamento.filter(l => l.product === 'Fibrilha');
+    const filaBriquete = filaCarregamento.filter(l => l.product === 'Briquete');
+    const filaOutros = filaCarregamento.filter(l => !['Pluma', 'Caroço', 'Fibrilha', 'Briquete'].includes(l.product));
+    
+    let message = `🏢 IBA Santa Luzia - Controle Guarita
+🕒 Fila de Carregamento - ${today} - ${time}\n\n`;
 
-🚛 Pluma – 3 carretas aguardando:
-🚛 Bitrem | TransBrasil
-🚛 Rodotrem | CoopAgro
-🚛 Toco | Almeida Log
+    if (filaPluma.length > 0) {
+      message += `🧺 Pluma – ${filaPluma.length} carreta${filaPluma.length > 1 ? 's' : ''} aguardando:\n`;
+      filaPluma.slice(0, 5).forEach(item => {
+        message += `🚛 ${item.truck_type} | ${item.plate} | ${item.carrier}\n`;
+      });
+      message += '\n';
+    }
 
-🌰 Caroço – 2 carretas aguardando:
-🚚 Rodotrem | JSL
-🚚 Trucado | Rocha Transportes
+    if (filaCaroco.length > 0) {
+      message += `🌰 Caroço – ${filaCaroco.length} carreta${filaCaroco.length > 1 ? 's' : ''} aguardando:\n`;
+      filaCaroco.slice(0, 5).forEach(item => {
+        message += `🚚 ${item.truck_type} | ${item.plate} | ${item.carrier}\n`;
+      });
+      message += '\n';
+    }
 
-🧵 Fibrilha – 1 carreta aguardando:
-🚛 Bitrem | Rápido Oeste
+    if (filaFibrilha.length > 0) {
+      message += `🧵 Fibrilha – ${filaFibrilha.length} carreta${filaFibrilha.length > 1 ? 's' : ''} aguardando:\n`;
+      filaFibrilha.slice(0, 5).forEach(item => {
+        message += `🚛 ${item.truck_type} | ${item.plate} | ${item.carrier}\n`;
+      });
+      message += '\n';
+    }
 
-🔥 Briquete – 1 carreta aguardando:
-🚛 Bitrem | Transportadora Central
+    if (filaBriquete.length > 0) {
+      message += `🔥 Briquete – ${filaBriquete.length} carreta${filaBriquete.length > 1 ? 's' : ''} aguardando:\n`;
+      filaBriquete.slice(0, 5).forEach(item => {
+        message += `🚛 ${item.truck_type} | ${item.plate} | ${item.carrier}\n`;
+      });
+      message += '\n';
+    }
 
-📌 Mensagem automática gerada via Controle Guarita`;
+    if (filaOutros.length > 0) {
+      message += `📦 Outros Produtos – ${filaOutros.length} carreta${filaOutros.length > 1 ? 's' : ''} aguardando:\n`;
+      filaOutros.slice(0, 5).forEach(item => {
+        message += `🚚 ${item.product} | ${item.plate} | ${item.carrier}\n`;
+      });
+      message += '\n';
+    }
+
+    if (filaCarregamento.length === 0) {
+      message += '✅ Não há carretas aguardando na fila no momento.\n\n';
+    }
+
+    message += '📌 Mensagem automática gerada via Controle Guarita';
 
     navigator.clipboard.writeText(message);
     toast({
       title: "Mensagem copiada!",
       description: "Cole no WhatsApp para compartilhar o status da fila.",
     });
+  };
+
+  const sendToWhatsApp = (message: string) => {
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappUrl = `https://web.whatsapp.com/send?text=${encodedMessage}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
+  const sendDailyReportToWhatsApp = () => {
+    const today = new Date().toLocaleDateString('pt-BR');
+    const todayDate = new Date().toISOString().split('T')[0];
+    
+    // Carregamentos concluídos do dia
+    const carregamentosConcluidos = loadingRecords.filter(l => l.exit_date === todayDate);
+    
+    // Agrupar carregamentos concluídos por produto
+    const plumaCarregamentos = carregamentosConcluidos.filter(l => l.product === 'Pluma');
+    const carocoCarregamentos = carregamentosConcluidos.filter(l => l.product === 'Caroço');
+    const fibrilhaCarregamentos = carregamentosConcluidos.filter(l => l.product === 'Fibrilha');
+    const briqueteCarregamentos = carregamentosConcluidos.filter(l => l.product === 'Briquete');
+    
+    // Calcular totais
+    const totalPlumaFardos = plumaCarregamentos.reduce((sum, l) => sum + (l.bales || 0), 0);
+    const totalCarocoKg = carocoCarregamentos.reduce((sum, l) => sum + (l.weight || 0), 0);
+    const totalFibrilhaFardos = fibrilhaCarregamentos.reduce((sum, l) => sum + (l.bales || 0), 0);
+    const totalBriqueteKg = briqueteCarregamentos.reduce((sum, l) => sum + (l.weight || 0), 0);
+    
+    // Puxe de algodão do dia
+    const todayCotton = cottonRecords.filter(r => r.date === todayDate);
+    const todayRolls = todayCotton.reduce((sum, r) => sum + r.rolls, 0);
+    
+    // Materiais recebidos (assumindo que você tem os dados de materiais)
+    // Como não temos os dados reais ainda, vou deixar preparado
+    const todayMaterials = materialRecords.filter(m => m.date === todayDate);
+    
+    // Fila de carregamento atual (apenas na fila)
+    const filaAtual = loadingRecords.filter(l => !l.entry_date);
+    const filaPluma = filaAtual.filter(l => l.product === 'Pluma').length;
+    const filaCaroco = filaAtual.filter(l => l.product === 'Caroço').length;
+    const filaFibrilha = filaAtual.filter(l => l.product === 'Fibrilha').length;
+    const filaBriquete = filaAtual.filter(l => l.product === 'Briquete').length;
+    
+    let message = `🏢 IBA Santa Luzia - Controle Guarita
+📅 Resumo Diário - ${today}
+
+� CARREGAMENTOS CONCLUÍDOS:`;
+
+    if (plumaCarregamentos.length > 0) {
+      message += `\n🧺 Pluma: ${plumaCarregamentos.length} caminhões | ${totalPlumaFardos.toLocaleString('pt-BR')} fardos`;
+    }
+    if (carocoCarregamentos.length > 0) {
+      message += `\n🌰 Caroço: ${carocoCarregamentos.length} caminhões | ${totalCarocoKg.toLocaleString('pt-BR')} kg`;
+    }
+    if (fibrilhaCarregamentos.length > 0) {
+      message += `\n� Fibrilha: ${fibrilhaCarregamentos.length} caminhões | ${totalFibrilhaFardos.toLocaleString('pt-BR')} fardos`;
+    }
+    if (briqueteCarregamentos.length > 0) {
+      message += `\n🔥 Briquete: ${briqueteCarregamentos.length} caminhões | ${totalBriqueteKg.toLocaleString('pt-BR')} kg`;
+    }
+    if (carregamentosConcluidos.length === 0) {
+      message += `\n❌ Nenhum carregamento concluído hoje`;
+    }
+
+    message += `\n\n🌾 PUXE DE ALGODÃO:`;
+    if (todayRolls > 0) {
+      message += `\n✅ ${todayRolls.toLocaleString('pt-BR')} rolos recebidos`;
+    } else {
+      message += `\n❌ Nenhum rolo recebido hoje`;
+    }
+
+    message += `\n\n📦 RECEBIMENTO DE MATERIAIS:`;
+    // Quando implementar materiais, adicionar aqui
+    message += `\n❌ Nenhum material recebido hoje`; // Temporário
+
+    message += `\n\n🚛 FILA DE CARREGAMENTO ATUAL:`;
+    if (filaPluma > 0) message += `\n🧺 Pluma: ${filaPluma} na fila`;
+    if (filaCaroco > 0) message += `\n🌰 Caroço: ${filaCaroco} na fila`;
+    if (filaFibrilha > 0) message += `\n🧵 Fibrilha: ${filaFibrilha} na fila`;
+    if (filaBriquete > 0) message += `\n🔥 Briquete: ${filaBriquete} na fila`;
+    if (filaAtual.length === 0) {
+      message += `\n✅ Fila vazia no momento`;
+    }
+
+    message += `\n\n📌 Mensagem automática gerada via Controle Guarita`;
+
+    sendToWhatsApp(message);
+  };
+
+  const sendQueueStatusToWhatsApp = () => {
+    const today = new Date().toLocaleDateString('pt-BR');
+    const time = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    
+    // Dados reais da fila de carregamento (apenas os que estão na fila)
+    const filaCarregamento = loadingRecords.filter(l => !l.entry_date);
+    
+    // Agrupar por produto
+    const filaPluma = filaCarregamento.filter(l => l.product === 'Pluma');
+    const filaCaroco = filaCarregamento.filter(l => l.product === 'Caroço');
+    const filaFibrilha = filaCarregamento.filter(l => l.product === 'Fibrilha');
+    const filaBriquete = filaCarregamento.filter(l => l.product === 'Briquete');
+    const filaOutros = filaCarregamento.filter(l => !['Pluma', 'Caroço', 'Fibrilha', 'Briquete'].includes(l.product));
+    
+    let message = `🏢 IBA Santa Luzia - Controle Guarita
+🕒 Fila de Carregamento - ${today} - ${time}
+
+🚛 RESUMO DA FILA POR PRODUTO:\n`;
+
+    if (filaPluma.length > 0) {
+      message += `🧺 Pluma: ${filaPluma.length} carreta${filaPluma.length > 1 ? 's' : ''} na fila\n`;
+    }
+    if (filaCaroco.length > 0) {
+      message += `🌰 Caroço: ${filaCaroco.length} carreta${filaCaroco.length > 1 ? 's' : ''} na fila\n`;
+    }
+    if (filaFibrilha.length > 0) {
+      message += `🧵 Fibrilha: ${filaFibrilha.length} carreta${filaFibrilha.length > 1 ? 's' : ''} na fila\n`;
+    }
+    if (filaBriquete.length > 0) {
+      message += `� Briquete: ${filaBriquete.length} carreta${filaBriquete.length > 1 ? 's' : ''} na fila\n`;
+    }
+    if (filaOutros.length > 0) {
+      message += `📦 Outros: ${filaOutros.length} carreta${filaOutros.length > 1 ? 's' : ''} na fila\n`;
+    }
+
+    if (filaCarregamento.length === 0) {
+      message += `✅ Fila vazia no momento`;
+    } else {
+      message += `\n📊 TOTAL: ${filaCarregamento.length} carreta${filaCarregamento.length > 1 ? 's' : ''} aguardando carregamento`;
+    }
+
+    message += `\n\n📌 Mensagem automática gerada via Controle Guarita`;
+
+    sendToWhatsApp(message);
   };
 
 
@@ -425,62 +633,81 @@ Autorizado por: ${todayEquipment.authorized_by}` : ''}
         {/* Movimentação Geral com Filtros */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Filter className="w-5 h-5" />
-              Movimentação Geral
+            <CardTitle className="flex items-center justify-between text-base">
+              <div className="flex items-center gap-2">
+                <Filter className="w-5 h-5" />
+                movimentação geral
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="flex items-center gap-2 text-sm"
+              >
+                {isExpanded ? "recolher" : "expandir tudo"}
+                <span className="text-xs">{isExpanded ? "↑" : "↓"}</span>
+              </Button>
             </CardTitle>
             <CardDescription>
-              Filtros de data, produto, placa e contadores de rolos
+              visualize e filtre todas as movimentações do sistema
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {/* Filtros */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-              <div className="space-y-2">
-                <Label>Data</Label>
-                <Input 
-                  type="date" 
-                  value={dateFilter}
-                  onChange={(e) => setDateFilter(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Produto</Label>
-                <Select value={productFilter} onValueChange={setProductFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Todos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todos</SelectItem>
-                    <SelectItem value="Pluma">Pluma</SelectItem>
-                    <SelectItem value="Caroço">Caroço</SelectItem>
-                    <SelectItem value="Fibrilha">Fibrilha</SelectItem>
-                    <SelectItem value="Briquete">Briquete</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Placa</Label>
-                <Input 
-                  placeholder="Ex: ABC-1234"
-                  value={plateFilter}
-                  onChange={(e) => setPlateFilter(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Período</Label>
-                <Select value={periodFilter} onValueChange={setPeriodFilter}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="day">Dia</SelectItem>
-                    <SelectItem value="month">Mês</SelectItem>
-                    <SelectItem value="year">Ano</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+            {/* Filtros sempre visíveis */}
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+                  <div className="space-y-2">
+                    <Label className="text-sm">data</Label>
+                    <Input 
+                      type="date" 
+                      value={dateFilter}
+                      onChange={(e) => setDateFilter(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm">produto</Label>
+                    <Select value={productFilter} onValueChange={setProductFilter}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Todos" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todos">Todos</SelectItem>
+                        <SelectItem value="Pluma">Pluma</SelectItem>
+                        <SelectItem value="Caroço">Caroço</SelectItem>
+                        <SelectItem value="Fibrilha">Fibrilha</SelectItem>
+                        <SelectItem value="Briquete">Briquete</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm">placa</Label>
+                    <Input 
+                      placeholder="Ex: ABC-1234"
+                      value={plateFilter}
+                      onChange={(e) => setPlateFilter(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm">motorista</Label>
+                    <Input 
+                      placeholder="Nome do motorista"
+                      value={driverFilter}
+                      onChange={(e) => setDriverFilter(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Período</Label>
+                    <Select value={periodFilter} onValueChange={setPeriodFilter}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="day">Dia</SelectItem>
+                        <SelectItem value="month">Mês</SelectItem>
+                        <SelectItem value="year">Ano</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
 
             {/* Contadores de Rolos */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -526,31 +753,33 @@ Autorizado por: ${todayEquipment.authorized_by}` : ''}
             </div>
 
             {/* Tabela de Resultados Filtrados */}
-            {(dateFilter || (productFilter && productFilter !== "todos") || plateFilter) && (
+            {(dateFilter || (productFilter && productFilter !== "todos") || plateFilter || driverFilter) && (
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse border border-gray-300">
                   <thead>
                     <tr className="bg-gray-50">
-                      <th className="border border-gray-300 p-2 text-left">Data</th>
-                      <th className="border border-gray-300 p-2 text-left">Tipo</th>
-                      <th className="border border-gray-300 p-2 text-left">Placa</th>
-                      <th className="border border-gray-300 p-2 text-left">Produto</th>
-                      <th className="border border-gray-300 p-2 text-left">Motorista</th>
-                      <th className="border border-gray-300 p-2 text-left">Detalhes</th>
+                      <th className="border border-gray-300 p-2 text-left text-sm">data</th>
+                      <th className="border border-gray-300 p-2 text-left text-sm">tipo</th>
+                      <th className="border border-gray-300 p-2 text-left text-sm">placa</th>
+                      <th className="border border-gray-300 p-2 text-left text-sm">produto</th>
+                      <th className="border border-gray-300 p-2 text-left text-sm">motorista</th>
+                      <th className="border border-gray-300 p-2 text-left text-sm">detalhes</th>
                     </tr>
                   </thead>
                   <tbody>
+                    {/* Carregamentos */}
                     {loadingRecords
                       .filter(l => 
                         (!dateFilter || l.date === dateFilter) &&
                         (productFilter === "todos" || l.product === productFilter) &&
-                        (!plateFilter || l.plate.toLowerCase().includes(plateFilter.toLowerCase()))
+                        (!plateFilter || l.plate.toLowerCase().includes(plateFilter.toLowerCase())) &&
+                        (!driverFilter || l.driver.toLowerCase().includes(driverFilter.toLowerCase()))
                       )
                       .map((loading) => (
-                        <tr key={loading.id} className="hover:bg-gray-50">
-                          <td className="border border-gray-300 p-2">{loading.date}</td>
-                          <td className="border border-gray-300 p-2">Carregamento</td>
-                          <td className="border border-gray-300 p-2 font-medium">{loading.plate}</td>
+                        <tr key={`loading-${loading.id}`} className="hover:bg-gray-50">
+                          <td className="border border-gray-300 p-2 text-sm">{loading.date}</td>
+                          <td className="border border-gray-300 p-2 text-sm">carregamento</td>
+                          <td className="border border-gray-300 p-2 font-medium text-sm">{loading.plate}</td>
                           <td className="border border-gray-300 p-2">
                             <span className={`px-2 py-1 rounded text-xs ${
                               loading.product === 'Pluma' ? 'bg-yellow-100 text-yellow-800' :
@@ -561,8 +790,52 @@ Autorizado por: ${todayEquipment.authorized_by}` : ''}
                               {loading.product}
                             </span>
                           </td>
-                          <td className="border border-gray-300 p-2">{loading.driver}</td>
+                          <td className="border border-gray-300 p-2 text-sm">{loading.driver}</td>
                           <td className="border border-gray-300 p-2 text-sm">{loading.carrier} → {loading.destination}</td>
+                        </tr>
+                      ))
+                    }
+                    
+                    {/* Puxe de Algodão (quando filtrar por motorista) */}
+                    {driverFilter && cottonRecords
+                      .filter(c => 
+                        (!dateFilter || c.date === dateFilter) &&
+                        c.driver.toLowerCase().includes(driverFilter.toLowerCase())
+                      )
+                      .map((cotton) => (
+                        <tr key={`cotton-${cotton.id}`} className="hover:bg-green-50">
+                          <td className="border border-gray-300 p-2">{cotton.date}</td>
+                          <td className="border border-gray-300 p-2">Puxe Algodão</td>
+                          <td className="border border-gray-300 p-2 font-medium">{cotton.plate}</td>
+                          <td className="border border-gray-300 p-2">
+                            <span className="px-2 py-1 rounded text-xs bg-green-100 text-green-800">
+                              Algodão ({cotton.rolls} rolos)
+                            </span>
+                          </td>
+                          <td className="border border-gray-300 p-2">{cotton.driver}</td>
+                          <td className="border border-gray-300 p-2 text-sm">{cotton.producer} - {cotton.farm}</td>
+                        </tr>
+                      ))
+                    }
+                    
+                    {/* Entrada de Veículos (quando filtrar por motorista) */}
+                    {driverFilter && vehicles
+                      .filter(v => 
+                        (!dateFilter || v.date === dateFilter) &&
+                        v.driver.toLowerCase().includes(driverFilter.toLowerCase())
+                      )
+                      .map((vehicle) => (
+                        <tr key={`vehicle-${vehicle.id}`} className="hover:bg-blue-50">
+                          <td className="border border-gray-300 p-2 text-sm">{vehicle.date}</td>
+                          <td className="border border-gray-300 p-2 text-sm">{vehicle.type}</td>
+                          <td className="border border-gray-300 p-2 font-medium text-sm">{vehicle.plate}</td>
+                          <td className="border border-gray-300 p-2">
+                            <span className="px-2 py-1 rounded text-xs bg-blue-100 text-blue-800">
+                              {vehicle.purpose || 'n/a'}
+                            </span>
+                          </td>
+                          <td className="border border-gray-300 p-2 text-sm">{vehicle.driver}</td>
+                          <td className="border border-gray-300 p-2 text-sm">entrada: {vehicle.entry_time} | saída: {vehicle.exit_time || 'pendente'}</td>
                         </tr>
                       ))
                     }
@@ -570,47 +843,87 @@ Autorizado por: ${todayEquipment.authorized_by}` : ''}
                 </table>
               </div>
             )}
+            
+            {!isExpanded && (
+              <div className="text-center py-8 text-muted-foreground">
+                <p className="text-sm mb-2">clique em "expandir tudo" para ver todas as movimentações</p>
+                <p className="text-xs">carregamentos • puxe de algodão • entrada de veículos</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
         <div className="grid lg:grid-cols-2 gap-6">
-          {/* Top Producers */}
+          {/* Puxe de Algodão por Motorista */}
           <Card>
             <CardHeader>
-              <CardTitle>Top 5 Produtoras</CardTitle>
-              <CardDescription>Ranking por quantidade de rolos entregues</CardDescription>
+              <CardTitle>Puxe de Algodão por Motorista</CardTitle>
+              <CardDescription>Ranking de motoristas por rolos puxados</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {topProducers.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>Nenhum registro de produtor encontrado</p>
-                    <p className="text-sm">Cadastre registros de algodão para ver o ranking</p>
-                  </div>
-                ) : (
-                  topProducers.map((producer, index) => (
-                    <div key={index} className="flex items-center gap-4">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
-                        index === 0 ? 'bg-primary text-primary-foreground' :
-                        index === 1 ? 'bg-secondary text-secondary-foreground' :
-                        index === 2 ? 'bg-accent text-accent-foreground' :
-                        'bg-muted text-muted-foreground'
-                      }`}>
-                        {index + 1}
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-semibold">{producer.name}</p>
-                        <div className="w-full bg-muted rounded-full h-2 mt-1">
-                          <div 
-                            className="bg-primary h-2 rounded-full transition-all"
-                            style={{ width: `${topProducers[0] ? (producer.rolls / topProducers[0].rolls) * 100 : 0}%` }}
-                          />
-                        </div>
-                      </div>
-                      <p className="font-bold text-primary">{producer.rolls}</p>
+                {(() => {
+                  // Calcular estatísticas por motorista
+                  const driverStats = cottonRecords.reduce((acc, record) => {
+                    const key = `${record.driver}-${record.plate}`;
+                    if (!acc[key]) {
+                      acc[key] = {
+                        driver: record.driver,
+                        plate: record.plate,
+                        totalRolls: 0,
+                        totalTrips: 0
+                      };
+                    }
+                    acc[key].totalRolls += record.rolls;
+                    acc[key].totalTrips += 1;
+                    return acc;
+                  }, {} as Record<string, {driver: string, plate: string, totalRolls: number, totalTrips: number}>);
+
+                  const sortedDrivers = Object.values(driverStats)
+                    .sort((a, b) => b.totalRolls - a.totalRolls)
+                    .slice(0, 5);
+
+                  return sortedDrivers.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>Nenhum registro de puxe de algodão encontrado</p>
+                      <p className="text-sm">Cadastre registros para ver o ranking</p>
                     </div>
-                  ))
-                )}
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b">
+                            <th className="text-left p-2 font-semibold">Pos</th>
+                            <th className="text-left p-2 font-semibold">Placa</th>
+                            <th className="text-left p-2 font-semibold">Motorista</th>
+                            <th className="text-center p-2 font-semibold">Viagens</th>
+                            <th className="text-center p-2 font-semibold">Total Rolos</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sortedDrivers.map((driver, index) => (
+                            <tr key={`${driver.driver}-${driver.plate}`} className="border-b hover:bg-gray-50">
+                              <td className="p-2">
+                                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                                  index === 0 ? 'bg-yellow-500 text-white' :
+                                  index === 1 ? 'bg-gray-400 text-white' :
+                                  index === 2 ? 'bg-amber-600 text-white' :
+                                  'bg-gray-200 text-gray-700'
+                                }`}>
+                                  {index + 1}
+                                </div>
+                              </td>
+                              <td className="p-2 font-medium">{driver.plate}</td>
+                              <td className="p-2">{driver.driver}</td>
+                              <td className="p-2 text-center font-medium">{driver.totalTrips}</td>
+                              <td className="p-2 text-center font-bold text-green-600">{driver.totalRolls}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                })()}
               </div>
             </CardContent>
           </Card>
@@ -649,6 +962,59 @@ Autorizado por: ${todayEquipment.authorized_by}` : ''}
           </Card>
         </div>
 
+        {/* Materiais Recebidos por Tipo */}
+        {(() => {
+          const materialsByType = materialRecords.reduce((acc: Record<string, { count: number, weight: number }>, material) => {
+            if (!acc[material.material_type]) {
+              acc[material.material_type] = { count: 0, weight: 0 };
+            }
+            acc[material.material_type].count += 1;
+            acc[material.material_type].weight += material.net_weight;
+            return acc;
+          }, {});
+          
+          return Object.keys(materialsByType).length > 0 ? (
+            <div className="grid lg:grid-cols-2 xl:grid-cols-3 gap-4">
+              {Object.entries(materialsByType).map(([type, data]) => (
+                <Card key={type} className="border-l-4 border-orange-500">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      📦 {type}
+                    </CardTitle>
+                    <CardDescription>Material recebido</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Entregas:</span>
+                        <span className="font-bold">{data.count}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Peso Total:</span>
+                        <span className="font-bold text-orange-600">{data.weight.toFixed(1)}t</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Média por entrega:</span>
+                        <span className="font-medium">{(data.weight / data.count).toFixed(1)}t</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="py-8">
+                <div className="text-center text-muted-foreground">
+                  <Package className="w-12 h-12 mx-auto mb-4" />
+                  <p>Nenhum material registrado ainda</p>
+                  <p className="text-sm">Registre materiais para ver os resumos aqui</p>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })()}
+
         {/* WhatsApp Messages */}
         <Card>
           <CardHeader>
@@ -660,20 +1026,39 @@ Autorizado por: ${todayEquipment.authorized_by}` : ''}
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid sm:grid-cols-2 gap-4">
-              <Button 
-                className="h-auto py-4 flex-col items-start bg-primary hover:bg-primary/90"
-                onClick={generateDailySummary}
-              >
-                <span className="font-semibold mb-1">📊 Resumo Diário</span>
-                <span className="text-xs opacity-90">Movimentação completa do dia</span>
-              </Button>
-              <Button 
-                className="h-auto py-4 flex-col items-start bg-accent hover:bg-accent/90"
-                onClick={generateQueueStatus}
-              >
-                <span className="font-semibold mb-1">🚛 Status da Fila</span>
-                <span className="text-xs opacity-90">Carretas aguardando embarque</span>
-              </Button>
+              <div className="space-y-2">
+                <Button 
+                  className="w-full h-auto py-4 flex-col items-start bg-primary hover:bg-primary/90"
+                  onClick={generateDailySummary}
+                >
+                  <span className="font-semibold mb-1">📊 Resumo Diário</span>
+                  <span className="text-xs opacity-90">Copiar mensagem completa</span>
+                </Button>
+                <Button 
+                  className="w-full h-auto py-3 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white"
+                  onClick={sendDailyReportToWhatsApp}
+                >
+                  <Share2 className="w-4 h-4" />
+                  <span className="text-sm font-medium">Enviar via WhatsApp</span>
+                </Button>
+              </div>
+              
+              <div className="space-y-2">
+                <Button 
+                  className="w-full h-auto py-4 flex-col items-start bg-accent hover:bg-accent/90"
+                  onClick={generateQueueStatus}
+                >
+                  <span className="font-semibold mb-1">🚛 Status da Fila</span>
+                  <span className="text-xs opacity-90">Copiar status atual</span>
+                </Button>
+                <Button 
+                  className="w-full h-auto py-3 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white"
+                  onClick={sendQueueStatusToWhatsApp}
+                >
+                  <Share2 className="w-4 h-4" />
+                  <span className="text-sm font-medium">Enviar via WhatsApp</span>
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>

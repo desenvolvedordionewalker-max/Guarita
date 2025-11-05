@@ -124,11 +124,12 @@ export interface SavedValue {
 export interface MaterialReceipt {
   id: string
   date: string
-  time: string
+  entry_time: string
+  exit_time?: string
   material_type: string // Areia, Cascalho, Cavaco, Pedra Brita, Pó de Pedra, Álcool
   plate: string
   driver: string
-  net_weight?: number
+  net_weight: number // Obrigatório agora
   volume_m3?: number
   volume_m2?: number
   volume_liters?: number
