@@ -41,7 +41,7 @@ const Rain = () => {
     const recordData = {
       date: formData.get("date") as string,
       start_time: formData.get("startTime") as string,
-      end_time: formData.get("endTime") as string || undefined,
+      end_time: formData.get("endTime") as string || null,
       millimeters: parseFloat(formData.get("mm") as string),
     };
     
@@ -66,7 +66,7 @@ const Rain = () => {
     const updatedData = {
       date: formData.get("editDate") as string,
       start_time: formData.get("editStartTime") as string,
-      end_time: formData.get("editEndTime") as string || undefined,
+      end_time: formData.get("editEndTime") as string || null,
       millimeters: parseFloat(formData.get("editMm") as string),
     };
 
