@@ -1,7 +1,10 @@
 import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { 
   Truck, 
   Package, 
@@ -17,9 +20,11 @@ import {
   ArrowRight,
   ArrowLeft,
   Container,
-  Plus
+  Plus,
+  Crown
 } from "lucide-react";
 import { useVehicles, useCottonPull, useRainRecords, useEquipment, useLoadingRecords } from "@/hooks/use-supabase";
+import { LoadingRecord } from "@/lib/supabase";
 import QueueDisplay from "@/components/QueueDisplay";
 import logo from "@/assets/BF_logo.png";
 
@@ -29,7 +34,10 @@ const Dashboard = () => {
   const { records: cottonRecords, loading: loadingCotton } = useCottonPull();
   const { records: rainRecords, loading: loadingRain } = useRainRecords();
   const { records: equipmentRecords, loading: loadingEquipment } = useEquipment();
-  const { records: loadingRecords, loading: loadingCarregamentos } = useLoadingRecords();
+  const { records: loadingRecords, loading: loadingCarregamentos, updateRecord } = useLoadingRecords();
+  
+  const [selectedLoading, setSelectedLoading] = useState<LoadingRecord | null>(null);
+  const [isManageModalOpen, setIsManageModalOpen] = useState(false);
 
   const handleRegisterVehicleExit = async (id: string) => {
     const now = new Date();
@@ -40,6 +48,71 @@ const Dashboard = () => {
     } catch (error) {
       console.error('Erro ao registrar saída:', error);
     }
+  };
+
+  const handleLoadingCardClick = (loading: LoadingRecord) => {
+    setSelectedLoading(loading);
+    setIsManageModalOpen(true);
+  };
+
+  const handleStartLoading = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!selectedLoading) return;
+    
+    const formData = new FormData(e.currentTarget);
+    const entryDate = formData.get("entryDate") as string;
+    const entryTime = formData.get("entryTime") as string;
+    
+    try {
+      await updateRecord(selectedLoading.id, {
+        entry_date: entryDate,
+        entry_time: entryTime
+      });
+      setIsManageModalOpen(false);
+      setSelectedLoading(null);
+    } catch (error) {
+      console.error('Erro ao iniciar carregamento:', error);
+    }
+  };
+
+  const getProductColor = (product: string) => {
+    switch (product) {
+      case 'Pluma':
+        return 'border-l-yellow-500 bg-yellow-50 text-yellow-800';
+      case 'Caroço':
+        return 'border-l-amber-600 bg-amber-50 text-amber-800';
+      case 'Fibrilha':
+        return 'border-l-green-500 bg-green-50 text-green-800';
+      case 'Briquete':
+        return 'border-l-purple-500 bg-purple-50 text-purple-800';
+      case 'Reciclados':
+        return 'border-l-blue-500 bg-blue-50 text-blue-800';
+      case 'Cavaco':
+        return 'border-l-orange-500 bg-orange-50 text-orange-800';
+      case 'Outros':
+        return 'border-l-pink-500 bg-pink-50 text-pink-800';
+      default:
+        return 'border-l-gray-500 bg-gray-50 text-gray-800';
+    }
+  };
+
+  const getQueuePosition = (loading: LoadingRecord) => {
+    const sameProductQueue = loadingsFila
+      .filter((l: LoadingRecord) => l.product === loading.product)
+      .sort((a: LoadingRecord, b: LoadingRecord) => new Date(a.created_at!).getTime() - new Date(b.created_at!).getTime());
+    
+    const position = sameProductQueue.findIndex((l: LoadingRecord) => l.id === loading.id) + 1;
+    return { position, total: sameProductQueue.length };
+  };
+
+  const getPositionMessage = (loading: LoadingRecord) => {
+    const { position } = getQueuePosition(loading);
+    if (position === 1) {
+      return `1º da vez - ${loading.product}`;
+    } else if (position === 2) {
+      return `Próximo da vez - ${loading.product}`;
+    }
+    return `${position}º na fila - ${loading.product}`;
   };
 
   useEffect(() => {
@@ -184,23 +257,23 @@ const Dashboard = () => {
   const username = localStorage.getItem("username") || "Usuário";
 
   return (
-    <div className="h-screen overflow-auto bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+    <div className="min-h-screen w-full bg-gradient-to-b from-white to-neutral-50 flex flex-col items-center">
       {/* Header */}
-      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden">
-              <img 
-                src={logo}
-                alt="Bom Futuro Logo" 
-                className="w-full h-full object-contain"
-              />
-            </div>
-            <div>
-              <h1 className="text-lg md:text-xl lg:text-2xl font-bold tv-title">Controle Guarita</h1>
-            </div>
+      <header className="w-full px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 2xl:px-16 py-3 flex justify-between items-center bg-card/50 backdrop-blur-sm shadow-sm sticky top-0 z-50 border-b">
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden">
+            <img 
+              src={logo}
+              alt="Bom Futuro Logo" 
+              className="w-full h-full object-contain"
+            />
           </div>
-          <div className="flex items-center gap-2 md:gap-3">
+          <div>
+            <h1 className="text-lg md:text-xl lg:text-2xl font-bold tv-title">Controle Guarita</h1>
+            <p className="text-sm text-muted-foreground">IBA Santa Luzia</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 md:gap-3">
             {/* Quick Action Modules */}
             <div className="hidden md:flex items-center gap-2 lg:gap-3">
               {modules.map((module, index) => (
@@ -211,7 +284,7 @@ const Dashboard = () => {
                   onClick={() => navigate(module.route)}
                   className="flex flex-col items-center gap-1 p-3 h-auto hover:bg-gray-50"
                 >
-                  <module.icon className={`w-5 h-5 ${module.color}`} />
+                  <module.icon className={`w-6 h-6 ${module.color}`} />
                   <span className="text-xs font-medium">{module.title}</span>
                 </Button>
               ))}
@@ -240,12 +313,11 @@ const Dashboard = () => {
                 <span className="hidden sm:inline">Sair</span>
                 <span className="sm:hidden">Exit</span>
               </Button>
-            </div>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="w-full max-w-[1600px] flex-1 px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 py-8">
         {/* Enhanced Stats Cards with Product Details */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {/* Fila Hoje */}
@@ -467,80 +539,80 @@ const Dashboard = () => {
                 Fila de Carregamentos
               </CardTitle>
               <CardDescription>
-                Veículos aguardando carregamento
+                Clique em um carregamento para gerenciar
               </CardDescription>
             </CardHeader>
             <CardContent>
               {!loadingCarregamentos && loadingsFila.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left p-2 font-semibold">Posição</th>
-                        <th className="text-left p-2 font-semibold">Placa</th>
-                        <th className="text-left p-2 font-semibold">Produto</th>
-                        <th className="text-left p-2 font-semibold">Motorista</th>
-                        <th className="text-left p-2 font-semibold">Transportadora</th>
-                        <th className="text-left p-2 font-semibold">Destino</th>
-                        <th className="text-left p-2 font-semibold">Agendado</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {loadingsFila
-                        .sort((a, b) => new Date(a.created_at!).getTime() - new Date(b.created_at!).getTime())
-                        .map((loading, index) => {
-                          // Calcular posição por produto
-                          const sameProductQueue = loadingsFila
-                            .filter(l => l.product === loading.product)
-                            .sort((a, b) => new Date(a.created_at!).getTime() - new Date(b.created_at!).getTime());
-                          const positionInProduct = sameProductQueue.findIndex(l => l.id === loading.id) + 1;
-                          
-                          const getPositionMessage = () => {
-                            if (positionInProduct === 1) {
-                              return `1º da vez - ${loading.product}`;
-                            } else if (positionInProduct === 2) {
-                              return `Próximo da vez - ${loading.product}`;
-                            }
-                            return `${positionInProduct}º na fila - ${loading.product}`;
-                          };
-
-                          return (
-                            <tr 
-                              key={loading.id} 
-                              className="border-b hover:bg-gray-50 cursor-pointer transition-colors"
-                              onClick={() => navigate(`/loading?edit=${loading.id}`)}
-                            >
-                              <td className="p-2">
-                                <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                                  positionInProduct === 1 ? 'bg-yellow-100 text-yellow-800' :
-                                  positionInProduct === 2 ? 'bg-blue-100 text-blue-800' :
-                                  'bg-gray-100 text-gray-800'
-                                }`}>
-                                  {getPositionMessage()}
-                                </span>
-                              </td>
-                              <td className="p-2 font-medium">{loading.plate}</td>
-                              <td className="p-2">
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                  loading.product === 'Pluma' ? 'bg-yellow-100 text-yellow-800' :
-                                  loading.product === 'Caroço' ? 'bg-brown-100 text-brown-800' :
-                                  loading.product === 'Fibrilha' ? 'bg-green-100 text-green-800' :
-                                  'bg-gray-100 text-gray-800'
-                                }`}>
-                                  {loading.product}
-                                </span>
-                              </td>
-                              <td className="p-2">{loading.driver}</td>
-                              <td className="p-2">{loading.carrier}</td>
-                              <td className="p-2">{loading.destination}</td>
-                              <td className="p-2 text-sm text-muted-foreground">
-                                {loading.date} {loading.time}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                    </tbody>
-                  </table>
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {loadingsFila
+                    .sort((a, b) => new Date(a.created_at!).getTime() - new Date(b.created_at!).getTime())
+                    .map((loading) => {
+                      const { position } = getQueuePosition(loading);
+                      return (
+                        <Card 
+                          key={loading.id} 
+                          className={`border-l-4 cursor-pointer hover:shadow-md transition-shadow ${getProductColor(loading.product)}`}
+                          onClick={() => handleLoadingCardClick(loading)}
+                        >
+                          <CardContent className="pt-4 pb-4">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <div className="flex gap-2 mb-1 items-center">
+                                  <span className={`px-3 py-1 rounded-full text-sm font-bold ${
+                                    loading.product === 'Pluma' ? 'bg-yellow-100 text-yellow-800' :
+                                    loading.product === 'Caroço' ? 'bg-amber-100 text-amber-800' :
+                                    loading.product === 'Fibrilha' ? 'bg-green-100 text-green-800' :
+                                    loading.product === 'Briquete' ? 'bg-purple-100 text-purple-800' :
+                                    loading.product === 'Reciclados' ? 'bg-blue-100 text-blue-800' :
+                                    loading.product === 'Cavaco' ? 'bg-orange-100 text-orange-800' :
+                                    loading.product === 'Outros' ? 'bg-pink-100 text-pink-800' :
+                                    'bg-gray-100 text-gray-800'
+                                  }`}>
+                                    {loading.product}
+                                  </span>
+                                  {loading.is_sider && (
+                                    <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-xs">SIDER</span>
+                                  )}
+                                  {position === 1 && (
+                                    <div className="flex items-center gap-1">
+                                      <Crown className="w-4 h-4 text-yellow-500" />
+                                      <span className="text-xs font-bold text-yellow-600">1º DA VEZ</span>
+                                    </div>
+                                  )}
+                                  {position === 2 && (
+                                    <div className="flex items-center gap-1">
+                                      <Users className="w-4 h-4 text-blue-500" />
+                                      <span className="text-xs font-bold text-blue-600">PRÓXIMO DA VEZ</span>
+                                    </div>
+                                  )}
+                                </div>
+                                <p className="font-semibold text-lg">{loading.plate}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  {getPositionMessage(loading)}
+                                </p>
+                              </div>
+                              <div className="text-right text-sm">
+                                <p className="text-muted-foreground">Transportadora</p>
+                                <p className="font-medium">{loading.carrier}</p>
+                              </div>
+                            </div>
+                            <div className="text-sm mt-3 pt-3 border-t">
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <p className="text-muted-foreground">Motorista</p>
+                                  <p className="font-medium">{loading.driver}</p>
+                                </div>
+                                <div>
+                                  <p className="text-muted-foreground">Destino</p>
+                                  <p className="font-medium">{loading.destination}</p>
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
                 </div>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
@@ -642,6 +714,77 @@ const Dashboard = () => {
           </Card>
         </div>
       </main>
+
+      {/* Modal de Gerenciamento de Carregamento */}
+      <Dialog open={isManageModalOpen} onOpenChange={setIsManageModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Gerenciar Carregamento</DialogTitle>
+            <DialogDescription>
+              Registre a data e hora de entrada para mover para "Carregando"
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedLoading && (
+            <>
+              <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className={`px-3 py-1 rounded-full text-sm font-bold ${
+                    selectedLoading.product === 'Pluma' ? 'bg-yellow-100 text-yellow-800' :
+                    selectedLoading.product === 'Caroço' ? 'bg-amber-100 text-amber-800' :
+                    selectedLoading.product === 'Fibrilha' ? 'bg-green-100 text-green-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {selectedLoading.product}
+                  </span>
+                  <span className="text-sm font-medium">{selectedLoading.plate}</span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Motorista: {selectedLoading.driver} | {selectedLoading.carrier}
+                </p>
+              </div>
+
+              <form onSubmit={handleStartLoading} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="entryDate">Data de Entrada</Label>
+                    <Input
+                      id="entryDate"
+                      name="entryDate"
+                      type="date"
+                      defaultValue={new Date().toISOString().split('T')[0]}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="entryTime">Hora de Entrada</Label>
+                    <Input
+                      id="entryTime"
+                      name="entryTime"
+                      type="time"
+                      defaultValue={new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <DialogFooter className="gap-2">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => setIsManageModalOpen(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button type="submit" className="bg-green-600 hover:bg-green-700">
+                    Iniciar Carregamento
+                  </Button>
+                </DialogFooter>
+              </form>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

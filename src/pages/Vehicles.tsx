@@ -71,6 +71,8 @@ const Vehicles = () => {
     const formData = new FormData(e.currentTarget);
     const updates = {
       type: formData.get("type") as string,
+      date: formData.get("date") as string,
+      entry_time: formData.get("entryTime") as string,
       plate: formData.get("plate") as string,
       driver: formData.get("driver") as string,
       vehicle_type: formData.get("vehicleType") as string,
@@ -411,6 +413,27 @@ const Vehicles = () => {
                   defaultValue={editingVehicle.producer_name || ""}
                   placeholder="Nome do produtor"
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-date">Data</Label>
+                  <Input
+                    id="edit-date"
+                    name="date"
+                    type="date"
+                    defaultValue={editingVehicle.date}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-entryTime">Horário de Entrada</Label>
+                  <Input
+                    id="edit-entryTime"
+                    name="entryTime"
+                    type="time"
+                    defaultValue={editingVehicle.entry_time}
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">

@@ -163,11 +163,20 @@ export const useCottonPull = () => {
       })
       
       return data
-    } catch (error) {
-      console.error('Erro ao adicionar registro:', error)
+    } catch (error: unknown) {
+      console.error('Erro detalhado ao adicionar registro:', error)
+      console.error('Dados enviados:', recordData)
+      
+      const errorObj = error as { message?: string; details?: string; hint?: string; code?: string };
+      const errorMessage = errorObj?.message || errorObj?.details || errorObj?.hint || "Erro desconhecido";
+      const errorCode = errorObj?.code || "N/A";
+      
+      console.error('Código do erro:', errorCode);
+      console.error('Mensagem do erro:', errorMessage);
+      
       toast({
         title: "Erro",
-        description: "Não foi possível adicionar o registro.",
+        description: `Não foi possível adicionar o registro: ${errorMessage}`,
         variant: "destructive"
       })
       throw error
@@ -198,6 +207,35 @@ export const useCottonPull = () => {
     }
   }
 
+  const updateRecord = async (id: string, updates: Partial<CottonPull>) => {
+    try {
+      const { data, error } = await supabase
+        .from('cotton_pull')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (error) throw error
+      
+      setRecords(prev => prev.map(r => r.id === id ? data : r))
+      toast({
+        title: "Registro atualizado!",
+        description: "Puxe de algodão atualizado com sucesso.",
+      })
+      
+      return data
+    } catch (error) {
+      console.error('Erro ao atualizar registro de algodão:', error)
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar o registro.",
+        variant: "destructive"
+      })
+      throw error
+    }
+  }
+
   useEffect(() => {
     fetchRecords()
   }, [fetchRecords])
@@ -206,6 +244,7 @@ export const useCottonPull = () => {
     records,
     loading,
     addRecord,
+    updateRecord,
     deleteRecord,
     refetch: fetchRecords
   }
@@ -267,6 +306,59 @@ export const useRainRecords = () => {
     }
   }
 
+  const updateRecord = async (id: string, updates: Partial<RainRecord>) => {
+    try {
+      const { data, error } = await supabase
+        .from('rain_records')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (error) throw error
+      
+      setRecords(prev => prev.map(r => r.id === id ? data : r))
+      toast({
+        title: "Registro atualizado!",
+        description: "Medição de chuva atualizada com sucesso.",
+      })
+      
+      return data
+    } catch (error) {
+      console.error('Erro ao atualizar registro de chuva:', error)
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar o registro.",
+        variant: "destructive"
+      })
+      throw error
+    }
+  }
+
+  const deleteRecord = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('rain_records')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+      
+      setRecords(prev => prev.filter(r => r.id !== id))
+      toast({
+        title: "Registro excluído!",
+        description: "Medição de chuva removida com sucesso.",
+      })
+    } catch (error) {
+      console.error('Erro ao excluir registro de chuva:', error)
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir o registro.",
+        variant: "destructive"
+      })
+    }
+  }
+
   useEffect(() => {
     fetchRecords()
   }, [fetchRecords])
@@ -275,6 +367,8 @@ export const useRainRecords = () => {
     records,
     loading,
     addRecord,
+    updateRecord,
+    deleteRecord,
     refetch: fetchRecords
   }
 }

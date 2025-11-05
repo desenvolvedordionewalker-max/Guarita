@@ -94,30 +94,69 @@ const CottonPull = () => {
     }
   };
   
-  const pendingExits = records.filter(record => !record.exit_time);
-  const completed = records.filter(record => record.exit_time);
+  // Temporário: até que exit_time seja adicionado no banco
+  const pendingExits = records; // Todos os registros por enquanto
+  const completed: CottonPullRecord[] = []; // Nenhum completo por enquanto
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     
+    // Validar campos obrigatórios
+    const date = formData.get("date") as string;
+    const entryTime = formData.get("entryTime") as string;
+    const farm = formData.get("farm") as string;
+    const plate = formData.get("plate") as string;
+    const driver = formData.get("driver") as string;
+    const rollsValue = formData.get("rolls") as string;
+
+    if (!date || !entryTime || !farm || !plate || !driver || !rollsValue) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Preencha todos os campos obrigatórios.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const rolls = parseInt(rollsValue);
+    if (isNaN(rolls) || rolls <= 0) {
+      toast({
+        title: "Valor inválido",
+        description: "Número de rolos deve ser um número positivo.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Note: Campo talhao não existe no banco ainda, então não incluindo
     const recordData = {
-      date: formData.get("date") as string,
-      entry_time: formData.get("entryTime") as string,
-      producer: formData.get("farm") as string, // Usar fazenda como produtor
-      farm: formData.get("farm") as string,
-      talhao: formData.get("talhao") as string || "",
-      plate: formData.get("plate") as string,
-      driver: formData.get("driver") as string,
-      rolls: parseInt(formData.get("rolls") as string),
-      observations: formData.get("observations") as string,
+      date,
+      entry_time: entryTime,
+      producer: farm, // Usar fazenda como produtor
+      farm,
+      plate: plate.toUpperCase(),
+      driver,
+      rolls,
+      observations: (formData.get("observations") as string) || "",
     };
+    
+    console.log('Dados que serão enviados:', recordData);
     
     try {
       await addRecord(recordData);
       e.currentTarget.reset();
+      toast({
+        title: "Sucesso!",
+        description: "Registro de algodão adicionado com sucesso.",
+      });
     } catch (error) {
-      // Erro já tratado no hook
+      console.error('Erro detalhado:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível adicionar o registro. Tente novamente.",
+        variant: "destructive"
+      });
     }
   };
 

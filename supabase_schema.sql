@@ -95,6 +95,7 @@ CREATE TABLE IF NOT EXISTS cotton_pull (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   date DATE NOT NULL,
   entry_time TIME NOT NULL,
+  exit_time TIME, -- Campo para horário de saída
   producer VARCHAR(255) NOT NULL,
   farm VARCHAR(255) NOT NULL, -- CARAJAS, VENTANIA, etc.
   talhao VARCHAR(100), -- Campo adicional para especificar talhão
@@ -106,6 +107,15 @@ CREATE TABLE IF NOT EXISTS cotton_pull (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Adicionar coluna exit_time se não existir
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                 WHERE table_name = 'cotton_pull' AND column_name = 'exit_time') THEN
+    ALTER TABLE cotton_pull ADD COLUMN exit_time TIME;
+  END IF;
+END$$;
 
 -- Índices para melhor performance na tabela cotton_pull
 CREATE INDEX IF NOT EXISTS idx_cotton_pull_date ON cotton_pull(date);

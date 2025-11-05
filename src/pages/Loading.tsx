@@ -63,7 +63,12 @@ const Loading = () => {
       driver: formData.get("driver") as string,
       bales: parseInt(formData.get("bales") as string) || 0,
       weight: parseFloat(formData.get("weight") as string) || 0,
-      notes: formData.get("notes") as string || ""
+      notes: formData.get("notes") as string || "",
+      // Novos campos de entrada e saída
+      entry_date: formData.get("entry_date") as string || null,
+      entry_time: formData.get("entry_time") as string || null,
+      exit_date: formData.get("exit_date") as string || null,
+      exit_time: formData.get("exit_time") as string || null
     };
     
     try {
@@ -476,6 +481,46 @@ const Loading = () => {
                   <Label>Hora</Label>
                   <Input type="time" name="time" defaultValue={selectedLoading.time} required />
                 </div>
+              </div>
+
+              {/* Campos de Entrada */}
+              <div className="grid grid-cols-2 gap-4 border-t pt-4">
+                <div className="space-y-2">
+                  <Label>Data de Entrada</Label>
+                  <Input type="date" name="entry_date" defaultValue={selectedLoading.entry_date || ""} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Hora de Entrada</Label>
+                  <Input type="time" name="entry_time" defaultValue={selectedLoading.entry_time || ""} />
+                </div>
+              </div>
+
+              {/* Campos de Saída */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Data de Saída</Label>
+                  <Input type="date" name="exit_date" defaultValue={selectedLoading.exit_date || ""} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Hora de Saída</Label>
+                  <Input type="time" name="exit_time" defaultValue={selectedLoading.exit_time || ""} />
+                </div>
+              </div>
+
+              {/* Campos de Peso/Fardos */}
+              <div className="grid grid-cols-2 gap-4">
+                {selectedLoading.product === "Pluma" && (
+                  <div className="space-y-2">
+                    <Label>Fardos</Label>
+                    <Input type="number" name="bales" defaultValue={selectedLoading.bales || ""} />
+                  </div>
+                )}
+                {(selectedLoading.product === "Caroço" || selectedLoading.product === "Briquete") && (
+                  <div className="space-y-2">
+                    <Label>Peso (kg)</Label>
+                    <Input type="number" name="weight" defaultValue={selectedLoading.weight || ""} />
+                  </div>
+                )}
               </div>
               
               <div className="space-y-2">

@@ -1,16 +1,22 @@
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Plus, CloudRain, Droplets, Calendar, Loader2, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRainRecords } from "@/hooks/use-supabase";
+import { RainRecord } from "@/lib/supabase";
 
 const Rain = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { records, loading, addRecord, updateRecord, deleteRecord } = useRainRecords();
+  
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingRecord, setEditingRecord] = useState<RainRecord | null>(null);
 
   const today = new Date().toISOString().split('T')[0];
   const currentMonth = new Date().getMonth();
@@ -47,11 +53,34 @@ const Rain = () => {
     }
   };
 
-  const handleEditRecord = (record: { id: string; date: string }) => {
-    toast({
-      title: "Funcionalidade em desenvolvimento",
-      description: "Edição de registro de chuva será implementada em breve",
-    });
+  const handleEditRecord = (record: RainRecord) => {
+    setEditingRecord(record);
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingRecord) return;
+
+    const formData = new FormData(e.currentTarget);
+    const updatedData = {
+      date: formData.get("editDate") as string,
+      start_time: formData.get("editStartTime") as string,
+      end_time: formData.get("editEndTime") as string || undefined,
+      millimeters: parseFloat(formData.get("editMm") as string),
+    };
+
+    try {
+      await updateRecord(editingRecord.id, updatedData);
+      setIsEditModalOpen(false);
+      setEditingRecord(null);
+      toast({
+        title: "Registro atualizado!",
+        description: "O registro de chuva foi atualizado com sucesso.",
+      });
+    } catch (error) {
+      console.error('Erro ao editar registro:', error);
+    }
   };
 
   const handleDeleteRecord = async (id: string, date: string) => {
@@ -77,18 +106,18 @@ const Rain = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-info/5 via-background to-primary/5">
-      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+      <header className="border-b bg-blue-800 backdrop-blur-sm sticky top-0 z-10 text-white">
         <div className="container mx-auto px-4 py-4 flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
+          <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")} className="text-white hover:bg-blue-700">
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-info/10 rounded-lg">
-              <CloudRain className="w-6 h-6 text-info" />
+            <div className="p-2 bg-blue-900/50 rounded-lg">
+              <CloudRain className="w-6 h-6 text-blue-300 drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
             </div>
             <div>
-              <h1 className="text-xl font-bold">Controle de Chuva</h1>
-              <p className="text-sm text-muted-foreground">Medições pluviométricas</p>
+              <h1 className="text-xl font-bold text-white">Controle de Chuva</h1>
+              <p className="text-sm text-blue-200">Medições pluviométricas - IBA Santa Luzia</p>
             </div>
           </div>
         </div>
@@ -244,6 +273,85 @@ const Rain = () => {
           </div>
         </div>
       </main>
+
+      {/* Modal de Edição */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Registro de Chuva</DialogTitle>
+            <DialogDescription>
+              Altere os dados do registro de chuva
+            </DialogDescription>
+          </DialogHeader>
+
+          {editingRecord && (
+            <form onSubmit={handleSaveEdit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="editDate">Data</Label>
+                <Input 
+                  id="editDate"
+                  name="editDate"
+                  type="date" 
+                  defaultValue={editingRecord.date}
+                  required 
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="editStartTime">Hora Inicial</Label>
+                  <Input 
+                    id="editStartTime"
+                    name="editStartTime"
+                    type="time" 
+                    defaultValue={editingRecord.start_time || editingRecord.time || ""}
+                    required 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="editEndTime">Hora Final</Label>
+                  <Input 
+                    id="editEndTime"
+                    name="editEndTime"
+                    type="time" 
+                    defaultValue={editingRecord.end_time || ""}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="editMm">Milímetros</Label>
+                <Input 
+                  id="editMm"
+                  name="editMm"
+                  type="number" 
+                  step="0.1" 
+                  min="0" 
+                  defaultValue={editingRecord.millimeters}
+                  required 
+                  placeholder="0.0"
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <Button type="submit" className="flex-1">
+                  Salvar Alterações
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => {
+                    setIsEditModalOpen(false);
+                    setEditingRecord(null);
+                  }}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
