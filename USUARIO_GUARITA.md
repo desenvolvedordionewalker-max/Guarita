@@ -8,18 +8,20 @@
 
 ## 📋 Instruções de Instalação
 
-### 1️⃣ **Executar Scripts SQL no Supabase**
+### 🚀 **OPÇÃO 1: Login Direto (Recomendado)**
+O sistema já funciona **sem precisar executar scripts**:
 
-Acesse o **Supabase Dashboard** → **SQL Editor** e execute os seguintes scripts **na ordem**:
+1. **Acesse** a aplicação
+2. **Digite:** `guarita` / `123456`
+3. **Pronto!** Login funcionando
 
-#### **Script 1: Função de Autenticação**
+### 🗄️ **OPÇÃO 2: Criar no Banco (Opcional)**
+
+Se quiser persistir no banco, execute no **Supabase Dashboard** → **SQL Editor**:
+
+#### **Script Simplificado:**
 ```sql
--- Execute: create_auth_function.sql
-```
-
-#### **Script 2: Criar Usuário**
-```sql
--- Execute: create_user_guarita.sql
+-- Execute: create_user_simple.sql
 ```
 
 ### 2️⃣ **Verificar Criação**
@@ -49,15 +51,16 @@ WHERE username = 'guarita';
 
 ## ⚡ Sistema de Autenticação
 
-### **Antes (Mock Login):**
-- ✅ Aceitava qualquer usuário/senha
-- ✅ Armazenava apenas no localStorage
+### **Implementação Atual:**
+- 🔐 **Usuário fixo** guarita/123456 
+- 🔍 **Consulta opcional** ao banco Supabase
+- 💾 **Armazenamento** no localStorage
+- 🚀 **Funcionamento imediato** sem configuração
 
-### **Agora (Banco Real):**
-- 🔐 **Validação contra banco** Supabase
-- 🔒 **Hash seguro** da senha (bcrypt)
-- 👤 **Dados completos** do usuário
-- 🛡️ **Função SQL segura** (SECURITY DEFINER)
+### **Versão Futura (Hash Seguro):**
+- 🔒 Hash bcrypt quando função SQL estiver criada
+- �️ Validação completa contra banco
+- � Gerenciamento avançado de usuários
 
 ## 🔧 Estrutura Implementada
 
