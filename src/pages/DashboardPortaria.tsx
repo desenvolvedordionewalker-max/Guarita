@@ -2,11 +2,12 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, CloudRain, Truck, PackageCheck, Clock } from "lucide-react";
 import { useVehicles, useCottonPull, useRainRecords, useLoadingRecords } from "@/hooks/use-supabase";
+import ControleGuaritaFitScreen from "@/components/ControleGuaritaFitScreen";
 import logo from "@/assets/BF_logo.png";
 
 export default function DashboardPortariaTV() {
   const { vehicles, loading: loadingVehicles } = useVehicles();
-  const { records: cottonRecords, loading: loadingCotton } = useCottonPull();
+  const { records: cottonPullRecords, loading: loadingCotton } = useCottonPull();
   const { records: rainRecords, loading: loadingRain } = useRainRecords();
   const { records: loadingRecords, loading: loadingLoadings } = useLoadingRecords();
   
@@ -29,13 +30,13 @@ export default function DashboardPortariaTV() {
     );
   }
 
-  const today = new Date().toISOString().split('T')[0];
-  const thisWeekStart = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-  const thisMonthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
-  const thisYearStart = new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0];
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  const thisWeekStart = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
 
   // Primeiro filtramos os carregamentos do dia
-  const todayLoadings = loadingRecords.filter(l => l.date === today);
+  const todayLoadings = loadingRecords.filter(l => l.date === todayStr);
   const fila = todayLoadings.filter(l => !l.entry_date);
   const carregando = todayLoadings.filter(l => l.entry_date && !l.exit_date);
   const concluidos = todayLoadings.filter(l => l.exit_date);
@@ -53,302 +54,350 @@ export default function DashboardPortariaTV() {
   });
   
   // Lista final de produtos
-  const produtos = [...produtosFixos, ...produtosComMovimentacao];
+  const produtosParaExibir = [...produtosFixos, ...produtosComMovimentacao];
 
   // Rolos puxados hoje
-  const todayRolls = cottonRecords.filter(r => r.date === today);
+  const todayRolls = cottonPullRecords?.filter(r => r.date === todayStr) || [];
 
   // Estatísticas de chuva
-  const chuvaHoje = rainRecords.filter(r => r.date === today).reduce((sum, r) => sum + r.millimeters, 0);
-  const chuvaSemana = rainRecords.filter(r => r.date >= thisWeekStart).reduce((sum, r) => sum + r.millimeters, 0);
-  const chuvaMes = rainRecords.filter(r => r.date >= thisMonthStart).reduce((sum, r) => sum + r.millimeters, 0);
-  const chuvaAno = rainRecords.filter(r => r.date >= thisYearStart).reduce((sum, r) => sum + r.millimeters, 0);
-
+  const chuvaHoje = rainRecords?.filter(r => r.date === todayStr).reduce((sum, r) => sum + r.millimeters, 0) || 0;
+  const chuvaMes = rainRecords?.filter(r => r.date >= thisMonthStart.toISOString().split('T')[0]).reduce((sum, r) => sum + r.millimeters, 0) || 0;
+  const chuvaSemana = rainRecords?.filter(r => r.date >= thisWeekStart.toISOString().split('T')[0]).reduce((sum, r) => sum + r.millimeters, 0) || 0;
+  
   // Última chuva
-  const ultimaChuva = rainRecords
-    .filter(r => r.millimeters > 0)
-    .sort((a, b) => new Date(b.date + ' ' + (b.time || '00:00')).getTime() - new Date(a.date + ' ' + (a.time || '00:00')).getTime())[0];
+  const ultimaChuva = rainRecords && rainRecords.length > 0 
+    ? new Date(rainRecords.find(r => r.millimeters > 0)?.date || rainRecords[0].date)
+    : null;
 
   // Ranking de placas - Rolos do dia
   const rankingDia = todayRolls.reduce((acc, r) => {
     if (!acc[r.plate]) {
-      acc[r.plate] = { plate: r.plate, rolos: 0, producer: r.producer, driver: r.driver, viagens: 0 };
+      acc[r.plate] = { plate: r.plate, driver: r.driver, rolos: 0, viagens: 0 };
     }
     acc[r.plate].rolos += r.rolls;
     acc[r.plate].viagens += 1;
     acc[r.plate].driver = r.driver; // Sempre usar o motorista mais recente
     return acc;
-  }, {} as Record<string, { plate: string; rolos: number; producer: string; driver: string; viagens: number }>);
+  }, {} as Record<string, {plate: string, driver: string, rolos: number, viagens: number}>);
 
   const rankingDiaArray = Object.values(rankingDia)
     .sort((a, b) => b.rolos - a.rolos)
-    .slice(0, 8);
+    .slice(0, 10);
 
   // Ranking de placas - Acumulado do mês
   const thisMonth = new Date().toISOString().substring(0, 7); // YYYY-MM
-  const monthRolls = cottonRecords.filter(r => r.date.startsWith(thisMonth));
+  const monthRolls = cottonPullRecords?.filter(r => r.date && r.date.startsWith(thisMonth)) || [];
   
   const rankingMes = monthRolls.reduce((acc, r) => {
     if (!acc[r.plate]) {
-      acc[r.plate] = { plate: r.plate, rolos: 0, producer: r.producer, driver: r.driver, viagens: 0 };
+      acc[r.plate] = { plate: r.plate, driver: r.driver, rolos: 0, viagens: 0 };
     }
     acc[r.plate].rolos += r.rolls;
     acc[r.plate].viagens += 1;
     acc[r.plate].driver = r.driver; // Sempre usar o motorista mais recente
     return acc;
-  }, {} as Record<string, { plate: string; rolos: number; producer: string; driver: string; viagens: number }>);
+  }, {} as Record<string, {plate: string, driver: string, rolos: number, viagens: number}>);
 
   const rankingMesArray = Object.values(rankingMes)
     .sort((a, b) => b.rolos - a.rolos)
-    .slice(0, 8);
+    .slice(0, 10);
+
+  // Sistema responsivo otimizado para TVs
+  const totalCards = produtosParaExibir.length;
+  const getResponsiveClasses = () => {
+    if (totalCards <= 2) {
+      return {
+        gridCols: 'repeat(auto-fit, minmax(clamp(280px, 40vw, 800px), 1fr))',
+        textSize: 'text-[clamp(0.8rem, 1.6vw, 1.8rem)]',
+        titleSize: 'text-[clamp(1rem, 1.9vw, 2.2rem)]',
+        cardTitleSize: 'text-[clamp(1.3rem, 2.2vw, 2.8rem)]',
+        padding: 'p-[clamp(0.8rem, 1.4vw, 2rem)]',
+        gap: 'gap-[clamp(0.8rem, 1.4vw, 2rem)]',
+        minHeight: 'min-h-[clamp(5rem, 15vh, 12rem)]'
+      };
+    } else if (totalCards <= 3) {
+      return {
+        gridCols: 'repeat(auto-fit, minmax(clamp(240px, 30vw, 600px), 1fr))',
+        textSize: 'text-[clamp(0.7rem, 1.4vw, 1.6rem)]',
+        titleSize: 'text-[clamp(0.9rem, 1.7vw, 2rem)]',
+        cardTitleSize: 'text-[clamp(1.1rem, 2vw, 2.5rem)]',
+        padding: 'p-[clamp(0.6rem, 1.2vw, 1.8rem)]',
+        gap: 'gap-[clamp(0.6rem, 1.2vw, 1.8rem)]',
+        minHeight: 'min-h-[clamp(4rem, 12vh, 10rem)]'
+      };
+    } else if (totalCards <= 4) {
+      return {
+        gridCols: 'repeat(auto-fit, minmax(clamp(200px, 22vw, 500px), 1fr))',
+        textSize: 'text-[clamp(0.6rem, 1.2vw, 1.4rem)]',
+        titleSize: 'text-[clamp(0.8rem, 1.5vw, 1.8rem)]',
+        cardTitleSize: 'text-[clamp(1rem, 1.8vw, 2.2rem)]',
+        padding: 'p-[clamp(0.5rem, 1.1vw, 1.6rem)]',
+        gap: 'gap-[clamp(0.5rem, 1.1vw, 1.6rem)]',
+        minHeight: 'min-h-[clamp(3.5rem, 10vh, 8rem)]'
+      };
+    } else if (totalCards <= 6) {
+      return {
+        gridCols: 'repeat(auto-fit, minmax(clamp(160px, 16vw, 400px), 1fr))',
+        textSize: 'text-[clamp(0.5rem, 1vw, 1.2rem)]',
+        titleSize: 'text-[clamp(0.7rem, 1.3vw, 1.6rem)]',
+        cardTitleSize: 'text-[clamp(0.9rem, 1.5vw, 1.9rem)]',
+        padding: 'p-[clamp(0.4rem, 0.9vw, 1.3rem)]',
+        gap: 'gap-[clamp(0.4rem, 0.9vw, 1.3rem)]',
+        minHeight: 'min-h-[clamp(3rem, 8vh, 6rem)]'
+      };
+    } else {
+      return {
+        gridCols: 'repeat(auto-fit, minmax(clamp(130px, 12vw, 300px), 1fr))',
+        textSize: 'text-[clamp(0.4rem, 0.8vw, 1rem)]',
+        titleSize: 'text-[clamp(0.6rem, 1.1vw, 1.4rem)]',
+        cardTitleSize: 'text-[clamp(0.8rem, 1.3vw, 1.7rem)]',
+        padding: 'p-[clamp(0.3rem, 0.7vw, 1rem)]',
+        gap: 'gap-[clamp(0.3rem, 0.7vw, 1rem)]',
+        minHeight: 'min-h-[clamp(2.5rem, 6vh, 5rem)]'
+      };
+    }
+  };
+
+  const classes = getResponsiveClasses();
+  const infoLevel = totalCards <= 4 ? 'low' : totalCards <= 6 ? 'medium' : 'high';
 
   return (
-    <div className="tv-mode min-h-screen bg-gradient-to-br from-black via-gray-900 to-emerald-800 text-emerald-100 p-[clamp(0.5rem,1vw,2rem)]">
-      {/* Header responsivo para TV */}
-      <div className="bg-black/60 backdrop-blur-lg rounded-lg p-[clamp(0.75rem,1.5vw,3rem)] mb-[clamp(1rem,1.5vw,2rem)] border border-emerald-600/30">
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-[clamp(1rem,2vw,3rem)]">
-          <div className="flex items-center gap-[clamp(0.75rem,1.5vw,2.5rem)]">
-            <div className="w-[clamp(4rem,6vw,8rem)] h-[clamp(4rem,6vw,8rem)]">
-              <img 
-                src={logo}
-                alt="Bom Futuro Logo" 
-                className="w-full h-full object-contain"
-              />
-            </div>
-            <div className="text-center sm:text-left">
-              <h1 className="text-[clamp(1.5rem,3vw,4rem)] font-bold text-emerald-400 leading-tight">
-                CONTROLE GUARITA
-              </h1>
-              <p className="text-[clamp(0.875rem,1.2vw,1.5rem)] text-emerald-300">
-                Sistema de Monitoramento em Tempo Real
-              </p>
+    <ControleGuaritaFitScreen>
+      <div className="h-full bg-transparent text-white flex flex-col relative">
+      {/* HEADER - Mais Compacto */}
+      <div className="bg-black/70 backdrop-blur-sm border-b border-emerald-600/30 p-[clamp(0.4rem,0.8vw,0.8rem)] min-h-[clamp(3rem,6vh,4rem)]">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-[clamp(0.75rem,1.5vw,1.5rem)]">
+            <img src={logo} alt="Logo" className="h-[clamp(2rem,3.5vh,3rem)] w-auto" />
+            <div>
+              <h1 className="text-[clamp(1.2rem,2.2vw,2.5rem)] font-bold text-emerald-400">Controle Guarita</h1>
+              <p className="text-[clamp(0.65rem,0.9vw,0.95rem)] text-emerald-300">IBA Santa Luzia</p>
             </div>
           </div>
-          <div className="text-center sm:text-right">
-            <p className="text-[clamp(1.25rem,2.5vw,3rem)] font-mono text-emerald-400">
-              {currentTime.toLocaleTimeString('pt-BR')}
+          <div className="text-right">
+            <p className="text-[clamp(0.8rem,1.1vw,1.2rem)] text-emerald-300">
+              {currentTime.toLocaleDateString('pt-BR', { 
+                weekday: 'long', 
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric' 
+              })}
             </p>
-            <p className="text-[clamp(0.875rem,1.2vw,1.5rem)] text-emerald-300">
-              {currentTime.toLocaleDateString('pt-BR')}
+            <p className="text-[clamp(0.9rem,1.3vw,1.4rem)] font-bold text-emerald-400">
+              {currentTime.toLocaleTimeString('pt-BR', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+              })}
             </p>
           </div>
         </div>
       </div>
 
-      {/* CARDS POR PRODUTO - Grid Responsivo Inteligente para TV */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 3xl:grid-cols-8 gap-[clamp(0.5rem,1vw,1.5rem)] mb-[clamp(1rem,2vw,3rem)] overflow-hidden">
-        {produtos.map((produto) => {
-          const filaCount = fila.filter(l => l.product.toUpperCase() === produto).length;
-          const carregandoCount = carregando.filter(l => l.product.toUpperCase() === produto).length;
-          const concluidosCount = concluidos.filter(l => l.product.toUpperCase() === produto).length;
-          const carregandoItems = carregando.filter(l => l.product.toUpperCase() === produto);
-          const concluidosItems = concluidos.filter(l => l.product.toUpperCase() === produto);
+      {/* CARREGAMENTOS - Sistema de Grid Fluido Responsivo */}
+      <div className="p-[clamp(0.3rem,0.8vw,1rem)] flex-1" style={{ 
+        minHeight: `calc(50vh - 60px)`, 
+        overflow: 'visible' 
+      }}>
+        <div 
+          className={`${classes.gap} w-full`}
+          style={{
+            display: 'grid',
+            gridTemplateColumns: classes.gridCols,
+            gridAutoRows: 'minmax(auto, 1fr)',
+            minHeight: '100%',
+            alignItems: 'stretch'
+          }}
+        >
+          {produtosParaExibir.map((produto) => {
+            const filaItems = fila.filter(l => l.product.toUpperCase() === produto);
+            const carregandoItems = carregando.filter(l => l.product.toUpperCase() === produto);
+            const concluidosItems = concluidos.filter(l => l.product.toUpperCase() === produto);
 
-          // Calcular totais por tipo de produto dos carregamentos concluídos do dia
-          const getTotalQuantity = () => {
-            switch (produto.toUpperCase()) {
-              case 'PLUMA':
-              case 'FIBRILHA': {
-                const totalFardos = concluidosItems.reduce((sum, item) => sum + (item.bales || 0), 0);
-                return {
-                  value: totalFardos,
-                  unit: 'Fardos',
-                  label: totalFardos === 1 ? 'Fardo' : 'Fardos'
-                };
+            // Cálculo inteligente de quantidades
+            const getQuantidadeTotal = (items: Array<{bales?: number; weight?: number}>) => {
+              if (produto === "PLUMA" || produto === "FIBRILHA") {
+                // Para Pluma e Fibrilha: mostrar em Fardos
+                const totalFardos = items.reduce((sum, item) => sum + (item.bales || 0), 0);
+                return `${totalFardos.toLocaleString('pt-BR')} Fardos`;
+              } else {
+                // Para Caroço e Briquete: mostrar em KG
+                const totalKg = items.reduce((sum, item) => sum + (item.weight || 0), 0);
+                return `${totalKg.toLocaleString('pt-BR')} KG`;
               }
-              case 'CAROÇO':
-              case 'BRIQUETE': {
-                const totalKg = concluidosItems.reduce((sum, item) => sum + (item.weight || 0), 0);
-                return {
-                  value: totalKg,
-                  unit: 'KG',
-                  label: 'Total KG'
-                };
-              }
-              default:
-                return {
-                  value: concluidosCount,
-                  unit: '',
-                  label: 'Concluídos'
-                };
-            }
-          };
+            };
 
-          const quantityInfo = getTotalQuantity();
-
-          // Sistema de ajuste inteligente baseado na quantidade de informação
-          const totalInfo = filaCount + carregandoCount + concluidosCount;
-          const hasActiveLoading = carregandoItems.length > 0;
-          const infoLevel = hasActiveLoading && totalInfo > 0 ? 'high' : totalInfo > 5 ? 'medium' : 'low';
-          
-          // Classes dinâmicas baseadas no nível de informação
-          const getResponsiveClasses = (level: string) => {
-            switch (level) {
-              case 'high':
-                return {
-                  cardHeight: 'h-[clamp(14rem,22vh,28rem)]',
-                  titleSize: 'text-[clamp(0.75rem,1vw,1.125rem)]',
-                  subTitleSize: 'text-[clamp(0.625rem,0.8vw,0.875rem)]',
-                  iconSize: 'w-[clamp(0.875rem,1.2vw,1.75rem)] h-[clamp(0.875rem,1.2vw,1.75rem)]',
-                  numberSize: 'text-[clamp(0.875rem,1.2vw,1.75rem)]',
-                  textSize: 'text-[clamp(0.625rem,0.8vw,0.875rem)]',
-                  padding: 'p-[clamp(0.375rem,0.75vw,0.875rem)]'
-                };
-              case 'medium':
-                return {
-                  cardHeight: 'h-[clamp(12rem,20vh,24rem)]',
-                  titleSize: 'text-[clamp(0.875rem,1.2vw,1.25rem)]',
-                  subTitleSize: 'text-[clamp(0.75rem,1vw,1rem)]',
-                  iconSize: 'w-[clamp(1rem,1.5vw,2rem)] h-[clamp(1rem,1.5vw,2rem)]',
-                  numberSize: 'text-[clamp(1rem,1.5vw,2rem)]',
-                  textSize: 'text-[clamp(0.75rem,1vw,1rem)]',
-                  padding: 'p-[clamp(0.5rem,1vw,1rem)]'
-                };
-              default: // low
-                return {
-                  cardHeight: 'h-[clamp(10rem,18vh,22rem)]',
-                  titleSize: 'text-[clamp(1rem,1.4vw,1.5rem)]',
-                  subTitleSize: 'text-[clamp(0.875rem,1.2vw,1.25rem)]',
-                  iconSize: 'w-[clamp(1.25rem,1.8vw,2.25rem)] h-[clamp(1.25rem,1.8vw,2.25rem)]',
-                  numberSize: 'text-[clamp(1.25rem,1.8vw,2.25rem)]',
-                  textSize: 'text-[clamp(0.875rem,1.2vw,1.125rem)]',
-                  padding: 'p-[clamp(0.625rem,1.2vw,1.25rem)]'
-                };
-            }
-          };
-          
-          const classes = getResponsiveClasses(infoLevel);
-
-          return (
-            <Card key={produto} className={`bg-black/60 backdrop-blur-lg text-emerald-100 border-emerald-600/30 hover:border-emerald-500/50 transition-colors min-w-0 flex flex-col ${classes.cardHeight} card-info-${infoLevel}`}>
-              <CardHeader className="border-b border-emerald-600/30 pb-[clamp(0.25rem,0.5vh,0.75rem)] flex-shrink-0">
-                <CardTitle className={`${classes.titleSize} font-bold flex flex-col gap-[clamp(0.125rem,0.25vh,0.375rem)]`}>
-                  <span className="flex items-center gap-[clamp(0.25rem,0.5vw,0.75rem)] min-w-0">
-                    <PackageCheck className={`${classes.iconSize} text-emerald-400 flex-shrink-0`} />
-                    <span className="text-emerald-400 truncate">{produto}</span>
-                  </span>
-                  <span className={`${classes.subTitleSize} text-emerald-300 font-normal`}>
-                    {quantityInfo.value > 0 ? `${quantityInfo.value.toLocaleString('pt-BR')} ${quantityInfo.label}` : quantityInfo.label}
-                  </span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className={`${classes.padding} flex-1 flex flex-col min-w-0`}>
-                {/* Contadores */}
-                <div className="grid grid-cols-3 gap-[clamp(0.125rem,0.25vw,0.375rem)] mb-[clamp(0.25rem,0.5vh,0.75rem)]">
-                  <div className={`bg-orange-500/20 border border-orange-500/30 rounded ${classes.padding} text-center min-w-0`}>
-                    <div className="flex flex-col items-center">
-                      <Clock className={`${classes.iconSize} text-orange-400 mb-[clamp(0.125rem,0.25vh,0.25rem)]`} />
-                      <span className={`${classes.textSize} font-semibold text-orange-300 truncate`}>FILA</span>
-                      <p className={`${classes.numberSize} font-bold text-orange-400`}>{filaCount}</p>
+            return (
+              <Card key={produto} className="bg-black/60 backdrop-blur-lg border-emerald-600/30 text-emerald-100 min-h-full flex flex-col">
+                <CardHeader className={`border-b border-emerald-600/30 ${classes.padding} pb-[clamp(0.2rem,0.4vw,0.5rem)]`}>
+                  <CardTitle className={`${classes.cardTitleSize} font-bold text-emerald-400 text-center`}>
+                    {produto}
+                  </CardTitle>
+                  <div className="text-center">
+                    <p className={`text-[clamp(0.5rem,0.7vw,0.75rem)] text-emerald-300 truncate`}>
+                      {produto === "PLUMA" || produto === "FIBRILHA" ? 
+                        `${(filaItems.reduce((sum, item) => sum + (item.bales || 0), 0) + 
+                           carregandoItems.reduce((sum, item) => sum + (item.bales || 0), 0) + 
+                           concluidosItems.reduce((sum, item) => sum + (item.bales || 0), 0)).toLocaleString('pt-BR')} Fardos` :
+                        `${(filaItems.reduce((sum, item) => sum + (item.weight || 0), 0) + 
+                           carregandoItems.reduce((sum, item) => sum + (item.weight || 0), 0) + 
+                           concluidosItems.reduce((sum, item) => sum + (item.weight || 0), 0)).toLocaleString('pt-BR')} KG`
+                      }
+                    </p>
+                  </div>
+                </CardHeader>
+                <CardContent className={`${classes.padding} h-full overflow-hidden flex flex-col`}>
+                  <div className={`grid grid-cols-3 ${classes.gap} mb-[clamp(0.3rem,0.6vh,0.8rem)] text-center`}>
+                    <div className={`bg-yellow-600/20 border border-yellow-600/30 rounded ${classes.padding} ${classes.minHeight} flex flex-col justify-center`}>
+                      <p className="text-[clamp(0.5rem,0.8vw,0.9rem)] text-yellow-400 font-semibold">FILA</p>
+                      <p className={`${classes.titleSize} font-bold text-yellow-300`}>{filaItems.length}</p>
+                    </div>
+                    <div className={`bg-blue-600/20 border border-blue-600/30 rounded ${classes.padding} ${classes.minHeight} flex flex-col justify-center`}>
+                      <p className="text-[clamp(0.45rem,0.7vw,0.8rem)] text-blue-400 font-semibold">CARREGANDO</p>
+                      <p className={`${classes.titleSize} font-bold text-blue-300`}>{carregandoItems.length}</p>
+                    </div>
+                    <div className={`bg-emerald-600/20 border border-emerald-600/30 rounded ${classes.padding} ${classes.minHeight} flex flex-col justify-center`}>
+                      <p className="text-[clamp(0.45rem,0.7vw,0.8rem)] text-emerald-400 font-semibold">FINALIZADO</p>
+                      <p className={`${classes.titleSize} font-bold text-emerald-300`}>{concluidosItems.length}</p>
                     </div>
                   </div>
-                  <div className={`bg-blue-500/20 border border-blue-500/30 rounded ${classes.padding} text-center min-w-0`}>
-                    <div className="flex flex-col items-center">
-                      <Truck className={`${classes.iconSize} text-blue-400 mb-[clamp(0.125rem,0.25vh,0.25rem)]`} />
-                      <span className={`${classes.textSize} font-semibold text-blue-300 truncate`}>Carregando</span>
-                      <p className={`${classes.numberSize} font-bold text-blue-400`}>{carregandoCount}</p>
-                    </div>
-                  </div>
-                  <div className={`bg-emerald-500/20 border border-emerald-500/30 rounded ${classes.padding} text-center min-w-0`}>
-                    <div className="flex flex-col items-center">
-                      <PackageCheck className={`${classes.iconSize} text-emerald-400 mb-[clamp(0.125rem,0.25vh,0.25rem)]`} />
-                      <span className={`${classes.textSize} font-semibold text-emerald-300 truncate`}>OK</span>
-                      <p className={`${classes.numberSize} font-bold text-emerald-400`}>{concluidosCount}</p>
-                    </div>
-                  </div>
-                </div>
 
-                {/* Detalhes dos carregamentos em andamento */}
-                <div className="flex-1 min-h-0">
-                  <p className={`text-emerald-300 ${classes.textSize} mb-[clamp(0.125rem,0.25vh,0.25rem)] font-semibold truncate`}>🚛 Carregando:</p>
-                  <div className={`bg-black/30 border border-emerald-600/20 rounded ${classes.padding} flex-1 overflow-hidden`}>
-                    {carregandoItems.length > 0 ? (
-                      <div className={`space-y-[clamp(0.125rem,0.25vh,0.25rem)] max-h-[${infoLevel === 'high' ? 'clamp(3rem,6vh,4.5rem)' : infoLevel === 'medium' ? 'clamp(4rem,8vh,6rem)' : 'clamp(5rem,10vh,7.5rem)'}] overflow-y-auto`}>
-                        {carregandoItems.slice(0, infoLevel === 'high' ? 1 : 2).map((item) => (
-                          <div key={item.id} className={classes.textSize}>
-                            <span className="font-semibold text-emerald-400 block truncate">{item.plate}</span>
-                            <span className={`text-emerald-300 ${infoLevel === 'high' ? 'text-[clamp(0.5rem,0.7vw,0.75rem)]' : classes.textSize} truncate block`}>
-                              {infoLevel === 'high' ? 
-                                `${item.carrier}${item.client ? ` - ${item.client}` : ''}` :
-                                `${item.truck_type} - ${item.carrier}${item.client ? ` - ${item.client}` : ''}`
-                              }
-                            </span>
-                          </div>
-                        ))}
-                        {carregandoItems.length > (infoLevel === 'high' ? 1 : 2) && (
-                          <div className={`text-emerald-400 text-center ${infoLevel === 'high' ? 'text-[clamp(0.5rem,0.7vw,0.75rem)]' : classes.textSize}`}>
-                            +{carregandoItems.length - (infoLevel === 'high' ? 1 : 2)} mais
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <p className={`text-emerald-400 text-center ${classes.textSize}`}>Nenhum ativo</p>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
-      {/* ROLOS E CHUVA - Seção Responsiva para TV */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-[clamp(1rem,2vw,2rem)]">
-        {/* Movimentação de Rolos */}
-        <Card className="bg-black/60 backdrop-blur-lg text-emerald-100 border-emerald-600/30">
-          <CardHeader className="border-b border-emerald-600/30">
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-[clamp(0.5rem,1vw,1rem)]">
-              <CardTitle className="text-[clamp(1.25rem,2vw,2.5rem)] font-bold flex items-center gap-[clamp(0.5rem,1vw,1rem)]">
-                <Truck className="text-emerald-400 w-[clamp(1.5rem,2vw,2.5rem)] h-[clamp(1.5rem,2vw,2.5rem)]" /> 
-                <span className="text-emerald-400">Ranking de Rolos por Placa</span>
-              </CardTitle>
-              
-              {/* Informações do que está puxando hoje */}
-              {todayRolls.length > 0 && (
-                <div className="bg-black/40 border border-emerald-600/20 rounded-lg p-[clamp(0.5rem,1vw,1rem)]">
-                  <div className="text-center lg:text-right">
-                    <p className="text-[clamp(0.75rem,1vw,1rem)] text-emerald-300 mb-[clamp(0.25rem,0.5vh,0.5rem)]">🌾 Puxando Hoje</p>
-                    {(() => {
-                      // Pegar fazenda e talhão mais recente do dia
-                      const latestPull = todayRolls.sort((a, b) => 
-                        new Date(`${b.date} ${b.entry_time}`).getTime() - 
-                        new Date(`${a.date} ${a.entry_time}`).getTime()
-                      )[0];
-                      return (
-                        <div>
-                          <p className="font-semibold text-emerald-400 text-[clamp(0.875rem,1.2vw,1.25rem)]">
-                            {latestPull.farm}
-                          </p>
-                          {latestPull.talhao && (
-                            <p className="text-[clamp(0.75rem,1vw,1rem)] text-emerald-300">
-                              Talhão: {latestPull.talhao}
-                            </p>
+                  {/* Detalhes dos carregamentos em andamento */}
+                  <div className="flex-1 min-h-0 flex flex-col">
+                    <p className={`text-emerald-300 ${classes.textSize} mb-[clamp(0.4rem,0.8vh,0.8rem)] font-semibold`}>🚛 Carregando:</p>
+                    <div className={`bg-black/30 border border-emerald-600/20 rounded ${classes.padding} flex-1 overflow-auto ${classes.minHeight}`}>
+                      {carregandoItems.length > 0 ? (
+                        <div className={`space-y-[clamp(0.25rem,0.5vh,0.5rem)] overflow-y-auto h-full flex flex-col justify-center`}>
+                          {carregandoItems.slice(0, totalCards <= 4 ? 3 : totalCards <= 6 ? 2 : 2).map((item) => (
+                            <div key={item.id} className={`bg-black/20 rounded p-[clamp(0.2rem,0.4vw,0.5rem)] border border-emerald-600/20`}>
+                              <div className="text-[clamp(0.5rem,0.8vw,1rem)] text-emerald-400 font-bold text-center leading-tight">
+                                <span className="block">{item.plate}</span>
+                                <div className="text-[clamp(0.4rem,0.65vw,0.8rem)] text-emerald-300 mt-[clamp(0.1rem,0.2vh,0.2rem)]">
+                                  {item.client || 'S/Cliente'} • {item.truck_type || 'S/Tipo'} • {item.carrier || 'S/Transp'}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                          {carregandoItems.length > (totalCards <= 4 ? 3 : totalCards <= 6 ? 2 : 2) && (
+                            <div className={`text-emerald-400 text-center text-[clamp(0.35rem,0.5vw,0.6rem)] mt-[clamp(0.1rem,0.2vh,0.2rem)]`}>
+                              +{carregandoItems.length - (totalCards <= 4 ? 3 : totalCards <= 6 ? 2 : 2)} mais
+                            </div>
                           )}
                         </div>
-                      );
-                    })()}
+                      ) : (
+                        <p className={`text-emerald-400 text-center ${classes.textSize} flex items-center justify-center h-full`}>Nenhum ativo</p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ROLOS E CHUVA - Seção Responsiva */}
+      <div 
+        className="grid grid-cols-1 lg:grid-cols-2 gap-[clamp(0.5rem,1vw,1rem)] p-[clamp(0.5rem,1vw,1rem)]"
+        style={{ 
+          minHeight: `calc(50vh - 60px)`, 
+          overflow: 'visible' 
+        }}
+      >
+
+        {/* Card de Rolos */}
+        <Card className="bg-black/60 backdrop-blur-lg text-emerald-100 border-emerald-600/30 h-full overflow-hidden">
+          <CardHeader className="border-b border-emerald-600/30 pb-2">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-2">
+              <CardTitle className="text-[clamp(1.25rem,2vw,2.5rem)] font-bold flex items-center gap-[clamp(0.5rem,1vw,1rem)]">
+                <span className="text-emerald-400">Ranking Puxe Lavoura</span>
+              </CardTitle>
+              <div className="text-[clamp(0.75rem,1.2vw,1.25rem)] text-emerald-300">
+                {(() => {
+                  // Filtrar registros de hoje de forma mais robusta
+                  const todayString = today.toISOString().split('T')[0];
+                  const pulledToday = cottonPullRecords?.filter(r => {
+                    return r.date === todayString;
+                  }) || [];
+
+                  console.log('Cotton Pull Records:', cottonPullRecords?.length || 0);
+                  console.log('Today String:', todayString);
+                  console.log('Pulled Today:', pulledToday.length);
+
+                  if (pulledToday.length > 0) {
+                    // Mostrar fazendas únicas
+                    const uniqueFarms = [...new Set(pulledToday.map(r => r.farm).filter(farm => farm && farm.trim() !== ''))];
+                    
+                    // Mostrar talhões únicos se existirem
+                    const uniqueTalhaos = [...new Set(pulledToday.map(r => r.talhao).filter(talhao => talhao && talhao.trim() !== ''))];
+                    
+                    console.log('=== DEBUG TALHÃO ===');
+                    console.log('Cotton Pull Records:', cottonPullRecords?.length || 0);
+                    console.log('Today String:', todayString);
+                    console.log('Pulled Today:', pulledToday.length);
+                    console.log('Pulled Today Data:', pulledToday);
+                    console.log('Sample Record:', pulledToday[0]);
+                    console.log('Unique Farms:', uniqueFarms);
+                    console.log('Unique Talhaos:', uniqueTalhaos);
+                    console.log('Talhao values:', pulledToday.map(r => `${r.plate}: "${r.talhao}"`));
+                    console.log('===================');
+                    
+                    if (uniqueFarms.length > 0 || uniqueTalhaos.length > 0) {
+                      return (
+                        <div className="flex items-center gap-[clamp(0.2rem,0.4vw,0.5rem)]">
+                          <span className="text-green-400 text-[clamp(0.8rem,1.2vw,1.4rem)]">🌿</span>
+                          <div className="flex flex-col">
+                            <span className="text-[clamp(0.65rem,1vw,1.1rem)] font-semibold text-emerald-400">
+                              Puxando hoje
+                            </span>
+                            <div className="text-[clamp(0.55rem,0.85vw,0.95rem)] text-emerald-300">
+                              {uniqueFarms.length > 0 && (
+                                <span>
+                                  {uniqueFarms.slice(0, 2).join(', ')}
+                                  {uniqueFarms.length > 2 && ` +${uniqueFarms.length - 2}`}
+                                </span>
+                              )}
+                              {uniqueTalhaos.length > 0 && (
+                                <span className={uniqueFarms.length > 0 ? "ml-2" : ""}>
+                                  TH: {uniqueTalhaos.slice(0, 3).join(', ')}
+                                  {uniqueTalhaos.length > 3 && ` +${uniqueTalhaos.length - 3}`}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+                  }
+                  
+                  return (
+                    <div className="flex items-center gap-[clamp(0.2rem,0.4vw,0.5rem)]">
+                      <span className="text-green-400 text-[clamp(0.8rem,1.2vw,1.4rem)]">🌿</span>
+                      <span className="text-[clamp(0.65rem,1vw,1.1rem)] font-semibold text-emerald-400">
+                        Puxando hoje - {pulledToday.length} registros
+                      </span>
+                    </div>
+                  );
+                })()}
+              </div>
             </div>
           </CardHeader>
-          <CardContent className="p-[clamp(0.75rem,1.5vw,2rem)]">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-[clamp(1rem,2vw,2rem)]">
+          <CardContent className="p-[clamp(0.5rem,1vw,1rem)] h-full overflow-hidden">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-[clamp(0.5rem,1vw,1rem)] h-full">
+              
               {/* Ranking do Dia */}
-              <div>
-                <div className="flex items-center gap-[clamp(0.5rem,1vw,1rem)] mb-[clamp(0.75rem,1.5vw,1.5rem)]">
-                  <div className="w-[clamp(0.75rem,1vw,1rem)] h-[clamp(0.75rem,1vw,1rem)] bg-yellow-500 rounded-full"></div>
-                  <h3 className="font-semibold text-emerald-400 text-[clamp(1rem,1.3vw,1.5rem)]">🏆 TOP ROLOS - HOJE</h3>
-                </div>
-                <div className="space-y-[clamp(0.5rem,1vw,1rem)]">
+              <div className="flex flex-col h-full">
+                <h3 className="text-[clamp(0.6rem,0.9vw,1rem)] font-semibold text-emerald-400 mb-[clamp(0.15rem,0.3vh,0.3rem)] border-b border-emerald-600/30 pb-[clamp(0.15rem,0.3vh,0.3rem)]">
+                  HOJE ({rankingDiaArray.reduce((sum, item) => sum + item.rolos, 0).toLocaleString('pt-BR')} rolos)
+                </h3>
+                <div className="space-y-[clamp(0.1rem,0.2vh,0.25rem)] flex-1 overflow-y-auto">
                   {rankingDiaArray.length > 0 ? (
-                    rankingDiaArray.map((item, index) => (
+                    rankingDiaArray.slice(0, totalCards <= 3 ? 8 : totalCards <= 4 ? 10 : totalCards <= 6 ? 12 : 15).map((item, index) => (
                       <div
                         key={item.plate}
-                        className="bg-black/40 border border-emerald-600/20 rounded-lg p-[clamp(0.5rem,1vw,1rem)] flex justify-between items-center hover:border-emerald-500/40 transition-colors"
+                        className="bg-black/40 border border-emerald-600/20 rounded p-[clamp(0.2rem,0.4vw,0.5rem)] flex justify-between items-center hover:border-emerald-500/40 transition-colors"
                       >
-                        <div className="flex items-center gap-[clamp(0.5rem,1vw,1rem)]">
-                          <span className={`w-[clamp(1.5rem,2vw,2.5rem)] h-[clamp(1.5rem,2vw,2.5rem)] rounded-full flex items-center justify-center text-[clamp(0.75rem,1vw,1.25rem)] font-bold ${
+                        <div className="flex items-center gap-[clamp(0.2rem,0.4vw,0.5rem)] min-w-0 flex-1">
+                          <span className={`w-[clamp(0.9rem,1.4vw,1.4rem)] h-[clamp(0.9rem,1.4vw,1.4rem)] rounded-full flex items-center justify-center text-[clamp(0.3rem,0.5vw,0.55rem)] font-bold ${
                             index === 0 ? 'bg-yellow-500 text-black' :
                             index === 1 ? 'bg-gray-400 text-black' :
                             index === 2 ? 'bg-orange-500 text-black' :
@@ -356,38 +405,37 @@ export default function DashboardPortariaTV() {
                           }`}>
                             {index + 1}
                           </span>
-                          <div>
-                            <p className="font-semibold text-emerald-400 text-[clamp(0.875rem,1.2vw,1.25rem)]">{item.plate}</p>
-                            <p className="text-[clamp(0.75rem,1vw,1rem)] text-emerald-300">{item.driver}</p>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-semibold text-emerald-400 text-[clamp(0.4rem,0.65vw,0.8rem)]">{item.plate}</p>
+                              <p className="text-[clamp(0.35rem,0.55vw,0.7rem)] text-emerald-300">{item.driver}</p>
+                            </div>
                           </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold text-emerald-400 text-[clamp(1rem,1.3vw,1.5rem)]">{item.rolos.toLocaleString('pt-BR')}</p>
-                          <p className="text-[clamp(0.75rem,1vw,1rem)] text-emerald-300">{item.viagens} viagens</p>
-                        </div>
+                          <div className="text-right flex-shrink-0 ml-1">
+                            <p className="font-bold text-emerald-400 text-[clamp(0.4rem,0.65vw,0.8rem)]">{item.rolos.toLocaleString('pt-BR')}</p>
+                            <p className="text-[clamp(0.35rem,0.55vw,0.7rem)] text-emerald-300">{item.viagens} viagens</p>
+                          </div>
                       </div>
                     ))
                   ) : (
-                    <p className="text-emerald-400 text-center py-[clamp(1rem,2vw,2rem)] text-[clamp(1rem,1.3vw,1.5rem)]">Nenhum rolo hoje</p>
+                    <p className="text-emerald-400 text-center py-4 text-[clamp(0.6rem,0.9vw,1rem)]">Nenhum rolo hoje</p>
                   )}
                 </div>
               </div>
 
               {/* Ranking do Mês */}
-              <div>
-                <div className="flex items-center gap-[clamp(0.5rem,1vw,1rem)] mb-[clamp(0.75rem,1.5vw,1.5rem)]">
-                  <div className="w-[clamp(0.75rem,1vw,1rem)] h-[clamp(0.75rem,1vw,1rem)] bg-blue-500 rounded-full"></div>
-                  <h3 className="font-semibold text-emerald-400 text-[clamp(1rem,1.3vw,1.5rem)]">📅 TOP ROLOS - MÊS ATUAL</h3>
-                </div>
-                <div className="space-y-[clamp(0.5rem,1vw,1rem)]">
+              <div className="flex flex-col h-full">
+                <h3 className="text-[clamp(0.6rem,0.9vw,1rem)] font-semibold text-emerald-400 mb-[clamp(0.15rem,0.3vh,0.3rem)] border-b border-emerald-600/30 pb-[clamp(0.15rem,0.3vh,0.3rem)]">
+                  MÊS ({rankingMesArray.reduce((sum, item) => sum + item.rolos, 0).toLocaleString('pt-BR')} rolos)
+                </h3>
+                <div className="space-y-[clamp(0.1rem,0.2vh,0.25rem)] flex-1 overflow-y-auto">
                   {rankingMesArray.length > 0 ? (
-                    rankingMesArray.map((item, index) => (
+                    rankingMesArray.slice(0, totalCards <= 3 ? 8 : totalCards <= 4 ? 10 : totalCards <= 6 ? 12 : 15).map((item, index) => (
                       <div
                         key={item.plate}
-                        className="bg-black/40 border border-emerald-600/20 rounded-lg p-[clamp(0.5rem,1vw,1rem)] flex justify-between items-center hover:border-emerald-500/40 transition-colors"
+                        className="bg-black/40 border border-emerald-600/20 rounded p-[clamp(0.2rem,0.4vw,0.5rem)] flex justify-between items-center hover:border-emerald-500/40 transition-colors"
                       >
-                        <div className="flex items-center gap-[clamp(0.5rem,1vw,1rem)]">
-                          <span className={`w-[clamp(1.5rem,2vw,2.5rem)] h-[clamp(1.5rem,2vw,2.5rem)] rounded-full flex items-center justify-center text-[clamp(0.75rem,1vw,1.25rem)] font-bold ${
+                        <div className="flex items-center gap-[clamp(0.2rem,0.4vw,0.5rem)] min-w-0 flex-1">
+                          <span className={`w-[clamp(0.9rem,1.4vw,1.4rem)] h-[clamp(0.9rem,1.4vw,1.4rem)] rounded-full flex items-center justify-center text-[clamp(0.3rem,0.5vw,0.55rem)] font-bold ${
                             index === 0 ? 'bg-yellow-500 text-black' :
                             index === 1 ? 'bg-gray-400 text-black' :
                             index === 2 ? 'bg-orange-500 text-black' :
@@ -395,19 +443,19 @@ export default function DashboardPortariaTV() {
                           }`}>
                             {index + 1}
                           </span>
-                          <div>
-                            <p className="font-semibold text-emerald-400 text-[clamp(0.875rem,1.2vw,1.25rem)]">{item.plate}</p>
-                            <p className="text-[clamp(0.75rem,1vw,1rem)] text-emerald-300">{item.driver}</p>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold text-emerald-400 text-[clamp(0.4rem,0.65vw,0.8rem)]">{item.plate}</p>
+                            <p className="text-[clamp(0.35rem,0.55vw,0.7rem)] text-emerald-300">{item.driver}</p>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="font-bold text-emerald-400 text-[clamp(1rem,1.3vw,1.5rem)]">{item.rolos.toLocaleString('pt-BR')}</p>
-                          <p className="text-[clamp(0.75rem,1vw,1rem)] text-emerald-300">{item.viagens} viagens</p>
+                        <div className="text-right flex-shrink-0 ml-1">
+                          <p className="font-bold text-emerald-400 text-[clamp(0.4rem,0.65vw,0.8rem)]">{item.rolos.toLocaleString('pt-BR')}</p>
+                          <p className="text-[clamp(0.35rem,0.55vw,0.7rem)] text-emerald-300">{item.viagens} viagens</p>
                         </div>
                       </div>
                     ))
                   ) : (
-                    <p className="text-emerald-400 text-center py-[clamp(1rem,2vw,2rem)] text-[clamp(1rem,1.3vw,1.5rem)]">Nenhum rolo neste mês</p>
+                    <p className="text-emerald-400 text-center py-4 text-[clamp(0.6rem,0.9vw,1rem)]">Nenhum rolo neste mês</p>
                   )}
                 </div>
               </div>
@@ -415,71 +463,63 @@ export default function DashboardPortariaTV() {
           </CardContent>
         </Card>
 
-        {/* Monitoramento de Chuvas */}
+        {/* Card de Chuva */}
         <Card className="bg-black/60 backdrop-blur-lg text-emerald-100 border-emerald-600/30">
-          <CardHeader className="border-b border-emerald-600/30">
-            <CardTitle className="text-[clamp(1.25rem,2vw,2.5rem)] font-bold flex items-center gap-[clamp(0.5rem,1vw,1rem)]">
-              <CloudRain className="text-blue-400 w-[clamp(1.5rem,2vw,2.5rem)] h-[clamp(1.5rem,2vw,2.5rem)]" /> 
-              <span className="text-emerald-400">Monitoramento de Chuvas</span>
+          <CardHeader className="border-b border-emerald-600/30 p-[clamp(0.4rem,0.8vw,1rem)]">
+            <CardTitle className="text-[clamp(0.9rem,1.4vw,1.8rem)] font-bold flex items-center justify-between">
+              <span className="text-blue-400">💧 Chuva</span>
+              {ultimaChuva && (
+                <span className="text-[clamp(0.5rem,0.8vw,0.9rem)] text-blue-300 font-normal">
+                  Última: {ultimaChuva.toLocaleDateString('pt-BR')}
+                </span>
+              )}
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-[clamp(0.75rem,1.5vw,2rem)]">
-            <div className="space-y-[clamp(1rem,2vw,2rem)]">
-              {/* Estatísticas de Chuva */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-[clamp(0.75rem,1.5vw,1.5rem)]">
-                <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-[clamp(0.75rem,1.5vw,1.5rem)] text-center">
-                  <p className="text-[clamp(0.75rem,1vw,1rem)] text-blue-300 mb-[clamp(0.25rem,0.5vh,0.5rem)]">HOJE</p>
-                  <p className="text-[clamp(1.25rem,2vw,2.5rem)] font-bold text-blue-400">{chuvaHoje.toFixed(1)}</p>
-                  <p className="text-[clamp(0.75rem,1vw,1rem)] text-blue-300">mm</p>
-                </div>
-                <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-[clamp(0.75rem,1.5vw,1.5rem)] text-center">
-                  <p className="text-[clamp(0.75rem,1vw,1rem)] text-blue-300 mb-[clamp(0.25rem,0.5vh,0.5rem)]">SEMANA</p>
-                  <p className="text-[clamp(1.25rem,2vw,2.5rem)] font-bold text-blue-400">{chuvaSemana.toFixed(1)}</p>
-                  <p className="text-[clamp(0.75rem,1vw,1rem)] text-blue-300">mm</p>
-                </div>
-                <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-[clamp(0.75rem,1.5vw,1.5rem)] text-center">
-                  <p className="text-[clamp(0.75rem,1vw,1rem)] text-blue-300 mb-[clamp(0.25rem,0.5vh,0.5rem)]">MÊS</p>
-                  <p className="text-[clamp(1.25rem,2vw,2.5rem)] font-bold text-blue-400">{chuvaMes.toFixed(1)}</p>
-                  <p className="text-[clamp(0.75rem,1vw,1rem)] text-blue-300">mm</p>
-                </div>
-                <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-[clamp(0.75rem,1.5vw,1.5rem)] text-center">
-                  <p className="text-[clamp(0.75rem,1vw,1rem)] text-blue-300 mb-[clamp(0.25rem,0.5vh,0.5rem)]">ANO</p>
-                  <p className="text-[clamp(1.25rem,2vw,2.5rem)] font-bold text-blue-400">{chuvaAno.toFixed(1)}</p>
-                  <p className="text-[clamp(0.75rem,1vw,1rem)] text-blue-300">mm</p>
-                </div>
+          <CardContent className="p-[clamp(0.4rem,0.7vw,0.9rem)]">
+            <div className="grid grid-cols-3 gap-[clamp(0.3rem,0.6vw,0.8rem)] text-center">
+              <div className="bg-black/30 border border-blue-600/20 rounded-lg p-[clamp(0.3rem,0.6vw,0.8rem)]">
+                <p className="text-[clamp(0.5rem,0.8vw,0.9rem)] text-blue-300 mb-[clamp(0.15rem,0.3vh,0.3rem)]">HOJE</p>
+                <p className="text-[clamp(0.9rem,1.4vw,1.8rem)] font-bold text-blue-400">{chuvaHoje.toFixed(1)}</p>
+                <p className="text-[clamp(0.4rem,0.6vw,0.7rem)] text-blue-300">mm</p>
               </div>
+              <div className="bg-black/30 border border-blue-600/20 rounded-lg p-[clamp(0.3rem,0.6vw,0.8rem)]">
+                <p className="text-[clamp(0.5rem,0.8vw,0.9rem)] text-blue-300 mb-[clamp(0.15rem,0.3vh,0.3rem)]">SEMANA</p>
+                <p className="text-[clamp(0.9rem,1.4vw,1.8rem)] font-bold text-blue-400">{chuvaSemana.toFixed(1)}</p>
+                <p className="text-[clamp(0.4rem,0.6vw,0.7rem)] text-blue-300">mm</p>
+              </div>
+              <div className="bg-black/30 border border-blue-600/20 rounded-lg p-[clamp(0.3rem,0.6vw,0.8rem)]">
+                <p className="text-[clamp(0.5rem,0.8vw,0.9rem)] text-blue-300 mb-[clamp(0.15rem,0.3vh,0.3rem)]">MÊS</p>
+                <p className="text-[clamp(0.9rem,1.4vw,1.8rem)] font-bold text-blue-400">{chuvaMes.toFixed(1)}</p>
+                <p className="text-[clamp(0.4rem,0.6vw,0.7rem)] text-blue-300">mm</p>
+              </div>
+            </div>
 
-              {/* Última Chuva */}
-              {ultimaChuva && (
-                <div className="bg-black/40 border border-emerald-600/20 rounded-lg p-[clamp(1rem,2vw,2rem)]">
-                  <div className="flex items-center gap-[clamp(0.5rem,1vw,1rem)] mb-[clamp(0.5rem,1vw,1rem)]">
-                    <CloudRain className="w-[clamp(1.25rem,2vw,2rem)] h-[clamp(1.25rem,2vw,2rem)] text-blue-400" />
-                    <span className="font-semibold text-emerald-400 text-[clamp(1rem,1.3vw,1.5rem)]">Última Chuva Registrada</span>
+            {/* Últimas medições */}
+            <div className="mt-[clamp(0.3rem,0.5vw,0.6rem)]">
+              <h4 className="text-[clamp(0.5rem,0.7vw,0.8rem)] font-semibold text-blue-400 mb-[clamp(0.2rem,0.3vh,0.3rem)]">Últimas Medições</h4>
+              <div className="bg-black/30 border border-blue-600/20 rounded-lg p-[clamp(0.25rem,0.4vw,0.5rem)] max-h-[clamp(4rem,8vh,6rem)] overflow-y-auto">
+                {rainRecords && rainRecords.length > 0 ? (
+                  <div className="space-y-[clamp(0.1rem,0.18vh,0.2rem)]">
+                    {rainRecords.slice(0, totalCards <= 4 ? 10 : totalCards <= 6 ? 12 : 15).map((record, index) => (
+                      <div key={index} className="flex justify-between items-center py-[clamp(0.06rem,0.1vh,0.12rem)]">
+                        <span className="text-[clamp(0.5rem,0.75vw,0.85rem)] text-blue-300 flex-shrink-0">
+                          {new Date(record.date).toLocaleDateString('pt-BR')}
+                        </span>
+                        <span className="text-[clamp(0.5rem,0.75vw,0.85rem)] font-semibold text-blue-400 flex-shrink-0 ml-2">
+                          {record.millimeters.toFixed(1)}mm
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-[clamp(1rem,2vw,2rem)] text-[clamp(0.875rem,1.2vw,1.25rem)]">
-                    <div>
-                      <p className="text-emerald-300">Data:</p>
-                      <p className="font-semibold text-emerald-400">
-                        {new Date(ultimaChuva.date).toLocaleDateString('pt-BR')}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-emerald-300">Quantidade:</p>
-                      <p className="font-semibold text-blue-400">{ultimaChuva.millimeters.toFixed(1)}mm</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              {!ultimaChuva && (
-                <div className="text-center py-[clamp(1rem,2vw,2rem)]">
-                  <p className="text-emerald-400 text-[clamp(1rem,1.3vw,1.5rem)]">Nenhuma chuva registrada</p>
-                </div>
-              )}
+                ) : (
+                  <p className="text-blue-400 text-center text-[clamp(0.45rem,0.65vw,0.75rem)]">Nenhuma medição registrada</p>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
     </div>
+    </ControleGuaritaFitScreen>
   );
-}
+};

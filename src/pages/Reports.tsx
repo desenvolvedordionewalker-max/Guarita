@@ -158,15 +158,13 @@ const Reports = () => {
         record.destination
       ]);
       
-      doc.autoTable(
-        [['Data', 'Produto', 'Placa', 'Motorista', 'Destino']],
-        loadingTableData,
-        {
-          startY: yPosition,
-          theme: 'grid',
-          styles: { fontSize: 8 }
-        }
-      );
+      (doc as any).autoTable({
+        head: [['Data', 'Produto', 'Placa', 'Motorista', 'Destino']],
+        body: loadingTableData,
+        startY: yPosition,
+        theme: 'grid',
+        styles: { fontSize: 8 }
+      });
       
       yPosition = doc.lastAutoTable.finalY + 10;
     }
@@ -185,15 +183,13 @@ const Reports = () => {
         record.entry_time
       ]);
       
-      doc.autoTable(
-        [['Data', 'Produtor', 'Placa', 'Rolos', 'Entrada']],
-        cottonTableData,
-        {
-          startY: yPosition,
-          theme: 'grid',
-          styles: { fontSize: 8 }
-        }
-      );
+      (doc as any).autoTable({
+        head: [['Data', 'Produtor', 'Placa', 'Rolos', 'Entrada']],
+        body: cottonTableData,
+        startY: yPosition,
+        theme: 'grid',
+        styles: { fontSize: 8 }
+      });
     }
 
     doc.save(`Relatorio_Guarita_${new Date().toISOString().split('T')[0]}.pdf`);
