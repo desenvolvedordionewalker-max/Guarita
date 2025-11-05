@@ -21,9 +21,11 @@ import {
   ArrowLeft,
   Container,
   Plus,
-  Crown
+  Crown,
+  CheckCircle
 } from "lucide-react";
 import { useVehicles, useCottonPull, useRainRecords, useEquipment, useLoadingRecords } from "@/hooks/use-supabase";
+import { useMaterialReceipts } from "@/hooks/use-material-receipts";
 import { LoadingRecord } from "@/lib/supabase";
 import QueueDisplay from "@/components/QueueDisplay";
 import logo from "@/assets/BF_logo.png";
@@ -35,6 +37,7 @@ const Dashboard = () => {
   const { records: rainRecords, loading: loadingRain } = useRainRecords();
   const { records: equipmentRecords, loading: loadingEquipment } = useEquipment();
   const { records: loadingRecords, loading: loadingCarregamentos, updateRecord } = useLoadingRecords();
+  const { records: materialRecords, loading: loadingMaterials } = useMaterialReceipts();
   
   const [selectedLoading, setSelectedLoading] = useState<LoadingRecord | null>(null);
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
@@ -53,6 +56,16 @@ const Dashboard = () => {
   const handleLoadingCardClick = (loading: LoadingRecord) => {
     setSelectedLoading(loading);
     setIsManageModalOpen(true);
+  };
+
+  // Função para verificar se uma data é hoje
+  const isToday = (date: Date) => {
+    const today = new Date();
+    return (
+      date.getDate() === today.getDate() &&
+      date.getMonth() === today.getMonth() &&
+      date.getFullYear() === today.getFullYear()
+    );
   };
 
   const handleStartLoading = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -176,6 +189,14 @@ const Dashboard = () => {
       route: "/equipment",
     },
     {
+      title: "Materiais",
+      description: "Recebimento de insumos",
+      icon: Package,
+      color: "text-orange-600",
+      bgColor: "bg-orange-50",
+      route: "/materials",
+    },
+    {
       title: "Relatórios",
       description: "Métricas e análises",
       icon: BarChart3,
@@ -195,9 +216,10 @@ const Dashboard = () => {
   const todayRain = rainRecords
     .filter(r => r.date === today)
     .reduce((sum, r) => sum + r.millimeters, 0);
+  const todayMaterials = materialRecords.filter(m => m.date === today);
 
   // Estatísticas da nova tabela de carregamentos
-  const todayLoadings = loadingRecords.filter(l => l.date === today);
+  const todayLoadings = loadingRecords; // Temporariamente mostrando todos
   const loadingsFila = todayLoadings.filter(l => !l.entry_date);
   const loadingsCarregando = todayLoadings.filter(l => l.entry_date && !l.exit_date);
   const loadingsConcluidos = todayLoadings.filter(l => l.exit_date);
@@ -209,6 +231,11 @@ const Dashboard = () => {
   
   // Algodão dentro da algodoeira (CottonPull com entry_time mas sem exit_time)
   const algodaoNaAlgodoeira = cottonRecords.filter(c => c.entry_time && !c.exit_time);
+  
+  // Algodão que já saiu (concluído) hoje
+  const algodaoConcluido = cottonRecords.filter(c => 
+    c.exit_time && isToday(new Date(c.created_at!))
+  );
   
   // Totais APENAS dos carregamentos (não incluir veículos)
   const totalFila = loadingsFila.length;
@@ -469,47 +496,35 @@ const Dashboard = () => {
 
         {/* Detailed Information Section */}
         <div className="space-y-6">
-          {/* Algodão na Algodoeira */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="w-5 h-5 text-yellow-600" />
-                Algodão na Algodoeira
-              </CardTitle>
-              <CardDescription>
-                Veículos dentro da unidade processadora ({algodaoNaAlgodoeira.length} veículos)
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {algodaoNaAlgodoeira.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left p-2 font-semibold">Placa</th>
-                        <th className="text-left p-2 font-semibold">Produtor</th>
-                        <th className="text-left p-2 font-semibold">Fazenda</th>
-                        <th className="text-left p-2 font-semibold">Motorista</th>
-                        <th className="text-left p-2 font-semibold">Rolos</th>
-                        <th className="text-left p-2 font-semibold">Entrada</th>
-                        <th className="text-left p-2 font-semibold">Ações</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {algodaoNaAlgodoeira.map((cotton) => (
-                        <tr 
-                          key={cotton.id} 
-                          className="border-b hover:bg-gray-50 cursor-pointer transition-colors"
-                        >
-                          <td className="p-2 font-medium">{cotton.plate}</td>
-                          <td className="p-2">{cotton.producer}</td>
-                          <td className="p-2">{cotton.farm}</td>
-                          <td className="p-2">{cotton.driver}</td>
-                          <td className="p-2">{cotton.rolls}</td>
-                          <td className="p-2 text-sm text-muted-foreground">
-                            {cotton.entry_time}
-                          </td>
-                          <td className="p-2">
+          {/* Algodão - Cards Lado a Lado */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Veículos na Algodoeira */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Package className="w-5 h-5 text-yellow-600" />
+                    Na Algodoeira
+                  </div>
+                  <span className="text-sm font-normal bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
+                    {algodaoNaAlgodoeira.length}
+                  </span>
+                </CardTitle>
+                <CardDescription>
+                  Veículos processando algodão
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {algodaoNaAlgodoeira.length > 0 ? (
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {algodaoNaAlgodoeira.map((cotton) => (
+                      <Card key={cotton.id} className="border-yellow-200">
+                        <CardContent className="p-3">
+                          <div className="flex justify-between items-start mb-2">
+                            <div>
+                              <p className="font-semibold">{cotton.plate}</p>
+                              <p className="text-sm text-muted-foreground">{cotton.driver}</p>
+                            </div>
                             <Button 
                               size="sm" 
                               onClick={() => handleMarkExit(cotton.id)}
@@ -517,49 +532,191 @@ const Dashboard = () => {
                             >
                               Marcar Saída
                             </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  Nenhum veículo na algodoeira
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                          </div>
+                          <div className="text-xs text-muted-foreground space-y-1">
+                            <p><span className="font-medium">Produtor:</span> {cotton.producer}</p>
+                            <p><span className="font-medium">Fazenda:</span> {cotton.farm}</p>
+                            <p><span className="font-medium">Rolos:</span> {cotton.rolls}</p>
+                            <p><span className="font-medium">Entrada:</span> {cotton.entry_time}</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-6 text-muted-foreground text-sm">
+                    Nenhum veículo na algodoeira
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-          {/* Fila de Carregamentos */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Container className="w-5 h-5 text-purple-600" />
-                Fila de Carregamentos
-              </CardTitle>
-              <CardDescription>
-                Clique em um carregamento para gerenciar
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {!loadingCarregamentos && loadingsFila.length > 0 ? (
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {loadingsFila
-                    .sort((a, b) => new Date(a.created_at!).getTime() - new Date(b.created_at!).getTime())
-                    .map((loading) => {
-                      const { position } = getQueuePosition(loading);
-                      return (
-                        <Card 
-                          key={loading.id} 
-                          className={`border-l-4 cursor-pointer hover:shadow-md transition-shadow ${getProductColor(loading.product)}`}
-                          onClick={() => handleLoadingCardClick(loading)}
-                        >
-                          <CardContent className="pt-4 pb-4">
-                            <div className="flex justify-between items-start">
+            {/* Veículos que Concluíram */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                    Concluídos
+                  </div>
+                  <span className="text-sm font-normal bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                    {algodaoConcluido.length}
+                  </span>
+                </CardTitle>
+                <CardDescription>
+                  Processamento concluído hoje
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {algodaoConcluido.length > 0 ? (
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {algodaoConcluido
+                      .sort((a, b) => new Date(b.exit_time!).getTime() - new Date(a.exit_time!).getTime())
+                      .slice(0, 10)
+                      .map((cotton) => (
+                        <Card key={cotton.id} className="border-green-200">
+                          <CardContent className="p-3">
+                            <div className="flex justify-between items-start mb-2">
                               <div>
-                                <div className="flex gap-2 mb-1 items-center">
-                                  <span className={`px-3 py-1 rounded-full text-sm font-bold ${
+                                <p className="font-semibold">{cotton.plate}</p>
+                                <p className="text-sm text-muted-foreground">{cotton.driver}</p>
+                              </div>
+                              <CheckCircle className="w-4 h-4 text-green-500" />
+                            </div>
+                            <div className="text-xs text-muted-foreground space-y-1">
+                              <p><span className="font-medium">Produtor:</span> {cotton.producer}</p>
+                              <p><span className="font-medium">Fazenda:</span> {cotton.farm}</p>
+                              <p><span className="font-medium">Rolos:</span> {cotton.rolls}</p>
+                              <p className="text-green-600 font-medium">
+                                Saída: {cotton.exit_time || '-'}
+                              </p>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-6 text-muted-foreground text-sm">
+                    Nenhum processamento concluído hoje
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Fila de Carregamento - 3 Cards Lado a Lado */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Fila de Carregamento */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-5 h-5 text-blue-600" />
+                    Fila de Carregamento
+                  </div>
+                  <span className="text-sm font-normal bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                    {loadingCarregamentos ? '...' : loadingsFila.length}
+                  </span>
+                </CardTitle>
+                <CardDescription>
+                  Aguardando carregamento
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {!loadingCarregamentos && loadingsFila.length > 0 ? (
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {loadingsFila
+                      .sort((a, b) => new Date(a.created_at!).getTime() - new Date(b.created_at!).getTime())
+                      .slice(0, 5)
+                      .map((loading) => {
+                        const { position } = getQueuePosition(loading);
+                        return (
+                          <Card 
+                            key={loading.id} 
+                            className={`border-l-4 cursor-pointer hover:shadow-md transition-shadow ${getProductColor(loading.product)}`}
+                            onClick={() => handleLoadingCardClick(loading)}
+                          >
+                            <CardContent className="p-3">
+                              <div className="flex justify-between items-start mb-2">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <span className={`px-2 py-1 rounded text-xs font-bold ${
+                                      loading.product === 'Pluma' ? 'bg-yellow-100 text-yellow-800' :
+                                      loading.product === 'Caroço' ? 'bg-amber-100 text-amber-800' :
+                                      loading.product === 'Fibrilha' ? 'bg-green-100 text-green-800' :
+                                      loading.product === 'Briquete' ? 'bg-purple-100 text-purple-800' :
+                                      loading.product === 'Reciclados' ? 'bg-blue-100 text-blue-800' :
+                                      loading.product === 'Cavaco' ? 'bg-orange-100 text-orange-800' :
+                                      loading.product === 'Outros' ? 'bg-pink-100 text-pink-800' :
+                                      'bg-gray-100 text-gray-800'
+                                    }`}>
+                                      {loading.product}
+                                    </span>
+                                    {position === 1 && (
+                                      <div className="flex items-center gap-1">
+                                        <Crown className="w-3 h-3 text-yellow-500" />
+                                        <span className="text-xs font-bold text-yellow-600">1º</span>
+                                      </div>
+                                    )}
+                                    {loading.is_sider && (
+                                      <span className="px-1 py-0.5 rounded bg-blue-100 text-blue-800 text-xs">SIDER</span>
+                                    )}
+                                  </div>
+                                  <p className="font-semibold">{loading.plate}</p>
+                                </div>
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                <p className="truncate">{loading.driver}</p>
+                                <p className="truncate">{loading.carrier}</p>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                  </div>
+                ) : (
+                  <div className="text-center py-6 text-muted-foreground text-sm">
+                    {loadingCarregamentos ? (
+                      <div className="flex items-center justify-center">
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        Carregando...
+                      </div>
+                    ) : (
+                      "Nenhum veículo na fila"
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Carregando */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-5 h-5 text-orange-600" />
+                    Carregando
+                  </div>
+                  <span className="text-sm font-normal bg-orange-100 text-orange-800 px-2 py-1 rounded-full">
+                    {loadingCarregamentos ? '...' : loadingsCarregando.length}
+                  </span>
+                </CardTitle>
+                <CardDescription>
+                  Em processo de carregamento
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {!loadingCarregamentos && loadingsCarregando.length > 0 ? (
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {loadingsCarregando
+                      .slice(0, 5)
+                      .map((loading) => (
+                        <Card key={loading.id} className="relative border-orange-200">
+                          <CardContent className="p-3">
+                            <div className="flex justify-between items-start mb-2">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className={`px-2 py-1 rounded text-xs font-bold ${
                                     loading.product === 'Pluma' ? 'bg-yellow-100 text-yellow-800' :
                                     loading.product === 'Caroço' ? 'bg-amber-100 text-amber-800' :
                                     loading.product === 'Fibrilha' ? 'bg-green-100 text-green-800' :
@@ -571,63 +728,121 @@ const Dashboard = () => {
                                   }`}>
                                     {loading.product}
                                   </span>
-                                  {loading.is_sider && (
-                                    <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-xs">SIDER</span>
-                                  )}
-                                  {position === 1 && (
-                                    <div className="flex items-center gap-1">
-                                      <Crown className="w-4 h-4 text-yellow-500" />
-                                      <span className="text-xs font-bold text-yellow-600">1º DA VEZ</span>
-                                    </div>
-                                  )}
-                                  {position === 2 && (
-                                    <div className="flex items-center gap-1">
-                                      <Users className="w-4 h-4 text-blue-500" />
-                                      <span className="text-xs font-bold text-blue-600">PRÓXIMO DA VEZ</span>
-                                    </div>
-                                  )}
+                                  <div className="flex items-center gap-1">
+                                    <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
+                                    <span className="text-xs font-bold text-orange-600">CARREGANDO</span>
+                                  </div>
                                 </div>
-                                <p className="font-semibold text-lg">{loading.plate}</p>
-                                <p className="text-sm text-muted-foreground">
-                                  {getPositionMessage(loading)}
-                                </p>
-                              </div>
-                              <div className="text-right text-sm">
-                                <p className="text-muted-foreground">Transportadora</p>
-                                <p className="font-medium">{loading.carrier}</p>
+                                <p className="font-semibold">{loading.plate}</p>
                               </div>
                             </div>
-                            <div className="text-sm mt-3 pt-3 border-t">
-                              <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                  <p className="text-muted-foreground">Motorista</p>
-                                  <p className="font-medium">{loading.driver}</p>
-                                </div>
-                                <div>
-                                  <p className="text-muted-foreground">Destino</p>
-                                  <p className="font-medium">{loading.destination}</p>
-                                </div>
-                              </div>
+                            <div className="text-xs text-muted-foreground">
+                              <p className="truncate">{loading.driver}</p>
+                              <p className="truncate">{loading.carrier}</p>
+                              {loading.entry_time && (
+                                <p className="text-orange-600 font-medium">
+                                  Iniciado: {loading.entry_time}
+                                </p>
+                              )}
                             </div>
                           </CardContent>
                         </Card>
-                      );
-                    })}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  {loadingCarregamentos ? (
-                    <div className="flex items-center justify-center">
-                      <Loader2 className="w-6 h-6 animate-spin mr-2" />
-                      Carregando...
-                    </div>
-                  ) : (
-                    "Nenhum veículo na fila de carregamento"
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                      ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-6 text-muted-foreground text-sm">
+                    {loadingCarregamentos ? (
+                      <div className="flex items-center justify-center">
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        Carregando...
+                      </div>
+                    ) : (
+                      "Nenhum carregamento em andamento"
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Concluídos */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                    Concluídos
+                  </div>
+                  <span className="text-sm font-normal bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                    {loadingCarregamentos ? '...' : loadingsConcluidos.length}
+                  </span>
+                </CardTitle>
+                <CardDescription>
+                  Carregamentos finalizados hoje
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {!loadingCarregamentos && loadingsConcluidos.length > 0 ? (
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {loadingsConcluidos
+                      .sort((a, b) => new Date(b.exit_time!).getTime() - new Date(a.exit_time!).getTime())
+                      .slice(0, 5)
+                      .map((loading) => (
+                        <Card key={loading.id} className="relative border-green-200">
+                          <CardContent className="p-3">
+                            <div className="flex justify-between items-start mb-2">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className={`px-2 py-1 rounded text-xs font-bold ${
+                                    loading.product === 'Pluma' ? 'bg-yellow-100 text-yellow-800' :
+                                    loading.product === 'Caroço' ? 'bg-amber-100 text-amber-800' :
+                                    loading.product === 'Fibrilha' ? 'bg-green-100 text-green-800' :
+                                    loading.product === 'Briquete' ? 'bg-purple-100 text-purple-800' :
+                                    loading.product === 'Reciclados' ? 'bg-blue-100 text-blue-800' :
+                                    loading.product === 'Cavaco' ? 'bg-orange-100 text-orange-800' :
+                                    loading.product === 'Outros' ? 'bg-pink-100 text-pink-800' :
+                                    'bg-gray-100 text-gray-800'
+                                  }`}>
+                                    {loading.product}
+                                  </span>
+                                  <CheckCircle className="w-3 h-3 text-green-500" />
+                                </div>
+                                <p className="font-semibold">{loading.plate}</p>
+                              </div>
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              <p className="truncate">{loading.driver}</p>
+                              <p className="truncate">{loading.carrier}</p>
+                              {loading.exit_time && (
+                                <p className="text-green-600 font-medium">
+                                  Concluído: {new Date(loading.exit_time).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                              )}
+                              {loading.invoice_number && (
+                                <p className="text-blue-600 font-medium">
+                                  NF: {loading.invoice_number}
+                                </p>
+                              )}
+
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-6 text-muted-foreground text-sm">
+                    {loadingCarregamentos ? (
+                      <div className="flex items-center justify-center">
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        Carregando...
+                      </div>
+                    ) : (
+                      "Nenhum carregamento concluído hoje"
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
 
           {/* Movimentação Geral de Veículos */}
           <Card>
@@ -647,6 +862,7 @@ const Dashboard = () => {
                     <thead>
                       <tr className="border-b">
                         <th className="text-left p-2 font-semibold">Placa</th>
+                        <th className="text-left p-2 font-semibold">Motorista</th>
                         <th className="text-left p-2 font-semibold">Tipo</th>
                         <th className="text-left p-2 font-semibold">Finalidade</th>
                         <th className="text-left p-2 font-semibold">Entrada</th>
@@ -659,6 +875,7 @@ const Dashboard = () => {
                       {todayVehicles.slice(0, 10).map((vehicle) => (
                         <tr key={vehicle.id} className="border-b hover:bg-gray-50">
                           <td className="p-2 font-medium">{vehicle.plate}</td>
+                          <td className="p-2">{vehicle.driver}</td>
                           <td className="p-2">{vehicle.type}</td>
                           <td className="p-2">{vehicle.purpose}</td>
                           <td className="p-2 text-sm">

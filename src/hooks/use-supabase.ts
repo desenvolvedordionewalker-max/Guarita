@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { supabase, Vehicle, CottonPull, RainRecord, Equipment, Producer, LoadingRecord } from '@/lib/supabase'
+import { supabase, Vehicle, CottonPull, RainRecord, Equipment, Producer, LoadingRecord, MaterialReceipt } from '@/lib/supabase'
 import { useToast } from './use-toast'
 
 export const useVehicles = () => {

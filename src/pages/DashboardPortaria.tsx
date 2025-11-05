@@ -35,8 +35,8 @@ export default function DashboardPortariaTV() {
   const thisWeekStart = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
 
-  // Primeiro filtramos os carregamentos do dia
-  const todayLoadings = loadingRecords.filter(l => l.date === todayStr);
+  // Primeiro filtramos os carregamentos do dia (temporariamente todos)
+  const todayLoadings = loadingRecords; // Mostrando todos temporariamente
   const fila = todayLoadings.filter(l => !l.entry_date);
   const carregando = todayLoadings.filter(l => l.entry_date && !l.exit_date);
   const concluidos = todayLoadings.filter(l => l.exit_date);

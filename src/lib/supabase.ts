@@ -105,6 +105,7 @@ export interface LoadingRecord {
   bales: number
   weight: number
   notes?: string
+  invoice_number?: string
   created_by?: string
   created_at?: string
   updated_at?: string
@@ -118,4 +119,22 @@ export interface SavedValue {
   usage_count: number
   created_at?: string
   updated_at?: string
+}
+
+export interface MaterialReceipt {
+  id: string
+  date: string
+  time: string
+  material_type: string // Areia, Cascalho, Cavaco, Pedra Brita, Pó de Pedra, Álcool
+  plate: string
+  driver: string
+  net_weight?: number
+  volume_m3?: number
+  volume_m2?: number
+  volume_liters?: number
+  unit_type: 'KG' | 'M3' | 'M2' | 'LITROS'
+  observations?: string
+  created_at?: string
+  updated_at?: string
+  created_by?: string
 }
