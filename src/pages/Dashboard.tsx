@@ -30,6 +30,12 @@ import { LoadingRecord } from "@/lib/supabase";
 import QueueDisplay from "@/components/QueueDisplay";
 import logo from "@/assets/BF_logo.png";
 
+// Função helper para converter texto para Title Case
+const toTitleCase = (str: string): string => {
+  if (!str) return '';
+  return str.toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const { vehicles, loading: loadingVehicles, updateVehicle } = useVehicles();
@@ -910,10 +916,10 @@ const Dashboard = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <Truck className="w-5 h-5 text-primary" />
-                movimentação geral de veículos
+                Movimentação Geral de Veículos
               </CardTitle>
               <CardDescription>
-                todos os veículos que entraram hoje
+                Todos os Veículos que Entraram Hoje
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -922,23 +928,23 @@ const Dashboard = () => {
                   <table className="w-full border-collapse">
                     <thead>
                       <tr className="border-b">
-                        <th className="text-left p-2 font-semibold text-sm">placa</th>
-                        <th className="text-left p-2 font-semibold text-sm">motorista</th>
-                        <th className="text-left p-2 font-semibold text-sm">tipo</th>
-                        <th className="text-left p-2 font-semibold text-sm">finalidade</th>
-                        <th className="text-left p-2 font-semibold text-sm">entrada</th>
-                        <th className="text-left p-2 font-semibold text-sm">saída</th>
-                        <th className="text-left p-2 font-semibold text-sm">status</th>
-                        <th className="text-left p-2 font-semibold text-sm">ação</th>
+                        <th className="text-left p-2 font-semibold text-sm">Placa</th>
+                        <th className="text-left p-2 font-semibold text-sm">Motorista</th>
+                        <th className="text-left p-2 font-semibold text-sm">Tipo</th>
+                        <th className="text-left p-2 font-semibold text-sm">Finalidade</th>
+                        <th className="text-left p-2 font-semibold text-sm">Entrada</th>
+                        <th className="text-left p-2 font-semibold text-sm">Saída</th>
+                        <th className="text-left p-2 font-semibold text-sm">Status</th>
+                        <th className="text-left p-2 font-semibold text-sm">Ação</th>
                       </tr>
                     </thead>
                     <tbody>
                       {todayVehicles.slice(0, 10).map((vehicle) => (
                         <tr key={vehicle.id} className="border-b hover:bg-gray-50">
-                          <td className="p-2 font-medium text-sm">{vehicle.plate}</td>
-                          <td className="p-2 text-sm">{vehicle.driver}</td>
-                          <td className="p-2 text-sm">{vehicle.type}</td>
-                          <td className="p-2 text-sm">{vehicle.purpose}</td>
+                          <td className="p-2 font-medium text-sm">{vehicle.plate.toUpperCase()}</td>
+                          <td className="p-2 text-sm">{toTitleCase(vehicle.driver)}</td>
+                          <td className="p-2 text-sm">{toTitleCase(vehicle.type)}</td>
+                          <td className="p-2 text-sm">{toTitleCase(vehicle.purpose)}</td>
                           <td className="p-2 text-sm">
                             {vehicle.date} {vehicle.entry_time}
                           </td>
@@ -949,7 +955,7 @@ const Dashboard = () => {
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                               vehicle.exit_time ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'
                             }`}>
-                              {vehicle.exit_time ? 'saiu' : 'no pátio'}
+                              {vehicle.exit_time ? 'Saiu' : 'No Pátio'}
                             </span>
                           </td>
                           <td className="p-2">
@@ -960,7 +966,7 @@ const Dashboard = () => {
                                 onClick={() => handleRegisterVehicleExit(vehicle.id)}
                                 className="text-green-600 hover:text-green-700 hover:bg-green-50 text-xs"
                               >
-                                registrar saída
+                                Registrar Saída
                               </Button>
                             )}
                           </td>
@@ -971,7 +977,7 @@ const Dashboard = () => {
                   {todayVehicles.length > 10 && (
                     <div className="mt-4 text-center">
                       <Button variant="outline" onClick={() => navigate('/vehicles')} className="text-sm">
-                        ver todos os {todayVehicles.length} veículos
+                        Ver Todos os {todayVehicles.length} Veículos
                       </Button>
                     </div>
                   )}
@@ -981,10 +987,10 @@ const Dashboard = () => {
                   {loadingVehicles ? (
                     <div className="flex items-center justify-center">
                       <Loader2 className="w-6 h-6 animate-spin mr-2" />
-                      carregando...
+                      Carregando...
                     </div>
                   ) : (
-                    "nenhum veículo registrado hoje"
+                    "Nenhum Veículo Registrado Hoje"
                   )}
                 </div>
               )}

@@ -21,6 +21,12 @@ interface jsPDFWithAutoTable extends jsPDF {
   };
 }
 
+// Função helper para converter texto para Title Case
+const toTitleCase = (str: string): string => {
+  if (!str) return '';
+  return str.toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
 const Reports = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -636,7 +642,7 @@ const Reports = () => {
             <CardTitle className="flex items-center justify-between text-base">
               <div className="flex items-center gap-2">
                 <Filter className="w-5 h-5" />
-                movimentação geral
+                Movimentação Geral
               </div>
               <Button
                 variant="outline"
@@ -644,19 +650,19 @@ const Reports = () => {
                 onClick={() => setIsExpanded(!isExpanded)}
                 className="flex items-center gap-2 text-sm"
               >
-                {isExpanded ? "recolher" : "expandir tudo"}
+                {isExpanded ? "Recolher" : "Expandir Tudo"}
                 <span className="text-xs">{isExpanded ? "↑" : "↓"}</span>
               </Button>
             </CardTitle>
             <CardDescription>
-              visualize e filtre todas as movimentações do sistema
+              Visualize e Filtre Todas as Movimentações do Sistema
             </CardDescription>
           </CardHeader>
           <CardContent>
             {/* Filtros sempre visíveis */}
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
                   <div className="space-y-2">
-                    <Label className="text-sm">data</Label>
+                    <Label className="text-sm">Data</Label>
                     <Input 
                       type="date" 
                       value={dateFilter}
@@ -664,7 +670,7 @@ const Reports = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-sm">produto</Label>
+                    <Label className="text-sm">Produto</Label>
                     <Select value={productFilter} onValueChange={setProductFilter}>
                       <SelectTrigger>
                         <SelectValue placeholder="Todos" />
@@ -679,7 +685,7 @@ const Reports = () => {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-sm">placa</Label>
+                    <Label className="text-sm">Placa</Label>
                     <Input 
                       placeholder="Ex: ABC-1234"
                       value={plateFilter}
@@ -687,7 +693,7 @@ const Reports = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-sm">motorista</Label>
+                    <Label className="text-sm">Motorista</Label>
                     <Input 
                       placeholder="Nome do motorista"
                       value={driverFilter}
@@ -758,12 +764,12 @@ const Reports = () => {
                 <table className="w-full border-collapse border border-gray-300">
                   <thead>
                     <tr className="bg-gray-50">
-                      <th className="border border-gray-300 p-2 text-left text-sm">data</th>
-                      <th className="border border-gray-300 p-2 text-left text-sm">tipo</th>
-                      <th className="border border-gray-300 p-2 text-left text-sm">placa</th>
-                      <th className="border border-gray-300 p-2 text-left text-sm">produto</th>
-                      <th className="border border-gray-300 p-2 text-left text-sm">motorista</th>
-                      <th className="border border-gray-300 p-2 text-left text-sm">detalhes</th>
+                      <th className="border border-gray-300 p-2 text-left text-sm">Data</th>
+                      <th className="border border-gray-300 p-2 text-left text-sm">Tipo</th>
+                      <th className="border border-gray-300 p-2 text-left text-sm">Placa</th>
+                      <th className="border border-gray-300 p-2 text-left text-sm">Produto</th>
+                      <th className="border border-gray-300 p-2 text-left text-sm">Motorista</th>
+                      <th className="border border-gray-300 p-2 text-left text-sm">Detalhes</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -778,8 +784,8 @@ const Reports = () => {
                       .map((loading) => (
                         <tr key={`loading-${loading.id}`} className="hover:bg-gray-50">
                           <td className="border border-gray-300 p-2 text-sm">{loading.date}</td>
-                          <td className="border border-gray-300 p-2 text-sm">carregamento</td>
-                          <td className="border border-gray-300 p-2 font-medium text-sm">{loading.plate}</td>
+                          <td className="border border-gray-300 p-2 text-sm">Carregamento</td>
+                          <td className="border border-gray-300 p-2 font-medium text-sm">{loading.plate.toUpperCase()}</td>
                           <td className="border border-gray-300 p-2">
                             <span className={`px-2 py-1 rounded text-xs ${
                               loading.product === 'Pluma' ? 'bg-yellow-100 text-yellow-800' :
@@ -787,11 +793,11 @@ const Reports = () => {
                               loading.product === 'Fibrilha' ? 'bg-green-100 text-green-800' :
                               'bg-gray-100 text-gray-800'
                             }`}>
-                              {loading.product}
+                              {toTitleCase(loading.product)}
                             </span>
                           </td>
-                          <td className="border border-gray-300 p-2 text-sm">{loading.driver}</td>
-                          <td className="border border-gray-300 p-2 text-sm">{loading.carrier} → {loading.destination}</td>
+                          <td className="border border-gray-300 p-2 text-sm">{toTitleCase(loading.driver)}</td>
+                          <td className="border border-gray-300 p-2 text-sm">{toTitleCase(loading.carrier)} → {toTitleCase(loading.destination)}</td>
                         </tr>
                       ))
                     }
@@ -827,15 +833,15 @@ const Reports = () => {
                       .map((vehicle) => (
                         <tr key={`vehicle-${vehicle.id}`} className="hover:bg-blue-50">
                           <td className="border border-gray-300 p-2 text-sm">{vehicle.date}</td>
-                          <td className="border border-gray-300 p-2 text-sm">{vehicle.type}</td>
-                          <td className="border border-gray-300 p-2 font-medium text-sm">{vehicle.plate}</td>
+                          <td className="border border-gray-300 p-2 text-sm">{toTitleCase(vehicle.type)}</td>
+                          <td className="border border-gray-300 p-2 font-medium text-sm">{vehicle.plate.toUpperCase()}</td>
                           <td className="border border-gray-300 p-2">
                             <span className="px-2 py-1 rounded text-xs bg-blue-100 text-blue-800">
-                              {vehicle.purpose || 'n/a'}
+                              {toTitleCase(vehicle.purpose || 'N/A')}
                             </span>
                           </td>
-                          <td className="border border-gray-300 p-2 text-sm">{vehicle.driver}</td>
-                          <td className="border border-gray-300 p-2 text-sm">entrada: {vehicle.entry_time} | saída: {vehicle.exit_time || 'pendente'}</td>
+                          <td className="border border-gray-300 p-2 text-sm">{toTitleCase(vehicle.driver)}</td>
+                          <td className="border border-gray-300 p-2 text-sm">Entrada: {vehicle.entry_time} | Saída: {toTitleCase(vehicle.exit_time || 'Pendente')}</td>
                         </tr>
                       ))
                     }
