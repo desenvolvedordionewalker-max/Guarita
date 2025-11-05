@@ -59,7 +59,8 @@ export default function DashboardPortariaTV() {
       
       // Detalhes específicos de cada material recebido
       todayMaterials.forEach(material => {
-        messages.push(`📦 ${material.material_type}: ${material.net_weight.toFixed(1)}t - ${material.supplier || 'Fornecedor não informado'}`);
+        const supplierInfo = material.supplier ? ` | ${material.supplier}` : '';
+        messages.push(`📦 ${material.material_type}: ${material.net_weight.toFixed(1)}t${supplierInfo} | ${material.plate}`);
       });
       
       // Por tipo de material (resumo)

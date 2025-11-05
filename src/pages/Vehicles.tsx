@@ -218,8 +218,8 @@ const Vehicles = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        <div className="grid lg:grid-cols-2 gap-6">
-          <Card>
+        <div className="grid lg:grid-cols-3 gap-6">
+          <Card className="lg:col-span-1">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Plus className="w-5 h-5" />
@@ -303,7 +303,7 @@ const Vehicles = () => {
             </CardContent>
           </Card>
 
-          <div className="space-y-4">
+          <div className="space-y-4 lg:col-span-2">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">

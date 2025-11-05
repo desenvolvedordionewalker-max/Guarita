@@ -59,6 +59,28 @@ const Dashboard = () => {
     }
   };
 
+  const handleRegisterVehicleReturn = async (id: string) => {
+    const now = new Date();
+    const entryTime = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    
+    try {
+      await updateVehicle(id, { entry_time: entryTime });
+    } catch (error) {
+      console.error('Erro ao registrar retorno:', error);
+    }
+  };
+
+  const calculatePermanenceTime = (entryTime?: string, exitTime?: string) => {
+    if (!entryTime || !exitTime) return "-";
+    const [entryH, entryM] = entryTime.split(':').map(Number);
+    const [exitH, exitM] = exitTime.split(':').map(Number);
+    const totalMinutes = (exitH * 60 + exitM) - (entryH * 60 + entryM);
+    if (totalMinutes < 0) return "-";
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return hours > 0 ? `${hours}h ${minutes}min` : `${minutes}min`;
+  };
+
   const handleLoadingCardClick = (loading: LoadingRecord) => {
     setSelectedLoading(loading);
     setIsManageModalOpen(true);
@@ -934,44 +956,75 @@ const Dashboard = () => {
                         <th className="text-left p-2 font-semibold text-sm">Finalidade</th>
                         <th className="text-left p-2 font-semibold text-sm">Entrada</th>
                         <th className="text-left p-2 font-semibold text-sm">Saída</th>
+                        <th className="text-left p-2 font-semibold text-sm">Permanência</th>
                         <th className="text-left p-2 font-semibold text-sm">Status</th>
                         <th className="text-left p-2 font-semibold text-sm">Ação</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {todayVehicles.slice(0, 10).map((vehicle) => (
-                        <tr key={vehicle.id} className="border-b hover:bg-gray-50">
-                          <td className="p-2 font-medium text-sm">{vehicle.plate.toUpperCase()}</td>
-                          <td className="p-2 text-sm">{toTitleCase(vehicle.driver)}</td>
-                          <td className="p-2 text-sm">{toTitleCase(vehicle.type)}</td>
-                          <td className="p-2 text-sm">{toTitleCase(vehicle.purpose)}</td>
-                          <td className="p-2 text-sm">
-                            {vehicle.date} {vehicle.entry_time}
-                          </td>
-                          <td className="p-2 text-sm">
-                            {vehicle.exit_time ? `${vehicle.date} ${vehicle.exit_time}` : '-'}
-                          </td>
-                          <td className="p-2">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              vehicle.exit_time ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'
-                            }`}>
-                              {vehicle.exit_time ? 'Saiu' : 'No Pátio'}
-                            </span>
-                          </td>
-                          <td className="p-2">
-                            {!vehicle.exit_time && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleRegisterVehicleExit(vehicle.id)}
-                                className="text-green-600 hover:text-green-700 hover:bg-green-50 text-xs"
-                              >
-                                Registrar Saída
-                              </Button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
+                      {todayVehicles.slice(0, 10).map((vehicle) => {
+                        const isExternalExit = vehicle.type === "Saída Externa";
+                        return (
+                          <tr key={vehicle.id} className={`border-b hover:bg-gray-50 ${isExternalExit ? 'bg-orange-50' : ''}`}>
+                            <td className="p-2 font-medium text-sm">
+                              {vehicle.plate.toUpperCase()}
+                              {isExternalExit && (
+                                <span className="ml-2 px-1 py-0.5 text-xs bg-orange-100 text-orange-700 rounded">
+                                  Externa
+                                </span>
+                              )}
+                            </td>
+                            <td className="p-2 text-sm">{toTitleCase(vehicle.driver)}</td>
+                            <td className="p-2 text-sm">{toTitleCase(vehicle.type)}</td>
+                            <td className="p-2 text-sm">{toTitleCase(vehicle.purpose)}</td>
+                            <td className="p-2 text-sm">
+                              {vehicle.entry_time ? `${vehicle.date} ${vehicle.entry_time}` : '-'}
+                            </td>
+                            <td className="p-2 text-sm">
+                              {vehicle.exit_time ? `${vehicle.date} ${vehicle.exit_time}` : '-'}
+                            </td>
+                            <td className="p-2 text-sm">
+                              {isExternalExit 
+                                ? (vehicle.entry_time ? "Retornou" : "Saída Externa") 
+                                : calculatePermanenceTime(vehicle.entry_time, vehicle.exit_time)
+                              }
+                            </td>
+                            <td className="p-2">
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                isExternalExit 
+                                  ? (vehicle.entry_time ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800')
+                                  : (vehicle.exit_time ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800')
+                              }`}>
+                                {isExternalExit 
+                                  ? (vehicle.entry_time ? 'Retornou' : 'Fora')
+                                  : (vehicle.exit_time ? 'Saiu' : 'No Pátio')
+                                }
+                              </span>
+                            </td>
+                            <td className="p-2">
+                              {isExternalExit && !vehicle.entry_time ? (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleRegisterVehicleReturn(vehicle.id)}
+                                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 text-xs"
+                                >
+                                  Registrar Retorno
+                                </Button>
+                              ) : !isExternalExit && !vehicle.exit_time && vehicle.entry_time ? (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleRegisterVehicleExit(vehicle.id)}
+                                  className="text-green-600 hover:text-green-700 hover:bg-green-50 text-xs"
+                                >
+                                  Registrar Saída
+                                </Button>
+                              ) : null}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                   {todayVehicles.length > 10 && (

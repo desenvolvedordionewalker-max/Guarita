@@ -46,6 +46,7 @@ const MaterialReceipts = () => {
       material_type: formData.get("material_type") as string,
       plate: formData.get("plate") as string,
       driver: formData.get("driver") as string,
+      supplier: (formData.get("supplier") as string) || undefined,
       unit_type: unitType,
       observations: (formData.get("observations") as string) || "",
       net_weight: quantity, // Sempre obrigatório
@@ -326,7 +327,7 @@ const MaterialReceipts = () => {
               </Select>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div>
                 <Label htmlFor="plate">Placa</Label>
                 <Input 
@@ -343,6 +344,14 @@ const MaterialReceipts = () => {
                   placeholder="Nome do motorista" 
                   defaultValue={selectedRecord?.driver}
                   required 
+                />
+              </div>
+              <div>
+                <Label htmlFor="supplier">Fornecedor</Label>
+                <Input 
+                  name="supplier" 
+                  placeholder="Nome do fornecedor" 
+                  defaultValue={selectedRecord?.supplier}
                 />
               </div>
             </div>

@@ -296,7 +296,7 @@ const Reports = () => {
     );
   }
 
-  const generateDailySummary = (sendToWhatsAppFlag = false) => {
+  const generateDailySummary = () => {
     const today = new Date().toLocaleDateString('pt-BR');
     const todayDate = new Date().toISOString().split('T')[0];
     
@@ -318,12 +318,6 @@ const Reports = () => {
     // Puxe de algodão do dia
     const todayCotton = cottonRecords.filter(r => r.date === todayDate);
     const todayRolls = todayCotton.reduce((sum, r) => sum + r.rolls, 0);
-
-    // Materiais recebidos
-    const todayMaterials = materialRecords.filter(m => m.date === todayDate);
-
-    // Saída de equipamentos do dia
-    const todayEquipment = equipmentRecords.filter(eq => eq.date === todayDate);
     
     // Fila de carregamento atual (apenas na fila)
     const filaAtual = loadingRecords.filter(l => !l.entry_date);
@@ -335,7 +329,7 @@ const Reports = () => {
     let message = `🏢 IBA Santa Luzia - Controle Guarita
 📅 Resumo Diário - ${today}
 
-🚛 CARREGAMENTOS CONCLUÍDOS:`;
+� CARREGAMENTOS CONCLUÍDOS:`;
 
     if (plumaCarregamentos.length > 0) {
       message += `\n🧺 Pluma: ${plumaCarregamentos.length} caminhões | ${totalPlumaFardos.toLocaleString('pt-BR')} fardos`;
@@ -361,24 +355,10 @@ const Reports = () => {
     }
 
     message += `\n\n📦 RECEBIMENTO DE MATERIAIS:`;
-    if (todayMaterials.length > 0) {
-      todayMaterials.forEach(material => {
-        message += `\n• ${material.material_type} de ${material.supplier || 'Fornecedor não informado'}`;
-      });
-    } else {
-      message += `\n❌ Nenhum material recebido hoje`;
-    }
+    // Quando implementar materiais, adicionar aqui
+    message += `\n❌ Nenhum material recebido hoje`; // Temporário
 
-    message += `\n\n🔧 SAÍDA DE EQUIPAMENTOS:`;
-    if (todayEquipment.length > 0) {
-      todayEquipment.forEach(eq => {
-        message += `\n• ${eq.name} para ${eq.destination}`;
-      });
-    } else {
-      message += `\n❌ Nenhum equipamento retirado hoje`;
-    }
-
-    message += `\n\n⏳ FILA DE CARREGAMENTO ATUAL:`;
+    message += `\n\n� FILA DE CARREGAMENTO ATUAL:`;
     if (filaPluma > 0) message += `\n🧺 Pluma: ${filaPluma} na fila`;
     if (filaCaroco > 0) message += `\n🌰 Caroço: ${filaCaroco} na fila`;
     if (filaFibrilha > 0) message += `\n🧵 Fibrilha: ${filaFibrilha} na fila`;
@@ -389,18 +369,14 @@ const Reports = () => {
 
     message += `\n\n📌 Mensagem automática gerada via Controle Guarita`;
 
-    if (sendToWhatsAppFlag) {
-      sendToWhatsApp(message);
-    } else {
-      navigator.clipboard.writeText(message);
-      toast({
-        title: "Mensagem copiada!",
-        description: "Cole no WhatsApp para compartilhar o resumo.",
-      });
-    }
+    navigator.clipboard.writeText(message);
+    toast({
+      title: "Mensagem copiada!",
+      description: "Cole no WhatsApp para compartilhar o resumo.",
+    });
   };
 
-  const generateQueueStatus = (sendToWhatsAppFlag = false) => {
+  const generateQueueStatus = () => {
     const today = new Date().toLocaleDateString('pt-BR');
     const time = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     
@@ -464,15 +440,11 @@ const Reports = () => {
 
     message += '📌 Mensagem automática gerada via Controle Guarita';
 
-    if (sendToWhatsAppFlag) {
-      sendToWhatsApp(message);
-    } else {
-      navigator.clipboard.writeText(message);
-      toast({
-        title: "Mensagem copiada!",
-        description: "Cole no WhatsApp para compartilhar o status da fila.",
-      });
-    }
+    navigator.clipboard.writeText(message);
+    toast({
+      title: "Mensagem copiada!",
+      description: "Cole no WhatsApp para compartilhar o status da fila.",
+    });
   };
 
   const sendToWhatsApp = (message: string) => {
@@ -481,7 +453,145 @@ const Reports = () => {
     window.open(whatsappUrl, '_blank');
   };
 
-  const generateCottonPullSummary = (sendToWhatsAppFlag = false) => {
+  const sendDailyReportToWhatsApp = () => {
+    const today = new Date().toLocaleDateString('pt-BR');
+    const todayDate = new Date().toISOString().split('T')[0];
+    
+    // Carregamentos concluídos do dia
+    const carregamentosConcluidos = loadingRecords.filter(l => l.exit_date === todayDate);
+    
+    // Agrupar carregamentos concluídos por produto
+    const plumaCarregamentos = carregamentosConcluidos.filter(l => l.product === 'Pluma');
+    const carocoCarregamentos = carregamentosConcluidos.filter(l => l.product === 'Caroço');
+    const fibrilhaCarregamentos = carregamentosConcluidos.filter(l => l.product === 'Fibrilha');
+    const briqueteCarregamentos = carregamentosConcluidos.filter(l => l.product === 'Briquete');
+    
+    // Calcular totais
+    const totalPlumaFardos = plumaCarregamentos.reduce((sum, l) => sum + (l.bales || 0), 0);
+    const totalCarocoKg = carocoCarregamentos.reduce((sum, l) => sum + (l.weight || 0), 0);
+    const totalFibrilhaFardos = fibrilhaCarregamentos.reduce((sum, l) => sum + (l.bales || 0), 0);
+    const totalBriqueteKg = briqueteCarregamentos.reduce((sum, l) => sum + (l.weight || 0), 0);
+    
+    // Puxe de algodão do dia
+    const todayCotton = cottonRecords.filter(r => r.date === todayDate);
+    const todayRolls = todayCotton.reduce((sum, r) => sum + r.rolls, 0);
+    
+    // Materiais recebidos (assumindo que você tem os dados de materiais)
+    // Como não temos os dados reais ainda, vou deixar preparado
+    const todayMaterials = materialRecords.filter(m => m.date === todayDate);
+    
+    // Fila de carregamento atual (apenas na fila)
+    const filaAtual = loadingRecords.filter(l => !l.entry_date);
+    const filaPluma = filaAtual.filter(l => l.product === 'Pluma').length;
+    const filaCaroco = filaAtual.filter(l => l.product === 'Caroço').length;
+    const filaFibrilha = filaAtual.filter(l => l.product === 'Fibrilha').length;
+    const filaBriquete = filaAtual.filter(l => l.product === 'Briquete').length;
+    
+    let message = `🏢 IBA Santa Luzia - Controle Guarita
+📅 Resumo Diário - ${today}
+
+� CARREGAMENTOS CONCLUÍDOS:`;
+
+    if (plumaCarregamentos.length > 0) {
+      message += `\n🧺 Pluma: ${plumaCarregamentos.length} caminhões | ${totalPlumaFardos.toLocaleString('pt-BR')} fardos`;
+    }
+    if (carocoCarregamentos.length > 0) {
+      message += `\n🌰 Caroço: ${carocoCarregamentos.length} caminhões | ${totalCarocoKg.toLocaleString('pt-BR')} kg`;
+    }
+    if (fibrilhaCarregamentos.length > 0) {
+      message += `\n� Fibrilha: ${fibrilhaCarregamentos.length} caminhões | ${totalFibrilhaFardos.toLocaleString('pt-BR')} fardos`;
+    }
+    if (briqueteCarregamentos.length > 0) {
+      message += `\n🔥 Briquete: ${briqueteCarregamentos.length} caminhões | ${totalBriqueteKg.toLocaleString('pt-BR')} kg`;
+    }
+    if (carregamentosConcluidos.length === 0) {
+      message += `\n❌ Nenhum carregamento concluído hoje`;
+    }
+
+    message += `\n\n🌾 PUXE DE ALGODÃO:`;
+    if (todayRolls > 0) {
+      message += `\n✅ ${todayRolls.toLocaleString('pt-BR')} rolos recebidos`;
+    } else {
+      message += `\n❌ Nenhum rolo recebido hoje`;
+    }
+
+    message += `\n\n📦 RECEBIMENTO DE MATERIAIS:`;
+    // Quando implementar materiais, adicionar aqui
+    message += `\n❌ Nenhum material recebido hoje`; // Temporário
+
+    // Saída de equipamentos do dia
+    const todayEquipment = equipmentRecords.filter(eq => eq.date === todayDate);
+    message += `\n\n🔧 SAÍDA DE EQUIPAMENTOS:`;
+    if (todayEquipment.length > 0) {
+      message += `\n✅ ${todayEquipment.length} equipamento(s) retirado(s)`;
+      todayEquipment.forEach(eq => {
+        message += `\n• ${eq.name} - ${eq.destination}`;
+      });
+    } else {
+      message += `\n❌ Nenhum equipamento retirado hoje`;
+    }
+
+    message += `\n\n🚛 FILA DE CARREGAMENTO ATUAL:`;
+    if (filaPluma > 0) message += `\n🧺 Pluma: ${filaPluma} na fila`;
+    if (filaCaroco > 0) message += `\n🌰 Caroço: ${filaCaroco} na fila`;
+    if (filaFibrilha > 0) message += `\n🧵 Fibrilha: ${filaFibrilha} na fila`;
+    if (filaBriquete > 0) message += `\n🔥 Briquete: ${filaBriquete} na fila`;
+    if (filaAtual.length === 0) {
+      message += `\n✅ Fila vazia no momento`;
+    }
+
+    message += `\n\n📌 Mensagem automática gerada via Controle Guarita`;
+
+    sendToWhatsApp(message);
+  };
+
+  const sendQueueStatusToWhatsApp = () => {
+    const today = new Date().toLocaleDateString('pt-BR');
+    const time = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    
+    // Dados reais da fila de carregamento (apenas os que estão na fila)
+    const filaCarregamento = loadingRecords.filter(l => !l.entry_date);
+    
+    // Agrupar por produto
+    const filaPluma = filaCarregamento.filter(l => l.product === 'Pluma');
+    const filaCaroco = filaCarregamento.filter(l => l.product === 'Caroço');
+    const filaFibrilha = filaCarregamento.filter(l => l.product === 'Fibrilha');
+    const filaBriquete = filaCarregamento.filter(l => l.product === 'Briquete');
+    const filaOutros = filaCarregamento.filter(l => !['Pluma', 'Caroço', 'Fibrilha', 'Briquete'].includes(l.product));
+    
+    let message = `🏢 IBA Santa Luzia - Controle Guarita
+🕒 Fila de Carregamento - ${today} - ${time}
+
+🚛 RESUMO DA FILA POR PRODUTO:\n`;
+
+    if (filaPluma.length > 0) {
+      message += `🧺 Pluma: ${filaPluma.length} carreta${filaPluma.length > 1 ? 's' : ''} na fila\n`;
+    }
+    if (filaCaroco.length > 0) {
+      message += `🌰 Caroço: ${filaCaroco.length} carreta${filaCaroco.length > 1 ? 's' : ''} na fila\n`;
+    }
+    if (filaFibrilha.length > 0) {
+      message += `🧵 Fibrilha: ${filaFibrilha.length} carreta${filaFibrilha.length > 1 ? 's' : ''} na fila\n`;
+    }
+    if (filaBriquete.length > 0) {
+      message += `� Briquete: ${filaBriquete.length} carreta${filaBriquete.length > 1 ? 's' : ''} na fila\n`;
+    }
+    if (filaOutros.length > 0) {
+      message += `📦 Outros: ${filaOutros.length} carreta${filaOutros.length > 1 ? 's' : ''} na fila\n`;
+    }
+
+    if (filaCarregamento.length === 0) {
+      message += `✅ Fila vazia no momento`;
+    } else {
+      message += `\n📊 TOTAL: ${filaCarregamento.length} carreta${filaCarregamento.length > 1 ? 's' : ''} aguardando carregamento`;
+    }
+
+    message += `\n\n📌 Mensagem automática gerada via Controle Guarita`;
+
+    sendToWhatsApp(message);
+  };
+
+  const generateCottonPullSummary = () => {
     const today = new Date().toLocaleDateString('pt-BR');
     const todayDate = new Date().toISOString().split('T')[0];
     
@@ -584,23 +694,124 @@ const Reports = () => {
 
     message += `\n📌 Mensagem automática gerada via Controle Guarita`;
 
-    if (sendToWhatsAppFlag) {
-      sendToWhatsApp(message);
-    } else {
-      // Copiar para área de transferência
-      navigator.clipboard.writeText(message).then(() => {
-        toast({
-          title: "Copiado!",
-          description: "Relatório de Puxe de Rolos copiado para área de transferência.",
-        });
-      }).catch(() => {
-        toast({
-          title: "Erro ao copiar",
-          description: "Não foi possível copiar para área de transferência.",
-          variant: "destructive"
-        });
+    // Copiar para área de transferência
+    navigator.clipboard.writeText(message).then(() => {
+      toast({
+        title: "Copiado!",
+        description: "Relatório de Puxe de Rolos copiado para área de transferência.",
       });
+    }).catch(() => {
+      toast({
+        title: "Erro ao copiar",
+        description: "Não foi possível copiar para área de transferência.",
+        variant: "destructive"
+      });
+    });
+  };
+
+  const sendCottonPullReportToWhatsApp = () => {
+    const today = new Date().toLocaleDateString('pt-BR');
+    const todayDate = new Date().toISOString().split('T')[0];
+    
+    // Filtrar registros do dia
+    const todayRecords = cottonRecords.filter(record => record.date === todayDate);
+    
+    if (todayRecords.length === 0) {
+      toast({
+        title: "Sem dados",
+        description: "Nenhum registro de puxe de rolos encontrado para hoje.",
+        variant: "destructive"
+      });
+      return;
     }
+
+    // Tipo para agrupamento
+    type VehicleData = {
+      plate: string;
+      driver: string;
+      rolls: number;
+      trips: number;
+      totalTime: number;
+      firstEntry: string | null;
+      lastExit: string | null;
+    };
+
+    // Agrupar por placa e motorista (mesmo código da função generateCottonPullSummary)
+    const groupedData = todayRecords.reduce((acc, record) => {
+      const key = `${record.plate}-${record.driver}`;
+      if (!acc[key]) {
+        acc[key] = {
+          plate: record.plate,
+          driver: record.driver,
+          rolls: 0,
+          trips: 0,
+          totalTime: 0,
+          firstEntry: null,
+          lastExit: null
+        };
+      }
+      
+      acc[key].rolls += record.rolls;
+      acc[key].trips += 1;
+      
+      // Calcular tempo de permanência
+      if (record.entry_time && record.exit_time) {
+        const [entryH, entryM] = record.entry_time.split(':').map(Number);
+        const [exitH, exitM] = record.exit_time.split(':').map(Number);
+        const timeInMinutes = (exitH * 60 + exitM) - (entryH * 60 + entryM);
+        if (timeInMinutes > 0) {
+          acc[key].totalTime += timeInMinutes;
+        }
+      }
+      
+      if (!acc[key].firstEntry || record.entry_time < acc[key].firstEntry) {
+        acc[key].firstEntry = record.entry_time;
+      }
+      if (!acc[key].lastExit || (record.exit_time && record.exit_time > acc[key].lastExit)) {
+        acc[key].lastExit = record.exit_time;
+      }
+      
+      return acc;
+    }, {} as Record<string, VehicleData>);
+
+    // Formatação da mensagem (mesmo formato)
+    let message = `🏢 IBA Santa Luzia - Controle Guarita
+📅 Relatório Puxe de Rolos - ${today}
+🌾 Movimentação Detalhada por Veículo
+
+`;
+
+    const vehiclesArray = Object.values(groupedData);
+    const totalRolls = vehiclesArray.reduce((sum, v) => sum + v.rolls, 0);
+    const totalTrips = vehiclesArray.reduce((sum, v) => sum + v.trips, 0);
+
+    message += `📊 RESUMO GERAL:\n`;
+    message += `🚛 Veículos: ${vehiclesArray.length}\n`;
+    message += `🔄 Viagens: ${totalTrips}\n`;
+    message += `📦 Rolos: ${totalRolls.toLocaleString('pt-BR')}\n\n`;
+
+    message += `📋 DETALHAMENTO POR VEÍCULO:\n`;
+    
+    vehiclesArray.forEach((vehicle) => {
+      const avgTime = vehicle.totalTime > 0 ? Math.round(vehicle.totalTime / vehicle.trips) : 0;
+      const hours = Math.floor(avgTime / 60);
+      const minutes = avgTime % 60;
+      const timeStr = hours > 0 ? `${hours}h ${minutes}min` : `${minutes}min`;
+      
+      message += `\n🚛 ${vehicle.plate} | ${vehicle.driver}\n`;
+      message += `  📦 Rolos: ${vehicle.rolls.toLocaleString('pt-BR')}\n`;
+      message += `  🔄 Viagens: ${vehicle.trips}\n`;
+      if (vehicle.totalTime > 0) {
+        message += `  ⏱️ Tempo médio: ${timeStr}\n`;
+      }
+      if (vehicle.firstEntry && vehicle.lastExit) {
+        message += `  🕐 ${vehicle.firstEntry} → ${vehicle.lastExit}\n`;
+      }
+    });
+
+    message += `\n📌 Mensagem automática gerada via Controle Guarita`;
+
+    sendToWhatsApp(message);
   };
 
   return (
@@ -1055,14 +1266,14 @@ const Reports = () => {
               <div className="space-y-2">
                 <Button 
                   className="w-full h-auto py-4 flex-col items-start bg-primary hover:bg-primary/90"
-                  onClick={() => generateDailySummary(false)}
+                  onClick={generateDailySummary}
                 >
                   <span className="font-semibold mb-1">📊 Resumo Diário</span>
                   <span className="text-xs opacity-90">Copiar mensagem completa</span>
                 </Button>
                 <Button 
                   className="w-full h-auto py-3 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white"
-                  onClick={() => generateDailySummary(true)}
+                  onClick={sendDailyReportToWhatsApp}
                 >
                   <Share2 className="w-4 h-4" />
                   <span className="text-sm font-medium">Enviar via WhatsApp</span>
@@ -1072,14 +1283,14 @@ const Reports = () => {
               <div className="space-y-2">
                 <Button 
                   className="w-full h-auto py-4 flex-col items-start bg-accent hover:bg-accent/90"
-                  onClick={() => generateQueueStatus(false)}
+                  onClick={generateQueueStatus}
                 >
                   <span className="font-semibold mb-1">🚛 Status da Fila</span>
                   <span className="text-xs opacity-90">Copiar status atual</span>
                 </Button>
                 <Button 
                   className="w-full h-auto py-3 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white"
-                  onClick={() => generateQueueStatus(true)}
+                  onClick={sendQueueStatusToWhatsApp}
                 >
                   <Share2 className="w-4 h-4" />
                   <span className="text-sm font-medium">Enviar via WhatsApp</span>
@@ -1089,14 +1300,14 @@ const Reports = () => {
               <div className="space-y-2">
                 <Button 
                   className="w-full h-auto py-4 flex-col items-start bg-orange-600 hover:bg-orange-700"
-                  onClick={() => generateCottonPullSummary(false)}
+                  onClick={generateCottonPullSummary}
                 >
                   <span className="font-semibold mb-1">🌾 Puxe de Rolos</span>
                   <span className="text-xs opacity-90">Relatório detalhado</span>
                 </Button>
                 <Button 
                   className="w-full h-auto py-3 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white"
-                  onClick={() => generateCottonPullSummary(true)}
+                  onClick={sendCottonPullReportToWhatsApp}
                 >
                   <Share2 className="w-4 h-4" />
                   <span className="text-sm font-medium">Enviar via WhatsApp</span>
