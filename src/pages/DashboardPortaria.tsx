@@ -57,14 +57,20 @@ export default function DashboardPortariaTV() {
       const totalWeight = todayMaterials.reduce((sum, m) => sum + m.net_weight, 0);
       messages.push(`📦 ${todayMaterials.length} materiais recebidos hoje - Total: ${totalWeight.toFixed(1)}t`);
       
-      // Por tipo de material
+      // Detalhes específicos de cada material recebido
+      todayMaterials.forEach(material => {
+        messages.push(`📦 ${material.material_type}: ${material.net_weight.toFixed(1)}t - ${material.supplier || 'Fornecedor não informado'}`);
+      });
+      
+      // Por tipo de material (resumo)
       const materialsByType = todayMaterials.reduce((acc: Record<string, number>, m) => {
         acc[m.material_type] = (acc[m.material_type] || 0) + m.net_weight;
         return acc;
       }, {});
       
       Object.entries(materialsByType).forEach(([type, weight]) => {
-        messages.push(`📦 ${type}: ${weight.toFixed(1)}t recebidos hoje`);
+        const count = todayMaterials.filter(m => m.material_type === type).length;
+        messages.push(`� Resumo ${type}: ${count} entregas totalizando ${weight.toFixed(1)}t`);
       });
     }
     
@@ -75,21 +81,11 @@ export default function DashboardPortariaTV() {
       // Mensagem geral de equipamentos
       messages.push(`🔧 ${todayEquipment.length} equipamentos saíram hoje`);
       
-      // Por tipo de equipamento
-      const equipmentByType = todayEquipment.reduce((acc: Record<string, number>, e) => {
-        acc[e.type] = (acc[e.type] || 0) + 1;
-        return acc;
-      }, {});
-      
-      Object.entries(equipmentByType).forEach(([type, count]) => {
-        messages.push(`🔧 ${type}: ${count} saídas hoje`);
+      // Detalhes específicos de cada equipamento
+      todayEquipment.forEach(equipment => {
+        messages.push(`🔧 ${equipment.name} | ${equipment.destination} | ${equipment.purpose || 'Saída'}`);
       });
 
-      // Equipamentos ainda em campo (saídos mas não retornados)
-      const equipmentInField = todayEquipment.filter(e => e.status === 'pending');
-      if (equipmentInField.length > 0) {
-        messages.push(`⚠️ ${equipmentInField.length} equipamentos ainda em campo`);
-      }
     }
     
     return messages;
@@ -102,7 +98,7 @@ export default function DashboardPortariaTV() {
     
     const bannerTimer = setInterval(() => {
       setBannerIndex(prev => (prev + 1) % messages.length);
-    }, 5000); // muda a cada 5 segundos
+    }, 4000); // muda a cada 4 segundos para acomodar mais informações
     return () => clearInterval(bannerTimer);
   }, [materialRecords, equipmentRecords, getBannerMessages]);
 

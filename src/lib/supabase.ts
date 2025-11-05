@@ -129,6 +129,7 @@ export interface MaterialReceipt {
   material_type: string // Areia, Cascalho, Cavaco, Pedra Brita, Pó de Pedra, Álcool
   plate: string
   driver: string
+  supplier?: string // Fornecedor do material
   net_weight: number // Obrigatório agora
   volume_m3?: number
   volume_m2?: number

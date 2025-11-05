@@ -19,8 +19,11 @@ export const useMaterialReceipts = () => {
         .order('entry_time', { ascending: false })
 
       if (error) {
-        // Se a tabela não existe (código 400), não mostra erro ao usuário
-        if (error.message?.includes('does not exist') || error.code === '42P01') {
+        // Se a tabela não existe (código 400 ou 42P01), não mostra erro ao usuário
+        if (error.message?.includes('does not exist') || 
+            error.code === '42P01' || 
+            error.message?.includes('relation') ||
+            error.message?.includes('400')) {
           console.log('Tabela material_receipts ainda não criada no Supabase')
           setRecords([])
           return
@@ -46,10 +49,13 @@ export const useMaterialReceipts = () => {
         .single()
 
       if (error) {
-        if (error.message?.includes('does not exist') || error.code === '42P01') {
+        if (error.message?.includes('does not exist') || 
+            error.code === '42P01' || 
+            error.message?.includes('relation') ||
+            error.message?.includes('400')) {
           toast({
-            title: "Tabela não existe",
-            description: "Execute o script create_material_receipts.sql no Supabase primeiro.",
+            title: "🚨 Erro de Permissão",
+            description: "Execute: ALTER TABLE material_receipts DISABLE ROW LEVEL SECURITY; no Supabase SQL Editor",
             variant: "destructive"
           })
           return null
