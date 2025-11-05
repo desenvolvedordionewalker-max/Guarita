@@ -4,34 +4,33 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Lock } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Lock, Loader2 } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 import logo from "@/assets/BF_logo.png";
 
 const Login = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const { login } = useAuth();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Mock login - aceita qualquer credencial por enquanto
-    if (username && password) {
-      localStorage.setItem("isAuthenticated", "true");
-      localStorage.setItem("username", username);
-      toast({
-        title: "Login realizado com sucesso!",
-        description: `Bem-vindo, ${username}`,
-      });
-      navigate("/dashboard");
-    } else {
-      toast({
-        title: "Erro no login",
-        description: "Por favor, preencha todos os campos",
-        variant: "destructive",
-      });
+    if (!username || !password) {
+      return;
+    }
+
+    setLoading(true);
+    
+    try {
+      const success = await login(username, password);
+      if (success) {
+        navigate("/dashboard");
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -74,8 +73,20 @@ const Login = () => {
                 />
               </div>
             </div>
-            <Button type="submit" className="w-full h-11 text-base font-semibold" size="lg">
-              Entrar no Sistema
+            <Button 
+              type="submit" 
+              className="w-full h-11 text-base font-semibold" 
+              size="lg"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Entrando...
+                </>
+              ) : (
+                "Entrar no Sistema"
+              )}
             </Button>
           </form>
         </CardContent>
