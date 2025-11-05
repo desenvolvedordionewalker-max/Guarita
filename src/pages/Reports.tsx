@@ -519,6 +519,18 @@ const Reports = () => {
     // Quando implementar materiais, adicionar aqui
     message += `\n❌ Nenhum material recebido hoje`; // Temporário
 
+    // Saída de equipamentos do dia
+    const todayEquipment = equipmentRecords.filter(eq => eq.date === todayDate);
+    message += `\n\n🔧 SAÍDA DE EQUIPAMENTOS:`;
+    if (todayEquipment.length > 0) {
+      message += `\n✅ ${todayEquipment.length} equipamento(s) retirado(s)`;
+      todayEquipment.forEach(eq => {
+        message += `\n• ${eq.name} - ${eq.destination}`;
+      });
+    } else {
+      message += `\n❌ Nenhum equipamento retirado hoje`;
+    }
+
     message += `\n\n🚛 FILA DE CARREGAMENTO ATUAL:`;
     if (filaPluma > 0) message += `\n🧺 Pluma: ${filaPluma} na fila`;
     if (filaCaroco > 0) message += `\n🌰 Caroço: ${filaCaroco} na fila`;
@@ -579,9 +591,229 @@ const Reports = () => {
     sendToWhatsApp(message);
   };
 
+  const generateCottonPullSummary = () => {
+    const today = new Date().toLocaleDateString('pt-BR');
+    const todayDate = new Date().toISOString().split('T')[0];
+    
+    // Filtrar registros do dia
+    const todayRecords = cottonRecords.filter(record => record.date === todayDate);
+    
+    if (todayRecords.length === 0) {
+      toast({
+        title: "Sem dados",
+        description: "Nenhum registro de puxe de rolos encontrado para hoje.",
+        variant: "destructive"
+      });
+      return;
+    }
 
+    // Tipo para agrupamento
+    type VehicleData = {
+      plate: string;
+      driver: string;
+      rolls: number;
+      trips: number;
+      totalTime: number;
+      firstEntry: string | null;
+      lastExit: string | null;
+    };
 
+    // Agrupar por placa e motorista
+    const groupedData = todayRecords.reduce((acc, record) => {
+      const key = `${record.plate}-${record.driver}`;
+      if (!acc[key]) {
+        acc[key] = {
+          plate: record.plate,
+          driver: record.driver,
+          rolls: 0,
+          trips: 0,
+          totalTime: 0,
+          firstEntry: null,
+          lastExit: null
+        };
+      }
+      
+      acc[key].rolls += record.rolls_count;
+      acc[key].trips += 1;
+      
+      // Calcular tempo de permanência (se houver entrada e saída)
+      if (record.entry_time && record.exit_time) {
+        const [entryH, entryM] = record.entry_time.split(':').map(Number);
+        const [exitH, exitM] = record.exit_time.split(':').map(Number);
+        const timeInMinutes = (exitH * 60 + exitM) - (entryH * 60 + entryM);
+        if (timeInMinutes > 0) {
+          acc[key].totalTime += timeInMinutes;
+        }
+      }
+      
+      // Primeira entrada e última saída
+      if (!acc[key].firstEntry || record.entry_time < acc[key].firstEntry) {
+        acc[key].firstEntry = record.entry_time;
+      }
+      if (!acc[key].lastExit || (record.exit_time && record.exit_time > acc[key].lastExit)) {
+        acc[key].lastExit = record.exit_time;
+      }
+      
+      return acc;
+    }, {} as Record<string, VehicleData>);
 
+    // Formatação da mensagem
+    let message = `🏢 IBA Santa Luzia - Controle Guarita
+📅 Relatório Puxe de Rolos - ${today}
+🌾 Movimentação Detalhada por Veículo
+
+`;
+
+    const vehiclesArray = Object.values(groupedData);
+    const totalRolls = vehiclesArray.reduce((sum, v) => sum + v.rolls, 0);
+    const totalTrips = vehiclesArray.reduce((sum, v) => sum + v.trips, 0);
+
+    message += `📊 RESUMO GERAL:\n`;
+    message += `🚛 Veículos: ${vehiclesArray.length}\n`;
+    message += `🔄 Viagens: ${totalTrips}\n`;
+    message += `📦 Rolos: ${totalRolls.toLocaleString('pt-BR')}\n\n`;
+
+    message += `📋 DETALHAMENTO POR VEÍCULO:\n`;
+    
+    vehiclesArray.forEach((vehicle) => {
+      const avgTime = vehicle.totalTime > 0 ? Math.round(vehicle.totalTime / vehicle.trips) : 0;
+      const hours = Math.floor(avgTime / 60);
+      const minutes = avgTime % 60;
+      const timeStr = hours > 0 ? `${hours}h ${minutes}min` : `${minutes}min`;
+      
+      message += `\n🚛 ${vehicle.plate} | ${vehicle.driver}\n`;
+      message += `  📦 Rolos: ${vehicle.rolls.toLocaleString('pt-BR')}\n`;
+      message += `  🔄 Viagens: ${vehicle.trips}\n`;
+      if (vehicle.totalTime > 0) {
+        message += `  ⏱️ Tempo médio: ${timeStr}\n`;
+      }
+      if (vehicle.firstEntry && vehicle.lastExit) {
+        message += `  🕐 ${vehicle.firstEntry} → ${vehicle.lastExit}\n`;
+      }
+    });
+
+    message += `\n📌 Mensagem automática gerada via Controle Guarita`;
+
+    // Copiar para área de transferência
+    navigator.clipboard.writeText(message).then(() => {
+      toast({
+        title: "Copiado!",
+        description: "Relatório de Puxe de Rolos copiado para área de transferência.",
+      });
+    }).catch(() => {
+      toast({
+        title: "Erro ao copiar",
+        description: "Não foi possível copiar para área de transferência.",
+        variant: "destructive"
+      });
+    });
+  };
+
+  const sendCottonPullReportToWhatsApp = () => {
+    const today = new Date().toLocaleDateString('pt-BR');
+    const todayDate = new Date().toISOString().split('T')[0];
+    
+    // Filtrar registros do dia
+    const todayRecords = cottonRecords.filter(record => record.date === todayDate);
+    
+    if (todayRecords.length === 0) {
+      toast({
+        title: "Sem dados",
+        description: "Nenhum registro de puxe de rolos encontrado para hoje.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Tipo para agrupamento
+    type VehicleData = {
+      plate: string;
+      driver: string;
+      rolls: number;
+      trips: number;
+      totalTime: number;
+      firstEntry: string | null;
+      lastExit: string | null;
+    };
+
+    // Agrupar por placa e motorista
+    const groupedData = todayRecords.reduce((acc, record) => {
+      const key = `${record.plate}-${record.driver}`;
+      if (!acc[key]) {
+        acc[key] = {
+          plate: record.plate,
+          driver: record.driver,
+          rolls: 0,
+          trips: 0,
+          totalTime: 0,
+          firstEntry: null,
+          lastExit: null
+        };
+      }
+      
+      acc[key].rolls += record.rolls_count;
+      acc[key].trips += 1;
+      
+      // Calcular tempo de permanência (se houver entrada e saída)
+      if (record.entry_time && record.exit_time) {
+        const [entryH, entryM] = record.entry_time.split(':').map(Number);
+        const [exitH, exitM] = record.exit_time.split(':').map(Number);
+        const timeInMinutes = (exitH * 60 + exitM) - (entryH * 60 + entryM);
+        if (timeInMinutes > 0) {
+          acc[key].totalTime += timeInMinutes;
+        }
+      }
+      
+      // Primeira entrada e última saída
+      if (!acc[key].firstEntry || record.entry_time < acc[key].firstEntry) {
+        acc[key].firstEntry = record.entry_time;
+      }
+      if (!acc[key].lastExit || (record.exit_time && record.exit_time > acc[key].lastExit)) {
+        acc[key].lastExit = record.exit_time;
+      }
+      
+      return acc;
+    }, {} as Record<string, VehicleData>);
+
+    // Formatação da mensagem
+    let message = `🏢 IBA Santa Luzia - Controle Guarita
+📅 Relatório Puxe de Rolos - ${today}
+🌾 Movimentação Detalhada por Veículo
+
+`;
+
+    const vehiclesArray = Object.values(groupedData);
+    const totalRolls = vehiclesArray.reduce((sum, v) => sum + v.rolls, 0);
+    const totalTrips = vehiclesArray.reduce((sum, v) => sum + v.trips, 0);
+
+    message += `📊 RESUMO GERAL:\n`;
+    message += `🚛 Veículos: ${vehiclesArray.length}\n`;
+    message += `🔄 Viagens: ${totalTrips}\n`;
+    message += `📦 Rolos: ${totalRolls.toLocaleString('pt-BR')}\n\n`;
+
+    message += `📋 DETALHAMENTO POR VEÍCULO:\n`;
+    
+    vehiclesArray.forEach((vehicle) => {
+      const avgTime = vehicle.totalTime > 0 ? Math.round(vehicle.totalTime / vehicle.trips) : 0;
+      const hours = Math.floor(avgTime / 60);
+      const minutes = avgTime % 60;
+      const timeStr = hours > 0 ? `${hours}h ${minutes}min` : `${minutes}min`;
+      
+      message += `\n🚛 ${vehicle.plate} | ${vehicle.driver}\n`;
+      message += `  📦 Rolos: ${vehicle.rolls.toLocaleString('pt-BR')}\n`;
+      message += `  🔄 Viagens: ${vehicle.trips}\n`;
+      if (vehicle.totalTime > 0) {
+        message += `  ⏱️ Tempo médio: ${timeStr}\n`;
+      }
+      if (vehicle.firstEntry && vehicle.lastExit) {
+        message += `  🕐 ${vehicle.firstEntry} → ${vehicle.lastExit}\n`;
+      }
+    });
+
+    message += `\n📌 Mensagem automática gerada via Controle Guarita`;
+
+    sendToWhatsApp(message);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
@@ -1031,7 +1263,7 @@ const Reports = () => {
             <CardDescription>Gere mensagens automáticas para compartilhar</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid sm:grid-cols-2 gap-4">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Button 
                   className="w-full h-auto py-4 flex-col items-start bg-primary hover:bg-primary/90"
@@ -1060,6 +1292,23 @@ const Reports = () => {
                 <Button 
                   className="w-full h-auto py-3 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white"
                   onClick={sendQueueStatusToWhatsApp}
+                >
+                  <Share2 className="w-4 h-4" />
+                  <span className="text-sm font-medium">Enviar via WhatsApp</span>
+                </Button>
+              </div>
+
+              <div className="space-y-2">
+                <Button 
+                  className="w-full h-auto py-4 flex-col items-start bg-orange-600 hover:bg-orange-700"
+                  onClick={generateCottonPullSummary}
+                >
+                  <span className="font-semibold mb-1">🌾 Puxe de Rolos</span>
+                  <span className="text-xs opacity-90">Relatório detalhado</span>
+                </Button>
+                <Button 
+                  className="w-full h-auto py-3 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white"
+                  onClick={sendCottonPullReportToWhatsApp}
                 >
                   <Share2 className="w-4 h-4" />
                   <span className="text-sm font-medium">Enviar via WhatsApp</span>

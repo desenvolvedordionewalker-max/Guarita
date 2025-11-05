@@ -2,7 +2,26 @@
 
 Sistema completo de gestão para controle de veículos, equipamentos, algodão e registros pluviométricos.
 
-## 🚀 **Configuração Concluída**
+## 🚀 **Últimas Atualizações - v2.5**
+
+✅ **Sistema de Saída Externa implementado**
+- Novo tipo "Saída Externa" para colaboradores
+- Registro de saída antes da entrada
+- Botão especial para registrar retorno
+- Interface adaptável com indicadores visuais
+
+✅ **Correções de Banco de Dados**
+- Fix do erro 400 ao inserir veículos
+- Correção do problema material_receipts
+- Script SQL para recriar tabela com permissões
+
+✅ **Novos Relatórios WhatsApp**
+- Seção "Saída de Equipamentos" no resumo diário
+- Relatório completo "Puxe de Rolos" detalhado
+- Análise por placa/motorista com tempo de permanência
+- Botões para copiar e enviar via WhatsApp
+
+## 🔧 **Configuração Concluída**
 
 ✅ **Banco de dados Supabase configurado**  
 ✅ **Frontend conectado ao banco**  

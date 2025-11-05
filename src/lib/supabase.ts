@@ -10,7 +10,7 @@ export interface Vehicle {
   id: string
   type: string
   date: string
-  entry_time: string
+  entry_time?: string // Agora opcional para suportar saída externa
   exit_time?: string
   plate: string
   driver: string

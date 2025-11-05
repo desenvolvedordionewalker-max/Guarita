@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, Plus, Truck, Clock, Loader2, Trash2, Edit, LogOut as Exit } from "lucide-react";
+import { ArrowLeft, Plus, Truck, Clock, Loader2, Trash2, Edit, LogOut as Exit, ArrowLeftCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useVehicles, useProducers } from "@/hooks/use-supabase";
@@ -38,6 +38,7 @@ const Vehicles = () => {
   });
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
+  const [isExternalExit, setIsExternalExit] = useState(false);
 
     const handleDeleteVehicle = async (id: string, plate: string) => {
     if (window.confirm(`Tem certeza que deseja excluir o veículo ${plate}?`)) {
@@ -64,6 +65,26 @@ const Vehicles = () => {
       toast({
         title: "Erro",
         description: "Erro ao registrar saída do veículo",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRegisterReturn = async (id: string) => {
+    const now = new Date();
+    const entryTime = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    
+    try {
+      await updateVehicle(id, { entry_time: entryTime });
+      toast({
+        title: "Retorno registrado!",
+        description: `Entrada de retorno registrada às ${entryTime}`,
+      });
+    } catch (error) {
+      console.error('Erro ao registrar retorno:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao registrar retorno do veículo",
         variant: "destructive",
       });
     }
@@ -129,17 +150,19 @@ const Vehicles = () => {
       localStorage.setItem('guarita_saved_vehicle_types', JSON.stringify(newVehicleTypes));
     }
     
+    const isExternalExitType = formData.get("type") === "Saída Externa";
+    
     const vehicleData = {
       type: formData.get("type") as string,
       date: formData.get("date") as string,
-      entry_time: formData.get("time") as string,
-      exit_time: formData.get("exitTime") as string || undefined,
+      entry_time: isExternalExitType ? undefined : (formData.get("time") as string || undefined),
+      exit_time: isExternalExitType ? (formData.get("time") as string || undefined) : (formData.get("exitTime") as string || undefined),
       plate: plate,
       driver: driver,
       vehicle_type: vehicleType,
-      purpose: formData.get("purpose") as string,
-      producer_name: producerName || "",
-      observations: formData.get("observations") as string,
+      purpose: (formData.get("purpose") as string) || undefined,
+      producer_name: producerName || undefined,
+      observations: (formData.get("observations") as string) || undefined,
     };
     
     try {
@@ -210,8 +233,8 @@ const Vehicles = () => {
               <form onSubmit={handleSubmit} className="space-y-4 form-mobile">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="type">Tipo de Entrada</Label>
-                    <Select name="type" required defaultValue={isCarregamento ? "Carregamento" : undefined}>
+                    <Label htmlFor="type">Tipo</Label>
+                    <Select name="type" required defaultValue={isCarregamento ? "Carregamento" : undefined} onValueChange={(value) => setIsExternalExit(value === "Saída Externa")}>
                       <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Carregamento">Carregamento</SelectItem>
@@ -222,6 +245,7 @@ const Vehicles = () => {
                         <SelectItem value="Diretoria">Diretoria</SelectItem>
                         <SelectItem value="Regional">Regional</SelectItem>
                         <SelectItem value="Cliente">Cliente</SelectItem>
+                        <SelectItem value="Saída Externa">Saída Externa</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -232,13 +256,15 @@ const Vehicles = () => {
                 </div>
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="time">Hora de Entrada</Label>
+                    <Label htmlFor="time">{isExternalExit ? "Hora de Saída" : "Hora de Entrada"}</Label>
                     <Input type="time" name="time" required />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="exitTime">Hora da Saída</Label>
-                    <Input type="time" name="exitTime" />
-                  </div>
+                  {!isExternalExit && (
+                    <div className="space-y-2">
+                      <Label htmlFor="exitTime">Hora da Saída</Label>
+                      <Input type="time" name="exitTime" />
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="plate">Placa do Veículo</Label>
@@ -263,7 +289,7 @@ const Vehicles = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="purpose">Finalidade</Label>
-                  <Textarea name="purpose" placeholder="Descreva o motivo da entrada" />
+                  <Textarea name="purpose" placeholder={isExternalExit ? "Descreva o motivo da saída" : "Descreva o motivo da entrada"} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="observations">Observações</Label>
@@ -271,7 +297,7 @@ const Vehicles = () => {
                 </div>
                 <Button type="submit" className="w-full">
                   <Plus className="w-4 h-4 mr-2" />
-                  Registrar Entrada
+                  {isExternalExit ? "Registrar Saída Externa" : "Registrar Entrada"}
                 </Button>
               </form>
             </CardContent>
@@ -307,15 +333,39 @@ const Vehicles = () => {
                       </TableRow>
                     ) : (
                       todayVehicles.map((vehicle) => (
-                        <TableRow key={vehicle.id}>
-                          <TableCell className="font-medium">{vehicle.plate}</TableCell>
+                        <TableRow key={vehicle.id} className={vehicle.type === "Saída Externa" ? "bg-orange-50" : ""}>
+                          <TableCell className="font-medium">
+                            {vehicle.plate}
+                            {vehicle.type === "Saída Externa" && (
+                              <span className="ml-2 px-2 py-1 text-xs bg-orange-100 text-orange-700 rounded-full">
+                                Externa
+                              </span>
+                            )}
+                          </TableCell>
                           <TableCell>{vehicle.driver}</TableCell>
-                          <TableCell>{vehicle.entry_time}</TableCell>
+                          <TableCell>{vehicle.entry_time || "-"}</TableCell>
                           <TableCell>{vehicle.exit_time || "-"}</TableCell>
-                          <TableCell>{calculateInternalTime(vehicle.entry_time, vehicle.exit_time)}</TableCell>
+                          <TableCell>
+                            {vehicle.type === "Saída Externa" 
+                              ? "Saída Externa" 
+                              : vehicle.entry_time 
+                                ? calculateInternalTime(vehicle.entry_time, vehicle.exit_time)
+                                : "-"
+                            }
+                          </TableCell>
                           <TableCell>
                             <div className="flex gap-1">
-                              {!vehicle.exit_time && (
+                              {vehicle.type === "Saída Externa" && !vehicle.entry_time ? (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleRegisterReturn(vehicle.id)}
+                                  className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                  title="Registrar Retorno"
+                                >
+                                  <ArrowLeftCircle className="h-4 w-4" />
+                                </Button>
+                              ) : !vehicle.exit_time && vehicle.entry_time && (
                                 <Button
                                   variant="outline"
                                   size="sm"

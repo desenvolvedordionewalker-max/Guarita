@@ -42,9 +42,14 @@ export const useMaterialReceipts = () => {
 
   const addRecord = async (recordData: Omit<MaterialReceipt, 'id' | 'created_at' | 'updated_at'>) => {
     try {
+      // Remove campos undefined para evitar problemas no INSERT
+      const cleanData = Object.fromEntries(
+        Object.entries(recordData).filter(([_, value]) => value !== undefined)
+      )
+      
       const { data, error } = await supabase
         .from('material_receipts')
-        .insert([recordData])
+        .insert([cleanData])
         .select()
         .single()
 

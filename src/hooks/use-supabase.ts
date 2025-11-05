@@ -31,26 +31,44 @@ export const useVehicles = () => {
 
   const addVehicle = async (vehicleData: Omit<Vehicle, 'id' | 'created_at' | 'updated_at'>) => {
     try {
+      // Remove campos undefined e vazios para evitar problemas no INSERT
+      const cleanData = Object.fromEntries(
+        Object.entries(vehicleData).filter(([_, value]) => 
+          value !== undefined && value !== null && value !== ""
+        )
+      )
+      
+      // Log para debug
+      console.log('Dados enviados para veículo:', cleanData)
+      
       const { data, error } = await supabase
         .from('vehicles')
-        .insert([vehicleData])
+        .insert([cleanData])
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('Erro detalhado do Supabase:', error)
+        throw error
+      }
       
       setVehicles(prev => [data, ...prev])
+      const isExit = vehicleData.type === "Saída Externa"
       toast({
-        title: "Entrada registrada!",
+        title: isExit ? "Saída externa registrada!" : "Entrada registrada!",
         description: `Veículo ${vehicleData.plate} registrado com sucesso.`,
       })
       
       return data
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erro ao adicionar veículo:', error)
+      const isExternalExit = vehicleData.type === "Saída Externa"
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
       toast({
-        title: "Erro",
-        description: "Não foi possível registrar o veículo.",
+        title: "Erro ao registrar veículo",
+        description: isExternalExit 
+          ? `Erro ao registrar saída externa: ${errorMessage}`
+          : `Erro ao registrar entrada: ${errorMessage}`,
         variant: "destructive"
       })
       throw error
