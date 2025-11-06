@@ -288,8 +288,8 @@ const Dashboard = () => {
     .reduce((sum, r) => sum + r.millimeters, 0);
   const todayMaterials = materialRecords.filter(m => m.date === today);
 
-  // Estatísticas da nova tabela de carregamentos
-  const todayLoadings = loadingRecords; // Todos os loadings para fila e carregando
+  // Estatísticas da nova tabela de carregamentos - APENAS DO DIA
+  const todayLoadings = loadingRecords.filter(l => l.date === today);
   const loadingsFila = todayLoadings.filter(l => !l.entry_date);
   const loadingsCarregando = todayLoadings.filter(l => l.entry_date && !l.exit_date);
   // Concluídos: apenas os que saíram HOJE

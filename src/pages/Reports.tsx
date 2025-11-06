@@ -599,35 +599,26 @@ const Reports = () => {
     const vehiclesArray = Object.values(groupedData);
     const totalRolls = vehiclesArray.reduce((sum, v) => sum + v.rolls, 0);
     const totalTrips = vehiclesArray.reduce((sum, v) => sum + v.trips, 0);
+    
+    // Calcular média de tempo de viagem do dia (todas as viagens)
+    const totalTimeAllVehicles = vehiclesArray.reduce((sum, v) => sum + v.totalTime, 0);
+    const avgTripTime = totalTrips > 0 ? Math.round(totalTimeAllVehicles / totalTrips) : 0;
+    const avgHours = Math.floor(avgTripTime / 60);
+    const avgMinutes = avgTripTime % 60;
+    const avgTimeStr = avgHours > 0 ? `${avgHours}h ${avgMinutes}min` : `${avgMinutes}min`;
 
     message += `📊 RESUMO GERAL:\n`;
     message += `🚛 Veículos: ${vehiclesArray.length}\n`;
-    message += `🔄 Viagens: ${totalTrips}\n`;
-    message += `📦 Rolos: ${totalRolls.toLocaleString('pt-BR')}\n\n`;
+    message += `� Viagens: ${totalTrips}\n`;
+    message += `📦 Rolos: ${totalRolls.toLocaleString('pt-BR')}\n`;
+    message += `⏱️ Tempo Viagem: ${avgTimeStr}\n\n`;
 
     message += `📋 DETALHAMENTO POR VEÍCULO:\n`;
     
     vehiclesArray.forEach((vehicle) => {
-      const avgTime = vehicle.totalTime > 0 ? Math.round(vehicle.totalTime / vehicle.trips) : 0;
-      const hours = Math.floor(avgTime / 60);
-      const minutes = avgTime % 60;
-      const timeStr = hours > 0 ? `${hours}h ${minutes}min` : `${minutes}min`;
-      
-      // Talhões únicos deste veículo
-      const talhoesStr = vehicle.talhoesUnicos.size > 0 
-        ? Array.from(vehicle.talhoesUnicos).join(', ') 
-        : '-';
-      
       message += `\n🚛 ${vehicle.plate} | ${vehicle.driver}\n`;
       message += `  📦 Rolos: ${vehicle.rolls.toLocaleString('pt-BR')}\n`;
-      message += `  🔄 Viagens: ${vehicle.trips}\n`;
-      message += `  🌾 TH: ${talhoesStr}\n`;
-      if (vehicle.totalTime > 0) {
-        message += `  ⏱️ Tempo Algodoeira (médio): ${timeStr}\n`;
-      }
-      if (vehicle.firstEntry && vehicle.lastExit) {
-        message += `  🕐 Primeira entrada: ${vehicle.firstEntry} | Última saída: ${vehicle.lastExit}\n`;
-      }
+      message += `  � Viagens: ${vehicle.trips}\n`;
     });
 
     if (sendToWhatsAppFlag) {

@@ -89,23 +89,33 @@ const RelatorioGestaoPuxe = () => {
         setRanking(rank);
       }
 
-      // Buscar médias gerais DIRETO da tabela puxe_viagens (não de views)
+      // Buscar médias gerais DIRETO da tabela puxe_viagens
+      // FILTRO: apenas viagens onde entrada E saída são NO MESMO DIA
       const { data: viagensCompletas, error: erroViagens } = await supabase
         .from("puxe_viagens")
-        .select("tempo_unidade_min, tempo_lavoura_min, total_viagem_min")
+        .select("hora_chegada, hora_saida, tempo_unidade_min, tempo_lavoura_min")
+        .not("hora_chegada", "is", null)
+        .not("hora_saida", "is", null)
         .not("tempo_unidade_min", "is", null);
 
       if (!erroViagens && viagensCompletas && viagensCompletas.length > 0) {
-        // Calcular médias reais de TODAS as viagens
-        const somaAlgodoeira = viagensCompletas.reduce((sum, v) => sum + (v.tempo_unidade_min || 0), 0);
-        const somaViagem = viagensCompletas.reduce((sum, v) => sum + (v.tempo_lavoura_min || 0), 0);
-        const total = viagensCompletas.length;
-
-        setMediasGerais({
-          algodoeira: Math.round(somaAlgodoeira / total),
-          viagem: Math.round(somaViagem / total),
-          totalViagens: total,
+        // Filtrar apenas viagens onde entrada e saída são no mesmo dia
+        const viagensMesmoDia = viagensCompletas.filter(v => {
+          const dataChegada = new Date(v.hora_chegada).toDateString();
+          const dataSaida = new Date(v.hora_saida).toDateString();
+          return dataChegada === dataSaida && (v.tempo_unidade_min || 0) > 0;
         });
+
+        if (viagensMesmoDia.length > 0) {
+          const somaAlgodoeira = viagensMesmoDia.reduce((sum, v) => sum + (v.tempo_unidade_min || 0), 0);
+          const somaViagem = viagensMesmoDia.reduce((sum, v) => sum + (v.tempo_lavoura_min || 0), 0);
+          
+          setMediasGerais({
+            algodoeira: Math.round(somaAlgodoeira / viagensMesmoDia.length),
+            viagem: Math.round(somaViagem / viagensMesmoDia.length),
+            totalViagens: viagensMesmoDia.length,
+          });
+        }
       }
     } catch (error) {
       console.error("Erro ao buscar dados:", error);
@@ -231,7 +241,7 @@ const RelatorioGestaoPuxe = () => {
 
       {/* Tabs com Relatórios */}
       <Tabs value={tab} onValueChange={setTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 bg-gray-800">
+        <TabsList className="grid w-full grid-cols-2 bg-gray-800">
           <TabsTrigger
             value="analitico"
             className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white"
