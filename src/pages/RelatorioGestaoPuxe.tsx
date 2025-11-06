@@ -224,7 +224,8 @@ const RelatorioGestaoPuxe = () => {
         }
         
         // Buscar tempo viagem lavoura do mapa
-        const mapKey = r.entry_time ? `${r.plate}_${r.date}_${r.entry_time}` : '';
+        const hora = r.entry_time ? r.entry_time.substring(0, 5) : '';
+        const mapKey = hora ? `${r.plate}_${r.date}_${hora}` : '';
         const tempos = mapKey ? puxeViagensMap.get(mapKey) : null;
         const tempo_viagem_lavoura_min = tempos?.viagem || null;
         
@@ -402,7 +403,9 @@ const RelatorioGestaoPuxe = () => {
                     
                     // Buscar tempo de viagem lavoura do mapa puxe_viagens
                     if (r.entry_time) {
-                      const mapKey = `${r.plate}_${r.date}_${r.entry_time}`;
+                      // Remover segundos da hora se existir (HH:mm:ss -> HH:mm)
+                      const hora = r.entry_time.substring(0, 5);
+                      const mapKey = `${r.plate}_${r.date}_${hora}`;
                       const tempos = puxeViagensMap.get(mapKey);
                       
                       // Debug: log primeiras tentativas
@@ -548,7 +551,8 @@ const RelatorioGestaoPuxe = () => {
                           : null;
                         
                         // Buscar tempo viagem lavoura do mapa
-                        const mapKey = r.entry_time ? `${r.plate}_${r.date}_${r.entry_time}` : '';
+                        const hora = r.entry_time ? r.entry_time.substring(0, 5) : '';
+                        const mapKey = hora ? `${r.plate}_${r.date}_${hora}` : '';
                         const tempos = mapKey ? puxeViagensMap.get(mapKey) : null;
                         const tempoViagemLavoura = tempos?.viagem || null;
                         
@@ -558,6 +562,7 @@ const RelatorioGestaoPuxe = () => {
                             placa: r.plate,
                             data: r.date,
                             hora: r.entry_time,
+                            horaSemSegundos: hora,
                             mapKey,
                             temposEncontrados: tempos,
                             tempoViagem: tempoViagemLavoura
