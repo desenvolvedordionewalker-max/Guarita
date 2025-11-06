@@ -76,8 +76,8 @@ SELECT
     ROUND(AVG(tempo_unidade_min), 2) AS media_algodoeira_min,
     ROUND(AVG(tempo_lavoura_min), 2) AS media_viagem_min,
     ROUND(AVG(total_viagem_min), 2) AS media_total_min,
-    ROUND(MIN(tempo_viagem_min), 2) AS melhor_tempo_viagem_min,
-    ROUND(MAX(tempo_viagem_min), 2) AS pior_tempo_viagem_min,
+    ROUND(MIN(tempo_lavoura_min), 2) AS melhor_tempo_viagem_min,
+    ROUND(MAX(tempo_lavoura_min), 2) AS pior_tempo_viagem_min,
     MAX(DATE(hora_chegada)) AS ultima_viagem
 FROM view_relatorio_puxe
 WHERE tempo_lavoura_min IS NOT NULL
