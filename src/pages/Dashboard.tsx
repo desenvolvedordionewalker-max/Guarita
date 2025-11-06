@@ -833,6 +833,7 @@ const Dashboard = () => {
                                 </div>
                                 <p className="font-semibold text-sm">{loading.plate}</p>
                                 <p className="text-xs text-muted-foreground truncate">{loading.driver}</p>
+                                <p className="text-xs font-medium text-purple-600 truncate">{loading.carrier}</p>
                                 <p className="text-xs font-medium text-blue-600 truncate">{loading.destination}</p>
                               </div>
                             </div>

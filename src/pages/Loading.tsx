@@ -27,7 +27,10 @@ const Loading = () => {
     const saved = localStorage.getItem('guarita_carriers');
     return saved ? JSON.parse(saved) : ["Fribon", "Bom Futuro", "RDM"];
   });
-  const [destinations] = useState<string[]>(["Santos-SP", "Guararapes-SP", "Cubatão-SP", "Guarujá-SP", "Paranaguá-PR", "Tangará da Serra-MT", "Alto Araguaia-MT"]);
+  const [destinations, setDestinations] = useState<string[]>(() => {
+    const saved = localStorage.getItem('guarita_destinations');
+    return saved ? JSON.parse(saved) : ["Santos-SP", "Guararapes-SP", "Cubatão-SP", "Guarujá-SP", "Paranaguá-PR", "Tangará da Serra-MT", "Alto Araguaia-MT"];
+  });
   const [harvestYears] = useState<string[]>(["2024/2025", "2023/2024", "2022/2023", "2021/2022"]);
   
   const [selectedLoading, setSelectedLoading] = useState<LoadingRecord | null>(null);
@@ -35,6 +38,7 @@ const Loading = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [newTruckType, setNewTruckType] = useState("");
   const [newCarrier, setNewCarrier] = useState("");
+  const [newDestination, setNewDestination] = useState("");
   const [isCreatingNewProduct, setIsCreatingNewProduct] = useState(false);
   const [newProduct, setNewProduct] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -48,6 +52,11 @@ const Loading = () => {
   useEffect(() => {
     localStorage.setItem('guarita_carriers', JSON.stringify(carriers));
   }, [carriers]);
+
+  // Salvar destinos no localStorage sempre que mudar
+  useEffect(() => {
+    localStorage.setItem('guarita_destinations', JSON.stringify(destinations));
+  }, [destinations]);
 
   // Sistema de autocomplete
   const [savedPlates, setSavedPlates] = useState<string[]>(() => {
@@ -86,7 +95,7 @@ const Loading = () => {
       is_sider: formData.get("isSider") === "on",
       acompanhante: formData.get("acompanhante") === "on",
       carrier: formData.get("carrier") as string,
-      destination: (formData.get("destination_custom") as string) || (formData.get("destination") as string) || "",
+      destination: (formData.get("destination") as string) || "",
       plate: formData.get("plate") as string,
       driver: formData.get("driver") as string,
       client: formData.get("client") as string || "",
@@ -179,6 +188,9 @@ const Loading = () => {
     if (!selectedLoading) return;
     const entryDate = (document.getElementById("entryDate") as HTMLInputElement)?.value;
     const entryTime = (document.getElementById("entryTime") as HTMLInputElement)?.value;
+    const destination = (document.getElementById("confirmDestination") as HTMLInputElement)?.value;
+    const client = (document.getElementById("confirmClient") as HTMLInputElement)?.value;
+    
     if (!entryDate || !entryTime) {
       toast({ title: "Campos obrigatórios", description: "Preencha data e hora de entrada.", variant: "destructive" });
       return;
@@ -187,7 +199,9 @@ const Loading = () => {
     try {
       await updateRecord(selectedLoading.id, {
         entry_date: entryDate,
-        entry_time: entryTime
+        entry_time: entryTime,
+        destination: destination || selectedLoading.destination,
+        client: client || selectedLoading.client || ""
       });
       setIsDialogOpen(false);
     } catch (error) {
@@ -243,6 +257,14 @@ const Loading = () => {
       setCarriers([...carriers, newCarrier]);
       setNewCarrier("");
       toast({ title: "Transportadora adicionada!", description: `"${newCarrier}" cadastrada.` });
+    }
+  };
+
+  const handleAddDestination = () => {
+    if (newDestination && !destinations.includes(newDestination)) {
+      setDestinations([...destinations, newDestination]);
+      setNewDestination("");
+      toast({ title: "Destino adicionado!", description: `"${newDestination}" cadastrado.` });
     }
   };
 
@@ -378,6 +400,19 @@ const Loading = () => {
               </div>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
+                  <Label>Destino</Label>
+                  <Select name="destination" required>
+                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent>
+                      {destinations.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <div className="flex gap-2 mt-2">
+                    <Input placeholder="Novo destino" value={newDestination} onChange={e => setNewDestination(e.target.value)} />
+                    <Button type="button" size="sm" onClick={handleAddDestination}>Adicionar</Button>
+                  </div>
+                </div>
+                <div className="space-y-2">
                   <Label>Placa</Label>
                   <Input 
                     name="plate" 
@@ -389,17 +424,17 @@ const Loading = () => {
                     {savedPlates.map((plate) => <option key={plate} value={plate} />)}
                   </datalist>
                 </div>
-                <div className="space-y-2">
-                  <Label>Motorista</Label>
-                  <Input 
-                    name="driver" 
-                    required 
-                    list="drivers-list"
-                  />
-                  <datalist id="drivers-list">
-                    {savedDrivers.map((driver) => <option key={driver} value={driver} />)}
-                  </datalist>
-                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Motorista</Label>
+                <Input 
+                  name="driver" 
+                  required 
+                  list="drivers-list"
+                />
+                <datalist id="drivers-list">
+                  {savedDrivers.map((driver) => <option key={driver} value={driver} />)}
+                </datalist>
               </div>
               <Button type="submit" className="w-full bg-accent hover:bg-accent/90"><Plus className="w-4 h-4 mr-2" />Adicionar à Fila</Button>
             </form>
@@ -825,6 +860,24 @@ const Loading = () => {
               <div className="space-y-2">
                 <Label>Hora de Entrada</Label>
                 <Input type="time" id="entryTime" />
+              </div>
+              <div className="space-y-2 border-t pt-4">
+                <Label>Confirmar Destino</Label>
+                <Input 
+                  type="text" 
+                  id="confirmDestination" 
+                  placeholder="Digite ou confirme o destino"
+                  defaultValue={selectedLoading.destination || ""} 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Cliente (opcional)</Label>
+                <Input 
+                  type="text" 
+                  id="confirmClient" 
+                  placeholder="Digite o nome do cliente"
+                  defaultValue={selectedLoading.client || ""} 
+                />
               </div>
               <Button onClick={handleStartLoading} className="w-full bg-info hover:bg-info/90">
                 Iniciar Carregamento
