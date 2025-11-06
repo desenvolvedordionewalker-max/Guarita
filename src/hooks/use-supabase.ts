@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { supabase, Vehicle, CottonPull, RainRecord, Equipment, Producer, LoadingRecord, MaterialReceipt } from '@/lib/supabase'
+import { supabase, Vehicle, CottonPull, RainRecord, Equipment, Producer, LoadingRecord, MaterialReceipt, PuxeViagem } from '@/lib/supabase'
 import { useToast } from './use-toast'
 
 export const useVehicles = () => {
@@ -729,5 +729,129 @@ export const useLoadingRecords = () => {
     updateRecord,
     deleteRecord,
     refetch: fetchRecords
+  }
+}
+
+// Hook para gestão de viagens do puxe de algodão
+export const usePuxeViagens = () => {
+  const [viagens, setViagens] = useState<PuxeViagem[]>([])
+  const [loading, setLoading] = useState(true)
+  const { toast } = useToast()
+
+  const fetchViagens = useCallback(async () => {
+    setLoading(true)
+    try {
+      const { data, error} = await supabase
+        .from('puxe_viagens')
+        .select('*')
+        .order('hora_chegada', { ascending: false })
+
+      if (error) throw error
+      setViagens(data || [])
+    } catch (error) {
+      console.error('Erro ao buscar viagens:', error)
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar as viagens.",
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false)
+    }
+  }, [toast])
+
+  const addViagem = async (viagemData: Omit<PuxeViagem, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('puxe_viagens')
+        .insert([viagemData])
+        .select()
+        .single()
+
+      if (error) throw error
+      
+      setViagens(prev => [data, ...prev])
+      toast({
+        title: "Viagem registrada!",
+        description: "Entrada registrada com sucesso.",
+      })
+      
+      return data
+    } catch (error) {
+      console.error('Erro ao adicionar viagem:', error)
+      toast({
+        title: "Erro",
+        description: "Não foi possível registrar a viagem.",
+        variant: "destructive"
+      })
+      throw error
+    }
+  }
+
+  const updateViagem = async (id: string, updates: Partial<PuxeViagem>) => {
+    try {
+      const { data, error } = await supabase
+        .from('puxe_viagens')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (error) throw error
+      
+      setViagens(prev => prev.map(v => v.id === id ? data : v))
+      toast({
+        title: "Viagem atualizada!",
+        description: "Dados atualizados com sucesso.",
+      })
+      
+      return data
+    } catch (error) {
+      console.error('Erro ao atualizar viagem:', error)
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar a viagem.",
+        variant: "destructive"
+      })
+      throw error
+    }
+  }
+
+  const deleteViagem = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('puxe_viagens')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+      
+      setViagens(prev => prev.filter(v => v.id !== id))
+      toast({
+        title: "Viagem excluída!",
+        description: "Registro removido com sucesso.",
+      })
+    } catch (error) {
+      console.error('Erro ao excluir viagem:', error)
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir a viagem.",
+        variant: "destructive"
+      })
+      throw error
+    }
+  }
+
+  useEffect(() => {
+    fetchViagens()
+  }, [fetchViagens])
+
+  return {
+    viagens,
+    loading,
+    addViagem,
+    updateViagem,
+    deleteViagem,
+    refetch: fetchViagens
   }
 }

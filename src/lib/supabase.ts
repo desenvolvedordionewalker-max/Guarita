@@ -141,3 +141,19 @@ export interface MaterialReceipt {
   updated_at?: string
   created_by?: string
 }
+
+export interface PuxeViagem {
+  id: string
+  placa: string
+  motorista: string
+  fazenda_origem: string
+  data: string
+  hora_chegada: string
+  hora_saida?: string
+  tempo_unidade_min?: number
+  tempo_lavoura_min?: number
+  total_viagem_min?: number
+  observacao?: string
+  created_at?: string
+  updated_at?: string
+}

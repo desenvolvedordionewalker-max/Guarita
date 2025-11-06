@@ -23,7 +23,10 @@ const Loading = () => {
     const saved = localStorage.getItem('guarita_truck_types');
     return saved ? JSON.parse(saved) : ["Rodotrem", "Bitrem", "Toco", "LS Simples", "LS Trucada", "Vanderleia"];
   });
-  const [carriers] = useState<string[]>(["Fribon", "Bom Futuro", "RDM"]);
+  const [carriers, setCarriers] = useState<string[]>(() => {
+    const saved = localStorage.getItem('guarita_carriers');
+    return saved ? JSON.parse(saved) : ["Fribon", "Bom Futuro", "RDM"];
+  });
   const [destinations] = useState<string[]>(["Santos-SP", "Guararapes-SP", "Cubatão-SP", "Guarujá-SP", "Paranaguá-PR", "Tangará da Serra-MT", "Alto Araguaia-MT"]);
   const [harvestYears] = useState<string[]>(["2024/2025", "2023/2024", "2022/2023", "2021/2022"]);
   
@@ -31,6 +34,7 @@ const Loading = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [newTruckType, setNewTruckType] = useState("");
+  const [newCarrier, setNewCarrier] = useState("");
   const [isCreatingNewProduct, setIsCreatingNewProduct] = useState(false);
   const [newProduct, setNewProduct] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -39,6 +43,11 @@ const Loading = () => {
   useEffect(() => {
     localStorage.setItem('guarita_truck_types', JSON.stringify(truckTypes));
   }, [truckTypes]);
+
+  // Salvar transportadoras no localStorage sempre que mudar
+  useEffect(() => {
+    localStorage.setItem('guarita_carriers', JSON.stringify(carriers));
+  }, [carriers]);
 
   // Sistema de autocomplete
   const [savedPlates, setSavedPlates] = useState<string[]>(() => {
@@ -228,6 +237,14 @@ const Loading = () => {
     }
   };
 
+  const handleAddCarrier = () => {
+    if (newCarrier && !carriers.includes(newCarrier)) {
+      setCarriers([...carriers, newCarrier]);
+      setNewCarrier("");
+      toast({ title: "Transportadora adicionada!", description: `"${newCarrier}" cadastrada.` });
+    }
+  };
+
   const queuedLoadings = loadings.filter(l => !l.entry_date);
   const loadingInProgress = loadings.filter(l => l.entry_date && !l.exit_date);
   const completedLoadings = loadings.filter(l => l.exit_date);
@@ -342,8 +359,14 @@ const Loading = () => {
                 </div>
               </div>
               <div className="grid sm:grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>Transportadora</Label><Input name="carrier" list="carriers-list" required />
+                <div className="space-y-2">
+                  <Label>Transportadora</Label>
+                  <Input name="carrier" list="carriers-list" required />
                   <datalist id="carriers-list">{carriers.map(c => <option key={c} value={c} />)}</datalist>
+                  <div className="flex gap-2 mt-2">
+                    <Input placeholder="Nova transportadora" value={newCarrier} onChange={e => setNewCarrier(e.target.value)} />
+                    <Button type="button" size="sm" onClick={handleAddCarrier}>Adicionar</Button>
+                  </div>
                 </div>
                 <div className="space-y-2"><Label>Cliente (opcional)</Label><Input name="client" placeholder="Nome do cliente" /></div>
               </div>
