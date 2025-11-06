@@ -168,7 +168,7 @@ const Reports = () => {
         record.destination
       ]);
       
-      (doc as any).autoTable({
+      autoTable(doc, {
         head: [['Data', 'Produto', 'Placa', 'Motorista', 'Destino']],
         body: loadingTableData,
         startY: yPosition,
@@ -193,7 +193,7 @@ const Reports = () => {
         record.entry_time
       ]);
       
-      (doc as any).autoTable({
+      autoTable(doc, {
         head: [['Data', 'Produtor', 'Placa', 'Rolos', 'Entrada']],
         body: cottonTableData,
         startY: yPosition,
@@ -370,10 +370,19 @@ const Reports = () => {
             material_type: material.material_type,
             supplier: material.supplier || 'Fornecedor não informado',
             quantity: 0,
-            unit: material.unit || 'un'
+            unit: material.unit_type || 'KG'
           };
         }
-        acc[key].quantity += material.quantity || 0;
+        // Acumular quantidade baseada no tipo de unidade
+        if (material.unit_type === 'KG') {
+          acc[key].quantity += material.net_weight;
+        } else if (material.unit_type === 'M3' && material.volume_m3) {
+          acc[key].quantity += material.volume_m3;
+        } else if (material.unit_type === 'M2' && material.volume_m2) {
+          acc[key].quantity += material.volume_m2;
+        } else if (material.unit_type === 'LITROS' && material.volume_liters) {
+          acc[key].quantity += material.volume_liters;
+        }
         return acc;
       }, {} as Record<string, { material_type: string, supplier: string, quantity: number, unit: string }>);
 
@@ -1031,43 +1040,90 @@ const Reports = () => {
 
         {/* Materiais Recebidos por Tipo */}
         {(() => {
-          const materialsByType = materialRecords.reduce((acc: Record<string, { count: number, weight: number }>, material) => {
+          const materialsByType = materialRecords.reduce((acc: Record<string, { count: number, totalKg: number, totalM3: number, totalM2: number, totalLitros: number, unitType: string }>, material) => {
             if (!acc[material.material_type]) {
-              acc[material.material_type] = { count: 0, weight: 0 };
+              acc[material.material_type] = { 
+                count: 0, 
+                totalKg: 0, 
+                totalM3: 0, 
+                totalM2: 0, 
+                totalLitros: 0,
+                unitType: material.unit_type 
+              };
             }
             acc[material.material_type].count += 1;
-            acc[material.material_type].weight += material.net_weight;
+            
+            // Acumular baseado no tipo de unidade
+            if (material.unit_type === 'KG') {
+              acc[material.material_type].totalKg += material.net_weight;
+            } else if (material.unit_type === 'M3' && material.volume_m3) {
+              acc[material.material_type].totalM3 += material.volume_m3;
+            } else if (material.unit_type === 'M2' && material.volume_m2) {
+              acc[material.material_type].totalM2 += material.volume_m2;
+            } else if (material.unit_type === 'LITROS' && material.volume_liters) {
+              acc[material.material_type].totalLitros += material.volume_liters;
+            }
+            
             return acc;
           }, {});
           
           return Object.keys(materialsByType).length > 0 ? (
             <div className="grid lg:grid-cols-2 xl:grid-cols-3 gap-4">
-              {Object.entries(materialsByType).map(([type, data]) => (
-                <Card key={type} className="border-l-4 border-orange-500">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      📦 {type}
-                    </CardTitle>
-                    <CardDescription>Material recebido</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Entregas:</span>
-                        <span className="font-bold">{data.count}</span>
+              {Object.entries(materialsByType).map(([type, data]) => {
+                // Determinar qual quantidade e unidade mostrar
+                let totalQuantity = 0;
+                let unit = '';
+                let avgQuantity = 0;
+                
+                if (data.unitType === 'KG') {
+                  totalQuantity = data.totalKg / 1000; // Converter para toneladas
+                  unit = 't';
+                  avgQuantity = totalQuantity / data.count;
+                } else if (data.unitType === 'M3') {
+                  totalQuantity = data.totalM3;
+                  unit = 'm³';
+                  avgQuantity = totalQuantity / data.count;
+                } else if (data.unitType === 'M2') {
+                  totalQuantity = data.totalM2;
+                  unit = 'm²';
+                  avgQuantity = totalQuantity / data.count;
+                } else if (data.unitType === 'LITROS') {
+                  totalQuantity = data.totalLitros;
+                  unit = 'L';
+                  avgQuantity = totalQuantity / data.count;
+                }
+                
+                return (
+                  <Card key={type} className="border-l-4 border-orange-500">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        📦 {type}
+                      </CardTitle>
+                      <CardDescription>Material recebido</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">Entregas:</span>
+                          <span className="font-bold">{data.count}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">Quantidade Total:</span>
+                          <span className="font-bold text-orange-600">
+                            {totalQuantity.toFixed(1)}{unit}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">Média por entrega:</span>
+                          <span className="font-medium">
+                            {avgQuantity.toFixed(1)}{unit}
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Peso Total:</span>
-                        <span className="font-bold text-orange-600">{data.weight.toFixed(1)}t</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Média por entrega:</span>
-                        <span className="font-medium">{(data.weight / data.count).toFixed(1)}t</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           ) : (
             <Card>
