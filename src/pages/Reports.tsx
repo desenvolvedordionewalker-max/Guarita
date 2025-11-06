@@ -539,6 +539,7 @@ const Reports = () => {
       rolls: number;
       trips: number;
       totalTime: number;
+      talhoesUnicos: Set<string>;
       firstEntry: string | null;
       lastExit: string | null;
     };
@@ -553,6 +554,7 @@ const Reports = () => {
           rolls: 0,
           trips: 0,
           totalTime: 0,
+          talhoesUnicos: new Set<string>(),
           firstEntry: null,
           lastExit: null
         };
@@ -560,6 +562,11 @@ const Reports = () => {
       
       acc[key].rolls += record.rolls;
       acc[key].trips += 1;
+      
+      // Adicionar talhão se existir
+      if (record.talhao && record.talhao.trim()) {
+        acc[key].talhoesUnicos.add(record.talhao.trim());
+      }
       
       // Calcular tempo de permanência (se houver entrada e saída)
       if (record.entry_time && record.exit_time) {
@@ -606,11 +613,20 @@ const Reports = () => {
       const minutes = avgTime % 60;
       const timeStr = hours > 0 ? `${hours}h ${minutes}min` : `${minutes}min`;
       
+      // Talhões únicos deste veículo
+      const talhoesStr = vehicle.talhoesUnicos.size > 0 
+        ? Array.from(vehicle.talhoesUnicos).join(', ') 
+        : '-';
+      
       message += `\n🚛 ${vehicle.plate} | ${vehicle.driver}\n`;
       message += `  📦 Rolos: ${vehicle.rolls.toLocaleString('pt-BR')}\n`;
       message += `  🔄 Viagens: ${vehicle.trips}\n`;
+      message += `  🌾 TH: ${talhoesStr}\n`;
       if (vehicle.totalTime > 0) {
-        message += `  ⏱️ Tempo médio: ${timeStr}\n`;
+        message += `  ⏱️ Tempo Algodoeira (médio): ${timeStr}\n`;
+      }
+      if (vehicle.firstEntry && vehicle.lastExit) {
+        message += `  🕐 Primeira entrada: ${vehicle.firstEntry} | Última saída: ${vehicle.lastExit}\n`;
       }
     });
 
