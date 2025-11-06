@@ -23,12 +23,15 @@ import {
   Plus,
   Crown,
   CheckCircle,
-  UserPlus
+  UserPlus,
+  Moon,
+  Sun
 } from "lucide-react";
 import { useVehicles, useCottonPull, useRainRecords, useEquipment, useLoadingRecords } from "@/hooks/use-supabase";
 import { useMaterialReceipts } from "@/hooks/use-material-receipts";
 import { LoadingRecord } from "@/lib/supabase";
 import QueueDisplay from "@/components/QueueDisplay";
+import { useTheme } from "@/lib/theme";
 import logo from "@/assets/BF_logo.png";
 
 // Função helper para converter texto para Title Case
@@ -49,6 +52,8 @@ const Dashboard = () => {
   const [selectedLoading, setSelectedLoading] = useState<LoadingRecord | null>(null);
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
   const [filtroCarregando, setFiltroCarregando] = useState<string>("Todos");
+  const [filtroFila, setFiltroFila] = useState<string>("Todos");
+  const { theme, toggleTheme } = useTheme();
 
   const handleRegisterVehicleExit = async (id: string) => {
     const now = new Date();
@@ -363,15 +368,23 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-white to-neutral-50 flex flex-col items-center">
       {/* Header */}
-      <header className="w-full px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 2xl:px-16 py-3 flex justify-between items-center bg-white shadow-md sticky top-0 z-50 border-b">
+      <header className="w-full px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 2xl:px-16 py-3 flex justify-between items-center bg-white dark:bg-neutral-900 shadow-md sticky top-0 z-50 border-b dark:border-neutral-700">
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden">
-            <img 
-              src={logo}
-              alt="Bom Futuro Logo" 
-              className="w-full h-full object-contain"
-            />
-          </div>
+          <button 
+            onClick={toggleTheme}
+            className="w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden hover:opacity-80 transition-opacity cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary"
+            aria-label="Alternar tema"
+          >
+            {theme === "dark" ? (
+              <Moon className="w-full h-full p-4 text-yellow-400" />
+            ) : (
+              <img 
+                src={logo}
+                alt="Bom Futuro Logo" 
+                className="w-full h-full object-contain"
+              />
+            )}
+          </button>
           <div>
             <h1 className="text-lg md:text-xl lg:text-2xl font-bold tv-title">Controle Guarita</h1>
             <p className="text-sm text-muted-foreground">IBA Santa Luzia</p>
@@ -708,200 +721,135 @@ const Dashboard = () => {
 
           {/* Fila de Carregamento - Layout Otimizado */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Fila de Carregamento - 3 Cards por Produto */}
-            <div className="lg:col-span-9 grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Card Pluma */}
-              <Card className="border-l-4 border-yellow-500">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-yellow-600" />
-                      <span>Pluma</span>
-                    </div>
-                    <span className="text-xs font-normal bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
-                      {loadingCarregamentos ? '...' : loadingsFila.filter(l => l.product === 'Pluma').length}
-                    </span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {!loadingCarregamentos && loadingsFila.filter(l => l.product === 'Pluma').length > 0 ? (
-                    <div className="space-y-2 max-h-64 overflow-y-auto">
-                      {loadingsFila
-                        .filter(l => l.product === 'Pluma')
-                        .sort((a, b) => new Date(a.created_at!).getTime() - new Date(b.created_at!).getTime())
-                        .map((loading, idx) => (
-                          <Card 
-                            key={loading.id} 
-                            className="cursor-pointer hover:shadow-md transition-shadow border-yellow-200"
-                            onClick={() => handleLoadingCardClick(loading)}
-                          >
-                            <CardContent className="p-3">
-                              <div className="flex justify-between items-start mb-1">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <p className="font-semibold text-sm">{loading.plate}</p>
-                                    {idx === 0 && (
-                                      <div className="flex items-center gap-1">
-                                        <Crown className="w-3 h-3 text-yellow-500" />
-                                        <span className="text-xs font-bold text-yellow-600">1º</span>
-                                      </div>
-                                    )}
-                                    {loading.is_sider && (
-                                      <span className="px-1 py-0.5 rounded bg-blue-100 text-blue-800 text-xs">SIDER</span>
-                                    )}
-                                    {loading.acompanhante && (
-                                      <span className="px-1 py-0.5 rounded bg-green-100 text-green-800 text-xs flex items-center gap-1">
-                                        <UserPlus className="w-3 h-3" />
-                                        ACOMP
-                                      </span>
-                                    )}
-                                  </div>
-                                  <p className="text-xs text-muted-foreground truncate">{loading.driver}</p>
-                                  <p className="text-xs font-medium text-blue-600 truncate">{loading.destination}</p>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-4 text-muted-foreground text-xs">
-                      {loadingCarregamentos ? 'Carregando...' : 'Nenhum na fila'}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Card Caroço */}
-              <Card className="border-l-4 border-red-500">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-red-600" />
-                      <span>Caroço</span>
-                    </div>
-                    <span className="text-xs font-normal bg-red-100 text-red-800 px-2 py-1 rounded-full">
-                      {loadingCarregamentos ? '...' : loadingsFila.filter(l => l.product === 'Caroço').length}
-                    </span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {!loadingCarregamentos && loadingsFila.filter(l => l.product === 'Caroço').length > 0 ? (
-                    <div className="space-y-2 max-h-64 overflow-y-auto">
-                      {loadingsFila
-                        .filter(l => l.product === 'Caroço')
-                        .sort((a, b) => new Date(a.created_at!).getTime() - new Date(b.created_at!).getTime())
-                        .map((loading, idx) => (
-                          <Card 
-                            key={loading.id} 
-                            className="cursor-pointer hover:shadow-md transition-shadow border-red-200"
-                            onClick={() => handleLoadingCardClick(loading)}
-                          >
-                            <CardContent className="p-3">
-                              <div className="flex justify-between items-start mb-1">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <p className="font-semibold text-sm">{loading.plate}</p>
-                                    {idx === 0 && (
-                                      <div className="flex items-center gap-1">
-                                        <Crown className="w-3 h-3 text-yellow-500" />
-                                        <span className="text-xs font-bold text-yellow-600">1º</span>
-                                      </div>
-                                    )}
-                                    {loading.is_sider && (
-                                      <span className="px-1 py-0.5 rounded bg-blue-100 text-blue-800 text-xs">SIDER</span>
-                                    )}
-                                    {loading.acompanhante && (
-                                      <span className="px-1 py-0.5 rounded bg-green-100 text-green-800 text-xs flex items-center gap-1">
-                                        <UserPlus className="w-3 h-3" />
-                                        ACOMP
-                                      </span>
-                                    )}
-                                  </div>
-                                  <p className="text-xs text-muted-foreground truncate">{loading.driver}</p>
-                                  <p className="text-xs font-medium text-blue-600 truncate">{loading.destination}</p>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-4 text-muted-foreground text-xs">
-                      {loadingCarregamentos ? 'Carregando...' : 'Nenhum na fila'}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Card Outros (Fibrilha, Briquete, Reciclados, Cavaco, Outros) */}
-              <Card className="border-l-4 border-gray-500">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-gray-600" />
-                      <span>Outros</span>
-                    </div>
-                    <span className="text-xs font-normal bg-gray-100 text-gray-800 px-2 py-1 rounded-full">
-                      {loadingCarregamentos ? '...' : loadingsFila.filter(l => !['Pluma', 'Caroço'].includes(l.product)).length}
-                    </span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {!loadingCarregamentos && loadingsFila.filter(l => !['Pluma', 'Caroço'].includes(l.product)).length > 0 ? (
-                    <div className="space-y-2 max-h-64 overflow-y-auto">
-                      {loadingsFila
-                        .filter(l => !['Pluma', 'Caroço'].includes(l.product))
-                        .sort((a, b) => new Date(a.created_at!).getTime() - new Date(b.created_at!).getTime())
-                        .map((loading, idx) => (
-                          <Card 
-                            key={loading.id} 
-                            className="cursor-pointer hover:shadow-md transition-shadow border-gray-200"
-                            onClick={() => handleLoadingCardClick(loading)}
-                          >
-                            <CardContent className="p-3">
-                              <div className="flex justify-between items-start mb-1">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${
-                                      loading.product === 'Fibrilha' ? 'bg-green-100 text-green-800' :
-                                      loading.product === 'Briquete' ? 'bg-purple-100 text-purple-800' :
-                                      loading.product === 'Reciclados' ? 'bg-blue-100 text-blue-800' :
-                                      loading.product === 'Cavaco' ? 'bg-orange-100 text-orange-800' :
-                                      'bg-pink-100 text-pink-800'
-                                    }`}>
-                                      {loading.product}
+            {/* Fila de Carregamento - Card Único com Filtros */}
+            <Card className="lg:col-span-4 border-l-4 border-yellow-500">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-5 h-5 text-yellow-600" />
+                    Na Fila
+                  </div>
+                  <span className="text-sm font-normal bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
+                    {loadingCarregamentos ? '...' : loadingsFila.filter(l => filtroFila === "Todos" || l.product === filtroFila).length}
+                  </span>
+                </CardTitle>
+                <CardDescription>
+                  Aguardando carregamento
+                </CardDescription>
+                {/* Filtros por produto */}
+                <div className="flex flex-wrap gap-1 mt-2">
+                  <button
+                    onClick={() => setFiltroFila("Todos")}
+                    className={`px-2 py-1 rounded text-xs transition-colors ${
+                      filtroFila === "Todos"
+                        ? "bg-yellow-600 text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    Todos
+                  </button>
+                  <button
+                    onClick={() => setFiltroFila("Pluma")}
+                    className={`px-2 py-1 rounded text-xs transition-colors ${
+                      filtroFila === "Pluma"
+                        ? "bg-yellow-600 text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    Pluma
+                  </button>
+                  <button
+                    onClick={() => setFiltroFila("Caroço")}
+                    className={`px-2 py-1 rounded text-xs transition-colors ${
+                      filtroFila === "Caroço"
+                        ? "bg-yellow-600 text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    Caroço
+                  </button>
+                  <button
+                    onClick={() => setFiltroFila("Fibrilha")}
+                    className={`px-2 py-1 rounded text-xs transition-colors ${
+                      filtroFila === "Fibrilha"
+                        ? "bg-yellow-600 text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    Fibrilha
+                  </button>
+                  <button
+                    onClick={() => setFiltroFila("Briquete")}
+                    className={`px-2 py-1 rounded text-xs transition-colors ${
+                      filtroFila === "Briquete"
+                        ? "bg-yellow-600 text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    Briquete
+                  </button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {!loadingCarregamentos && loadingsFila.filter(l => filtroFila === "Todos" || l.product === filtroFila).length > 0 ? (
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                    {loadingsFila
+                      .filter(l => filtroFila === "Todos" || l.product === filtroFila)
+                      .sort((a, b) => new Date(a.created_at!).getTime() - new Date(b.created_at!).getTime())
+                      .map((loading, idx) => (
+                        <Card 
+                          key={loading.id} 
+                          className="cursor-pointer hover:shadow-md transition-shadow"
+                          onClick={() => handleLoadingCardClick(loading)}
+                        >
+                          <CardContent className="p-3">
+                            <div className="flex justify-between items-start mb-1">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                                    loading.product === 'Pluma' ? 'bg-yellow-100 text-yellow-800' :
+                                    loading.product === 'Caroço' ? 'bg-red-100 text-red-800' :
+                                    loading.product === 'Fibrilha' ? 'bg-green-100 text-green-800' :
+                                    loading.product === 'Briquete' ? 'bg-purple-100 text-purple-800' :
+                                    'bg-gray-100 text-gray-800'
+                                  }`}>
+                                    {loading.product}
+                                  </span>
+                                  {idx === 0 && (
+                                    <div className="flex items-center gap-1">
+                                      <Crown className="w-3 h-3 text-yellow-500" />
+                                      <span className="text-xs font-bold text-yellow-600">1º</span>
+                                    </div>
+                                  )}
+                                  {loading.is_sider && (
+                                    <span className="px-1 py-0.5 rounded bg-blue-100 text-blue-800 text-xs">SIDER</span>
+                                  )}
+                                  {loading.acompanhante && (
+                                    <span className="px-1 py-0.5 rounded bg-green-100 text-green-800 text-xs flex items-center gap-1">
+                                      <UserPlus className="w-3 h-3" />
+                                      ACOMP
                                     </span>
-                                    {loading.is_sider && (
-                                      <span className="px-1 py-0.5 rounded bg-blue-100 text-blue-800 text-xs">SIDER</span>
-                                    )}
-                                    {loading.acompanhante && (
-                                      <span className="px-1 py-0.5 rounded bg-green-100 text-green-800 text-xs flex items-center gap-1">
-                                        <UserPlus className="w-3 h-3" />
-                                        ACOMP
-                                      </span>
-                                    )}
-                                  </div>
-                                  <p className="font-semibold text-sm">{loading.plate}</p>
-                                  <p className="text-xs text-muted-foreground truncate">{loading.driver}</p>
-                                  <p className="text-xs font-medium text-blue-600 truncate">{loading.destination}</p>
+                                  )}
                                 </div>
+                                <p className="font-semibold text-sm">{loading.plate}</p>
+                                <p className="text-xs text-muted-foreground truncate">{loading.driver}</p>
+                                <p className="text-xs font-medium text-blue-600 truncate">{loading.destination}</p>
                               </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-4 text-muted-foreground text-xs">
-                      {loadingCarregamentos ? 'Carregando...' : 'Nenhum na fila'}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground text-sm">
+                    {loadingCarregamentos ? 'Carregando...' : 'Nenhum na fila'}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
             {/* Carregando */}
-            <Card className="lg:col-span-3">
+            <Card className="lg:col-span-4 border-l-4 border-orange-500">
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -1039,7 +987,7 @@ const Dashboard = () => {
             </Card>
 
             {/* Concluídos */}
-            <Card className="lg:col-span-6">
+            <Card className="lg:col-span-4 border-l-4 border-green-500">
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   <div className="flex items-center gap-2">

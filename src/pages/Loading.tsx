@@ -86,7 +86,7 @@ const Loading = () => {
       is_sider: formData.get("isSider") === "on",
       acompanhante: formData.get("acompanhante") === "on",
       carrier: formData.get("carrier") as string,
-      destination: formData.get("destination") as string || "",
+      destination: (formData.get("destination_custom") as string) || (formData.get("destination") as string) || "",
       plate: formData.get("plate") as string,
       driver: formData.get("driver") as string,
       client: formData.get("client") as string || "",
@@ -771,16 +771,22 @@ const Loading = () => {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label>Destino</Label>
-                <Select name="destination" defaultValue={selectedLoading.destination} required>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {destinations.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Destino</Label>
+                  <Select name="destination" defaultValue={selectedLoading.destination} required>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {destinations.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Destino (opcional - texto livre)</Label>
+                  <Input name="destination_custom" defaultValue={selectedLoading.destination || ""} placeholder="Digite destino customizado" />
+                </div>
               </div>
 
               <div className="flex items-center space-x-2">
