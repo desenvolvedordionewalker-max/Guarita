@@ -604,8 +604,16 @@ const Loading = () => {
               <div className="space-y-3 max-h-[600px] overflow-y-auto">
                 {loadingInProgress.length > 0 ? (
                   loadingInProgress.map(l => (
-                    <Card key={l.id} className={`border-l-4 cursor-pointer hover:shadow-md transition-shadow ${getProductColor(l.product)}`} onClick={() => handleCardClick(l)}>
+                    <Card key={l.id} className={`border-l-4 cursor-pointer hover:shadow-md transition-shadow relative ${getProductColor(l.product)} ${
+                      l.status === 'carregado' ? 'ring-2 ring-amber-400 bg-amber-50' : ''
+                    }`} onClick={() => handleCardClick(l)}>
                       <CardContent className="p-4">
+                        {/* Badge de alerta para status "carregado" */}
+                        {l.status === 'carregado' && (
+                          <div className="absolute -top-2 -right-2 bg-amber-500 text-white px-2 py-1 rounded-full text-xs font-bold shadow-lg animate-pulse z-10">
+                            ⚠️ REGISTRAR SAÍDA
+                          </div>
+                        )}
                         <div className="flex justify-between mb-2">
                           <div className="flex-1">
                             <div className="flex gap-2 mb-2 items-center flex-wrap">
@@ -619,8 +627,14 @@ const Loading = () => {
                                 </span>
                               )}
                               <div className="flex items-center gap-1">
-                                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                                <span className="text-xs font-bold text-blue-600">ATIVO</span>
+                                <div className={`w-2 h-2 rounded-full animate-pulse ${
+                                  l.status === 'carregado' ? 'bg-amber-500' : 'bg-blue-500'
+                                }`}></div>
+                                <span className={`text-xs font-bold ${
+                                  l.status === 'carregado' ? 'text-amber-600' : 'text-blue-600'
+                                }`}>
+                                  {l.status === 'carregado' ? 'CARREGADO' : 'ATIVO'}
+                                </span>
                               </div>
                             </div>
                             <p className="font-semibold text-base">{l.plate}</p>

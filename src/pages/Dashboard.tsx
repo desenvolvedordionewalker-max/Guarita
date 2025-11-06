@@ -53,6 +53,7 @@ const Dashboard = () => {
   
   const [selectedLoading, setSelectedLoading] = useState<LoadingRecord | null>(null);
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
+  const [modalAction, setModalAction] = useState<'escolher' | 'carregado' | 'saiu'>('escolher');
   const [filtroCarregando, setFiltroCarregando] = useState<string>("Todos");
   const [filtroFila, setFiltroFila] = useState<string>("Todos");
   const { theme, toggleTheme } = useTheme();
@@ -92,6 +93,7 @@ const Dashboard = () => {
 
   const handleLoadingCardClick = (loading: LoadingRecord) => {
     setSelectedLoading(loading);
+    setModalAction('escolher'); // Reset para escolher ação
     setIsManageModalOpen(true);
   };
 
@@ -377,11 +379,17 @@ const Dashboard = () => {
   );
   
   // CARREGANDO: status 'carregando' OU 'carregado' OU (não tem status E tem entry_date mas não exit_date)
-  const loadingsCarregando = loadingRecords.filter(l => 
-    l.status === 'carregando' || 
-    l.status === 'carregado' || 
-    (!l.status && l.entry_date && !l.exit_date)
-  );
+  // Mostra TODOS (independente do dia) que ainda não saíram
+  const loadingsCarregando = loadingRecords.filter(l => {
+    // Se já saiu (tem exit_date), não mostra aqui
+    if (l.exit_date) return false;
+    
+    // Se tem status carregando ou carregado
+    if (l.status === 'carregando' || l.status === 'carregado') return true;
+    
+    // Fallback: tem entry_date mas não tem exit_date
+    return !l.status && l.entry_date && !l.exit_date;
+  });
   
   // CONCLUÍDOS: Todos que saíram hoje (independente de status)
   // Por enquanto, até executar o SQL para criar coluna status
@@ -1015,10 +1023,20 @@ const Dashboard = () => {
                       .map((loading) => (
                         <Card 
                           key={loading.id} 
-                          className="relative border-orange-200 cursor-pointer hover:shadow-md transition-shadow"
+                          className={`relative cursor-pointer hover:shadow-md transition-shadow ${
+                            loading.status === 'carregado' 
+                              ? 'border-2 border-amber-400 bg-amber-50' 
+                              : 'border-orange-200'
+                          }`}
                           onClick={() => handleLoadingCardClick(loading)}
                         >
                           <CardContent className="p-3">
+                            {/* Badge de alerta para status "carregado" */}
+                            {loading.status === 'carregado' && (
+                              <div className="absolute -top-2 -right-2 bg-amber-500 text-white px-2 py-1 rounded-full text-xs font-bold shadow-lg animate-pulse">
+                                ⚠️ REGISTRAR SAÍDA
+                              </div>
+                            )}
                             <div className="flex justify-between items-start mb-2">
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-2">
@@ -1035,8 +1053,14 @@ const Dashboard = () => {
                                     {loading.product}
                                   </span>
                                   <div className="flex items-center gap-1">
-                                    <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
-                                    <span className="text-xs font-bold text-orange-600">CARREGANDO</span>
+                                    <div className={`w-2 h-2 rounded-full ${
+                                      loading.status === 'carregado' ? 'bg-amber-500' : 'bg-orange-500'
+                                    } animate-pulse`}></div>
+                                    <span className={`text-xs font-bold ${
+                                      loading.status === 'carregado' ? 'text-amber-600' : 'text-orange-600'
+                                    }`}>
+                                      {loading.status === 'carregado' ? 'CARREGADO' : 'CARREGANDO'}
+                                    </span>
                                   </div>
                                   {loading.acompanhante && (
                                     <span className="px-1 py-0.5 rounded bg-green-100 text-green-800 text-xs flex items-center gap-1">
@@ -1367,8 +1391,135 @@ const Dashboard = () => {
                     </Button>
                   </DialogFooter>
                 </form>
+              ) : modalAction === 'escolher' ? (
+                // TELA DE ESCOLHA: Carregado ou Saiu
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground text-center">
+                    Selecione a ação desejada:
+                  </p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <Button
+                      onClick={() => setModalAction('carregado')}
+                      className="h-24 flex flex-col gap-2 bg-orange-500 hover:bg-orange-600"
+                    >
+                      <Package className="w-8 h-8" />
+                      <span className="font-bold">CARREGADO</span>
+                      <span className="text-xs font-normal">Aguardando saída</span>
+                    </Button>
+                    <Button
+                      onClick={() => setModalAction('saiu')}
+                      className="h-24 flex flex-col gap-2 bg-green-600 hover:bg-green-700"
+                    >
+                      <CheckCircle className="w-8 h-8" />
+                      <span className="font-bold">SAIU</span>
+                      <span className="text-xs font-normal">Finalizar NF</span>
+                    </Button>
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsManageModalOpen(false)}
+                    className="w-full"
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              ) : modalAction === 'carregado' ? (
+                // FORMULÁRIO CARREGADO (sem data de saída)
+                <div className="space-y-4">
+                  <div className="space-y-2 border-b pb-4">
+                    <Label htmlFor="dashDestinationCarregado">Destino</Label>
+                    <Input
+                      id="dashDestinationCarregado"
+                      type="text"
+                      placeholder="Digite ou confirme o destino"
+                      defaultValue={selectedLoading.destination || ""}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="dashClientCarregado">Cliente (opcional)</Label>
+                    <Input
+                      id="dashClientCarregado"
+                      type="text"
+                      placeholder="Digite o nome do cliente"
+                      defaultValue={selectedLoading.client || ""}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="invoiceNumberCarregado">Número da Nota Fiscal</Label>
+                    <Input
+                      id="invoiceNumberCarregado"
+                      type="text"
+                      placeholder="Ex: 123.456"
+                      defaultValue={selectedLoading.invoice_number || ""}
+                    />
+                  </div>
+
+                  {(selectedLoading.product === 'Caroço' || selectedLoading.product === 'Briquete') && (
+                    <div className="space-y-2">
+                      <Label htmlFor="weightCarregado">Peso (kg)</Label>
+                      <Input
+                        id="weightCarregado"
+                        type="number"
+                        step="0.01"
+                        placeholder="Peso em kg"
+                        defaultValue={selectedLoading.weight || ""}
+                      />
+                    </div>
+                  )}
+
+                  {(selectedLoading.product === 'Pluma' || selectedLoading.product === 'Fibrilha') && (
+                    <div className="space-y-2">
+                      <Label htmlFor="balesCarregado">Fardos</Label>
+                      <Input
+                        id="balesCarregado"
+                        type="number"
+                        placeholder="Quantidade de fardos"
+                        defaultValue={selectedLoading.bales || ""}
+                      />
+                    </div>
+                  )}
+
+                  <DialogFooter className="gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setModalAction('escolher')}
+                    >
+                      Voltar
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        const destination = (document.getElementById("dashDestinationCarregado") as HTMLInputElement)?.value;
+                        const client = (document.getElementById("dashClientCarregado") as HTMLInputElement)?.value;
+                        const invoiceNumber = (document.getElementById("invoiceNumberCarregado") as HTMLInputElement)?.value;
+                        const weight = (document.getElementById("weightCarregado") as HTMLInputElement)?.value;
+                        const bales = (document.getElementById("balesCarregado") as HTMLInputElement)?.value;
+                        
+                        const updateData: Partial<LoadingRecord> = {
+                          status: 'carregado',
+                          destination: destination || selectedLoading.destination,
+                          client: client || selectedLoading.client || "",
+                          invoice_number: invoiceNumber || selectedLoading.invoice_number || null,
+                          weight: weight ? parseFloat(weight) : selectedLoading.weight,
+                          bales: bales ? parseInt(bales) : selectedLoading.bales,
+                        };
+                        
+                        updateRecord(selectedLoading.id, updateData);
+                        setIsManageModalOpen(false);
+                        toast({
+                          title: "Marcado como Carregado!",
+                          description: `Placa ${selectedLoading.plate} - Aguardando hora de saída.`,
+                        });
+                      }}
+                      className="bg-orange-500 hover:bg-orange-600"
+                    >
+                      📦 Salvar como Carregado
+                    </Button>
+                  </DialogFooter>
+                </div>
               ) : (
-                // Formulário para FINALIZAR carregamento
+                // FORMULÁRIO para FINALIZAR carregamento (SAIU)
                 <form onSubmit={handleFinishLoading} className="space-y-4">
                   <div className="space-y-2 border-b pb-4">
                     <Label htmlFor="dashDestination">Destino</Label>
@@ -1394,22 +1545,20 @@ const Dashboard = () => {
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="exitDate">Data de Saída</Label>
+                      <Label htmlFor="exitDate">Data de Saída *</Label>
                       <Input
                         id="exitDate"
                         name="exitDate"
                         type="date"
-                        defaultValue={new Date().toISOString().split('T')[0]}
                         required
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="exitTime">Hora de Saída</Label>
+                      <Label htmlFor="exitTime">Hora de Saída *</Label>
                       <Input
                         id="exitTime"
                         name="exitTime"
                         type="time"
-                        defaultValue={new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                         required
                       />
                     </div>
@@ -1453,34 +1602,17 @@ const Dashboard = () => {
                       />
                     </div>
                   )}
-                  
-                  <div className="space-y-2">
-                    <Button 
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        handleMarkAsLoaded();
-                      }}
-                      className="w-full bg-orange-500 hover:bg-orange-600"
-                      variant="outline"
-                    >
-                      📦 Carregado (aguardando saída)
-                    </Button>
-                    <p className="text-xs text-muted-foreground text-center">
-                      Caminhão carregado mas ainda não saiu. Salva os dados acima.
-                    </p>
-                  </div>
 
                   <DialogFooter className="gap-2">
                     <Button 
                       type="button" 
                       variant="outline" 
-                      onClick={() => setIsManageModalOpen(false)}
+                      onClick={() => setModalAction('escolher')}
                     >
-                      Cancelar
+                      Voltar
                     </Button>
                     <Button type="submit" className="bg-green-600 hover:bg-green-700">
-                      ✅ Saiu - Finalizar e Remover
+                      ✅ Saiu - Finalizar
                     </Button>
                   </DialogFooter>
                 </form>
