@@ -338,13 +338,13 @@ const Reports = () => {
 🚛 CARREGAMENTOS CONCLUÍDOS:`;
 
     if (plumaCarregamentos.length > 0) {
-      message += `\n🧺 Pluma: ${plumaCarregamentos.length} caminhões | ${totalPlumaFardos.toLocaleString('pt-BR')} fardos`;
+      message += `\n▪️ Pluma: ${plumaCarregamentos.length} caminhões | ${totalPlumaFardos.toLocaleString('pt-BR')} fardos`;
     }
     if (carocoCarregamentos.length > 0) {
       message += `\n🌰 Caroço: ${carocoCarregamentos.length} caminhões | ${totalCarocoKg.toLocaleString('pt-BR')} kg`;
     }
     if (fibrilhaCarregamentos.length > 0) {
-      message += `\n🧵 Fibrilha: ${fibrilhaCarregamentos.length} caminhões | ${totalFibrilhaFardos.toLocaleString('pt-BR')} fardos`;
+      message += `\n▪️ Fibrilha: ${fibrilhaCarregamentos.length} caminhões | ${totalFibrilhaFardos.toLocaleString('pt-BR')} fardos`;
     }
     if (briqueteCarregamentos.length > 0) {
       message += `\n🔥 Briquete: ${briqueteCarregamentos.length} caminhões | ${totalBriqueteKg.toLocaleString('pt-BR')} kg`;
@@ -362,57 +362,69 @@ const Reports = () => {
 
     message += `\n\n📦 RECEBIMENTO DE MATERIAIS:`;
     if (todayMaterials.length > 0) {
-      // Agrupar materiais por tipo e fornecedor
-      const groupedMaterials = todayMaterials.reduce((acc, material) => {
-        const key = `${material.material_type}|${material.supplier || 'Fornecedor não informado'}`;
-        if (!acc[key]) {
-          acc[key] = {
-            material_type: material.material_type,
-            supplier: material.supplier || 'Fornecedor não informado',
-            quantity: 0,
-            unit: material.unit_type || 'KG'
-          };
-        }
-        // Acumular quantidade baseada no tipo de unidade
-        if (material.unit_type === 'KG') {
-          acc[key].quantity += material.net_weight;
-        } else if (material.unit_type === 'M3' && material.volume_m3) {
-          acc[key].quantity += material.volume_m3;
-        } else if (material.unit_type === 'M2' && material.volume_m2) {
-          acc[key].quantity += material.volume_m2;
-        } else if (material.unit_type === 'LITROS' && material.volume_liters) {
-          acc[key].quantity += material.volume_liters;
-        }
-        return acc;
-      }, {} as Record<string, { material_type: string, supplier: string, quantity: number, unit: string }>);
+      // Separar Cavaco de outros materiais
+      const cavacoMaterials = todayMaterials.filter(m => m.material_type === 'Cavaco');
+      const otherMaterials = todayMaterials.filter(m => m.material_type !== 'Cavaco');
+      
+      // Cavaco: mostrar apenas quantidade de cargas e peso total
+      if (cavacoMaterials.length > 0) {
+        const totalCavacoWeight = cavacoMaterials.reduce((sum, m) => sum + m.net_weight, 0);
+        message += `\n• Cavaco: ${cavacoMaterials.length} carga${cavacoMaterials.length > 1 ? 's' : ''} | ${totalCavacoWeight.toLocaleString('pt-BR')} kg`;
+      }
+      
+      // Outros materiais: agrupar por tipo e fornecedor
+      if (otherMaterials.length > 0) {
+        const groupedMaterials = otherMaterials.reduce((acc, material) => {
+          const key = `${material.material_type}|${material.supplier || 'Fornecedor não informado'}`;
+          if (!acc[key]) {
+            acc[key] = {
+              material_type: material.material_type,
+              supplier: material.supplier || 'Fornecedor não informado',
+              quantity: 0,
+              unit: material.unit_type || 'KG'
+            };
+          }
+          // Acumular quantidade baseada no tipo de unidade
+          if (material.unit_type === 'KG') {
+            acc[key].quantity += material.net_weight;
+          } else if (material.unit_type === 'M3' && material.volume_m3) {
+            acc[key].quantity += material.volume_m3;
+          } else if (material.unit_type === 'M2' && material.volume_m2) {
+            acc[key].quantity += material.volume_m2;
+          } else if (material.unit_type === 'LITROS' && material.volume_liters) {
+            acc[key].quantity += material.volume_liters;
+          }
+          return acc;
+        }, {} as Record<string, { material_type: string, supplier: string, quantity: number, unit: string }>);
 
-      // Mostrar apenas um resumo por produto
-      const materialsByType = Object.values(groupedMaterials).reduce((acc, item) => {
-        if (!acc[item.material_type]) {
-          acc[item.material_type] = {
-            total: 0,
-            unit: item.unit,
-            suppliers: new Set<string>()
-          };
-        }
-        acc[item.material_type].total += item.quantity;
-        acc[item.material_type].suppliers.add(item.supplier);
-        return acc;
-      }, {} as Record<string, { total: number, unit: string, suppliers: Set<string> }>);
+        // Mostrar resumo por produto
+        const materialsByType = Object.values(groupedMaterials).reduce((acc, item) => {
+          if (!acc[item.material_type]) {
+            acc[item.material_type] = {
+              total: 0,
+              unit: item.unit,
+              suppliers: new Set<string>()
+            };
+          }
+          acc[item.material_type].total += item.quantity;
+          acc[item.material_type].suppliers.add(item.supplier);
+          return acc;
+        }, {} as Record<string, { total: number, unit: string, suppliers: Set<string> }>);
 
-      // Se houver múltiplos fornecedores para o mesmo produto, mostrar separado
-      Object.entries(materialsByType).forEach(([materialType, data]) => {
-        if (data.suppliers.size === 1) {
-          const supplier = Array.from(data.suppliers)[0];
-          message += `\n• ${materialType}: ${data.total.toLocaleString('pt-BR')} ${data.unit} de ${supplier}`;
-        } else {
-          // Múltiplos fornecedores - mostrar cada um
-          const itemsForType = Object.values(groupedMaterials).filter(item => item.material_type === materialType);
-          itemsForType.forEach(item => {
-            message += `\n• ${item.material_type}: ${item.quantity.toLocaleString('pt-BR')} ${item.unit} de ${item.supplier}`;
-          });
-        }
-      });
+        // Se houver múltiplos fornecedores para o mesmo produto, mostrar separado
+        Object.entries(materialsByType).forEach(([materialType, data]) => {
+          if (data.suppliers.size === 1) {
+            const supplier = Array.from(data.suppliers)[0];
+            message += `\n• ${materialType}: ${data.total.toLocaleString('pt-BR')} ${data.unit} de ${supplier}`;
+          } else {
+            // Múltiplos fornecedores - mostrar cada um
+            const itemsForType = Object.values(groupedMaterials).filter(item => item.material_type === materialType);
+            itemsForType.forEach(item => {
+              message += `\n• ${item.material_type}: ${item.quantity.toLocaleString('pt-BR')} ${item.unit} de ${item.supplier}`;
+            });
+          }
+        });
+      }
     } else {
       message += `\n❌ Nenhum material recebido hoje`;
     }
@@ -427,9 +439,9 @@ const Reports = () => {
     }
 
     message += `\n\n⏳ FILA DE CARREGAMENTO ATUAL:`;
-    if (filaPluma > 0) message += `\n🧺 Pluma: ${filaPluma} na fila`;
+    if (filaPluma > 0) message += `\n▪️ Pluma: ${filaPluma} na fila`;
     if (filaCaroco > 0) message += `\n🌰 Caroço: ${filaCaroco} na fila`;
-    if (filaFibrilha > 0) message += `\n🧵 Fibrilha: ${filaFibrilha} na fila`;
+    if (filaFibrilha > 0) message += `\n▪️ Fibrilha: ${filaFibrilha} na fila`;
     if (filaBriquete > 0) message += `\n🔥 Briquete: ${filaBriquete} na fila`;
     if (filaAtual.length === 0) {
       message += `\n✅ Fila vazia no momento`;
@@ -465,33 +477,78 @@ const Reports = () => {
 🕒 Fila de Carregamento - ${today} - ${time}\n\n`;
 
     if (filaPluma.length > 0) {
-      message += `🧺 Pluma – ${filaPluma.length} carreta${filaPluma.length > 1 ? 's' : ''} aguardando:\n`;
-      filaPluma.slice(0, 5).forEach(item => {
-        message += `🚛 ${item.truck_type} | ${item.plate} | ${item.carrier}\n`;
+      message += `▪️ Pluma – ${filaPluma.length} carreta${filaPluma.length > 1 ? 's' : ''} aguardando:\n`;
+      // Agrupar por tipo de caminhão e sider
+      const groupedPluma = filaPluma.reduce((acc, item) => {
+        const key = `${item.truck_type}|${item.is_sider ? 'Sider' : ''}`;
+        if (!acc[key]) {
+          acc[key] = { truck_type: item.truck_type, is_sider: item.is_sider, count: 0, carriers: new Set() };
+        }
+        acc[key].count++;
+        acc[key].carriers.add(item.carrier);
+        return acc;
+      }, {} as Record<string, { truck_type: string, is_sider: boolean, count: number, carriers: Set<string> }>);
+      
+      Object.values(groupedPluma).forEach(group => {
+        const siderText = group.is_sider ? ' (Sider)' : '';
+        message += `  • ${group.count}x ${group.truck_type}${siderText}\n`;
       });
       message += '\n';
     }
 
     if (filaCaroco.length > 0) {
       message += `🌰 Caroço – ${filaCaroco.length} carreta${filaCaroco.length > 1 ? 's' : ''} aguardando:\n`;
-      filaCaroco.slice(0, 5).forEach(item => {
-        message += `🚚 ${item.truck_type} | ${item.plate} | ${item.carrier}\n`;
+      // Agrupar por tipo de caminhão e sider
+      const groupedCaroco = filaCaroco.reduce((acc, item) => {
+        const key = `${item.truck_type}|${item.is_sider ? 'Sider' : ''}`;
+        if (!acc[key]) {
+          acc[key] = { truck_type: item.truck_type, is_sider: item.is_sider, count: 0 };
+        }
+        acc[key].count++;
+        return acc;
+      }, {} as Record<string, { truck_type: string, is_sider: boolean, count: number }>);
+      
+      Object.values(groupedCaroco).forEach(group => {
+        const siderText = group.is_sider ? ' (Sider)' : '';
+        message += `  • ${group.count}x ${group.truck_type}${siderText}\n`;
       });
       message += '\n';
     }
 
     if (filaFibrilha.length > 0) {
-      message += `🧵 Fibrilha – ${filaFibrilha.length} carreta${filaFibrilha.length > 1 ? 's' : ''} aguardando:\n`;
-      filaFibrilha.slice(0, 5).forEach(item => {
-        message += `🚛 ${item.truck_type} | ${item.plate} | ${item.carrier}\n`;
+      message += `▪️ Fibrilha – ${filaFibrilha.length} carreta${filaFibrilha.length > 1 ? 's' : ''} aguardando:\n`;
+      // Agrupar por tipo de caminhão e sider
+      const groupedFibrilha = filaFibrilha.reduce((acc, item) => {
+        const key = `${item.truck_type}|${item.is_sider ? 'Sider' : ''}`;
+        if (!acc[key]) {
+          acc[key] = { truck_type: item.truck_type, is_sider: item.is_sider, count: 0 };
+        }
+        acc[key].count++;
+        return acc;
+      }, {} as Record<string, { truck_type: string, is_sider: boolean, count: number }>);
+      
+      Object.values(groupedFibrilha).forEach(group => {
+        const siderText = group.is_sider ? ' (Sider)' : '';
+        message += `  • ${group.count}x ${group.truck_type}${siderText}\n`;
       });
       message += '\n';
     }
 
     if (filaBriquete.length > 0) {
       message += `🔥 Briquete – ${filaBriquete.length} carreta${filaBriquete.length > 1 ? 's' : ''} aguardando:\n`;
-      filaBriquete.slice(0, 5).forEach(item => {
-        message += `🚛 ${item.truck_type} | ${item.plate} | ${item.carrier}\n`;
+      // Agrupar por tipo de caminhão e sider
+      const groupedBriquete = filaBriquete.reduce((acc, item) => {
+        const key = `${item.truck_type}|${item.is_sider ? 'Sider' : ''}`;
+        if (!acc[key]) {
+          acc[key] = { truck_type: item.truck_type, is_sider: item.is_sider, count: 0 };
+        }
+        acc[key].count++;
+        return acc;
+      }, {} as Record<string, { truck_type: string, is_sider: boolean, count: number }>);
+      
+      Object.values(groupedBriquete).forEach(group => {
+        const siderText = group.is_sider ? ' (Sider)' : '';
+        message += `  • ${group.count}x ${group.truck_type}${siderText}\n`;
       });
       message += '\n';
     }
