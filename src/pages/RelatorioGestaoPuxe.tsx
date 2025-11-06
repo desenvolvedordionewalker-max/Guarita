@@ -146,12 +146,22 @@ const RelatorioGestaoPuxe = () => {
 
       if (!erroLavoura && viagensLavoura) {
         const mapaViagens = new Map<string, number>();
+        console.log('=== DEBUG PUXE VIAGENS ===');
+        console.log('Total de registros com tempo_lavoura:', viagensLavoura.length);
+        
         viagensLavoura.forEach(v => {
           // Criar chave: placa + data + hora
           const hora = new Date(v.hora_chegada).toTimeString().substring(0, 5);
           const key = `${v.placa}_${v.data}_${hora}`;
           mapaViagens.set(key, v.tempo_lavoura_min || 0);
+          
+          // Log primeiros 5 para debug
+          if (mapaViagens.size <= 5) {
+            console.log(`Key: ${key}, Tempo: ${v.tempo_lavoura_min}min`);
+          }
         });
+        
+        console.log('Total de chaves no mapa:', mapaViagens.size);
         setPuxeViagensMap(mapaViagens);
       }
     } catch (error) {
@@ -380,6 +390,12 @@ const RelatorioGestaoPuxe = () => {
                     if (r.entry_time) {
                       const mapKey = `${r.plate}_${r.date}_${r.entry_time}`;
                       const tempoViagem = puxeViagensMap.get(mapKey);
+                      
+                      // Debug: log primeiras tentativas
+                      if (acc[key].viagens === 1) {
+                        console.log(`Buscando: ${mapKey}, Encontrado: ${tempoViagem || 'NÃO ENCONTRADO'}`);
+                      }
+                      
                       if (tempoViagem && tempoViagem > 0) {
                         acc[key].tempoViagemLavoura += tempoViagem;
                       }
@@ -519,6 +535,17 @@ const RelatorioGestaoPuxe = () => {
                         // Buscar tempo viagem lavoura do mapa
                         const mapKey = r.entry_time ? `${r.plate}_${r.date}_${r.entry_time}` : '';
                         const tempoViagemLavoura = mapKey ? puxeViagensMap.get(mapKey) || null : null;
+                        
+                        // Debug primeiros registros
+                        if (i < 3) {
+                          console.log(`Tabela - Registro ${i}:`, {
+                            placa: r.plate,
+                            data: r.date,
+                            hora: r.entry_time,
+                            mapKey,
+                            tempoEncontrado: tempoViagemLavoura
+                          });
+                        }
                         
                         return (
                           <tr key={i} className="border-b border-gray-800 hover:bg-gray-800/50 text-white">
