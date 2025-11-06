@@ -1081,6 +1081,22 @@ const Reports = () => {
             <CardDescription>Gere mensagens automáticas para compartilhar</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Botão Relatório de Gestão de Puxe */}
+            <div className="mb-6">
+              <Button 
+                className="w-full h-auto py-6 flex-col items-start bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white"
+                onClick={() => navigate("/reports/gestao-puxe")}
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <BarChart3 className="w-6 h-6" />
+                  <span className="font-bold text-lg">📊 Relatório de Gestão do Puxe</span>
+                </div>
+                <span className="text-sm opacity-90">
+                  Análise completa de tempos, viagens, ranking e performance
+                </span>
+              </Button>
+            </div>
+
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Button 
