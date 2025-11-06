@@ -67,6 +67,7 @@ const RelatorioGestaoPuxe = () => {
   const [filtroPlaca, setFiltroPlaca] = useState("");
   const [rankingDetalhado, setRankingDetalhado] = useState<DetalhePuxe[] | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [puxeViagensMap, setPuxeViagensMap] = useState<Map<string, number>>(new Map());
   const { records: cottonRecords } = useCottonPull();
 
   useEffect(() => {
@@ -136,6 +137,23 @@ const RelatorioGestaoPuxe = () => {
           });
         }
       }
+
+      // Buscar tempo_lavoura_min da tabela puxe_viagens para mapear por placa/data/hora
+      const { data: viagensLavoura, error: erroLavoura } = await supabase
+        .from("puxe_viagens")
+        .select("placa, data, hora_chegada, tempo_lavoura_min")
+        .not("tempo_lavoura_min", "is", null);
+
+      if (!erroLavoura && viagensLavoura) {
+        const mapaViagens = new Map<string, number>();
+        viagensLavoura.forEach(v => {
+          // Criar chave: placa + data + hora
+          const hora = new Date(v.hora_chegada).toTimeString().substring(0, 5);
+          const key = `${v.placa}_${v.data}_${hora}`;
+          mapaViagens.set(key, v.tempo_lavoura_min || 0);
+        });
+        setPuxeViagensMap(mapaViagens);
+      }
     } catch (error) {
       console.error("Erro ao buscar dados:", error);
     } finally {
@@ -182,10 +200,14 @@ const RelatorioGestaoPuxe = () => {
           tempo_algodoeira_min = (sH * 60 + sM) - (eH * 60 + eM);
         }
         
+        // Buscar tempo viagem lavoura do mapa
+        const mapKey = r.entry_time ? `${r.plate}_${r.date}_${r.entry_time}` : '';
+        const tempo_viagem_lavoura_min = mapKey ? puxeViagensMap.get(mapKey) || null : null;
+        
         return {
           ...r,
           tempo_algodoeira_min,
-          tempo_viagem_lavoura_min: null // Virá da tabela puxe_viagens no futuro
+          tempo_viagem_lavoura_min
         };
       });
       
@@ -354,8 +376,14 @@ const RelatorioGestaoPuxe = () => {
                       if (tempo > 0) acc[key].tempoAlgodoeira += tempo;
                     }
                     
-                    // Nota: tempoViagemLavoura virá da tabela puxe_viagens através de join futuro
-                    // Por ora, mantemos em 0 pois cotton_pull não tem essa informação
+                    // Buscar tempo de viagem lavoura do mapa puxe_viagens
+                    if (r.entry_time) {
+                      const mapKey = `${r.plate}_${r.date}_${r.entry_time}`;
+                      const tempoViagem = puxeViagensMap.get(mapKey);
+                      if (tempoViagem && tempoViagem > 0) {
+                        acc[key].tempoViagemLavoura += tempoViagem;
+                      }
+                    }
                     
                     return acc;
                   }, {} as Record<string, ResumoPlaca>);
@@ -488,8 +516,9 @@ const RelatorioGestaoPuxe = () => {
                             })()
                           : null;
                         
-                        // Tempo viagem lavoura virá da tabela puxe_viagens (futuro)
-                        const tempoViagemLavoura = null;
+                        // Buscar tempo viagem lavoura do mapa
+                        const mapKey = r.entry_time ? `${r.plate}_${r.date}_${r.entry_time}` : '';
+                        const tempoViagemLavoura = mapKey ? puxeViagensMap.get(mapKey) || null : null;
                         
                         return (
                           <tr key={i} className="border-b border-gray-800 hover:bg-gray-800/50 text-white">
@@ -507,7 +536,7 @@ const RelatorioGestaoPuxe = () => {
                               {tempoAlgodoeira ? formatTime(tempoAlgodoeira) : "-"}
                             </td>
                             <td className="text-center py-3 px-2 text-blue-400 font-medium">
-                              {tempoViagemLavoura ? formatTime(tempoViagemLavoura) : "N/A"}
+                              {tempoViagemLavoura ? formatTime(tempoViagemLavoura) : "-"}
                             </td>
                           </tr>
                         );

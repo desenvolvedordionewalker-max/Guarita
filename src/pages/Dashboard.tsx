@@ -288,12 +288,16 @@ const Dashboard = () => {
     .reduce((sum, r) => sum + r.millimeters, 0);
   const todayMaterials = materialRecords.filter(m => m.date === today);
 
-  // Estatísticas da nova tabela de carregamentos - APENAS DO DIA
+  // Estatísticas da nova tabela de carregamentos
+  // FILA: apenas os criados hoje que ainda não entraram
   const todayLoadings = loadingRecords.filter(l => l.date === today);
   const loadingsFila = todayLoadings.filter(l => !l.entry_date);
-  const loadingsCarregando = todayLoadings.filter(l => l.entry_date && !l.exit_date);
-  // Concluídos: apenas os que saíram HOJE (exit_date existe e é hoje)
-  const loadingsConcluidos = todayLoadings.filter(l => l.exit_date && l.exit_date === today);
+  
+  // CARREGANDO: todos que têm entry_date mas não tem exit_date (independente da data de criação)
+  const loadingsCarregando = loadingRecords.filter(l => l.entry_date && !l.exit_date);
+  
+  // CONCLUÍDOS: que saíram HOJE (tem exit_date e exit_date é hoje)
+  const loadingsConcluidos = loadingRecords.filter(l => l.exit_date === today);
 
   // Apenas veículos (separado dos carregamentos)
   const veiculosFila = todayVehicles.filter(v => !v.exit_time && v.purpose?.toLowerCase().includes('fila'));
@@ -972,6 +976,7 @@ const Dashboard = () => {
                         <th className="text-left p-2 font-semibold text-sm">Placa</th>
                         <th className="text-left p-2 font-semibold text-sm">Motorista</th>
                         <th className="text-left p-2 font-semibold text-sm">Tipo</th>
+                        <th className="text-left p-2 font-semibold text-sm">Empresa</th>
                         <th className="text-left p-2 font-semibold text-sm">Finalidade</th>
                         <th className="text-left p-2 font-semibold text-sm">Entrada</th>
                         <th className="text-left p-2 font-semibold text-sm">Saída</th>
@@ -995,6 +1000,7 @@ const Dashboard = () => {
                             </td>
                             <td className="p-2 text-sm">{toTitleCase(vehicle.driver)}</td>
                             <td className="p-2 text-sm">{toTitleCase(vehicle.type)}</td>
+                            <td className="p-2 text-sm">{vehicle.company ? toTitleCase(vehicle.company) : '-'}</td>
                             <td className="p-2 text-sm">{toTitleCase(vehicle.purpose)}</td>
                             <td className="p-2 text-sm">
                               {vehicle.entry_time ? `${vehicle.date} ${vehicle.entry_time}` : '-'}

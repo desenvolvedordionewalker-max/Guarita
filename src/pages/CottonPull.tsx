@@ -74,11 +74,17 @@ const CottonPull = () => {
       producer: "Bom Futuro", // Produtor sempre será Bom Futuro
       farm: formData.get("farm") as string,
       talhao: formData.get("talhao") as string || "",
+      entry_time: formData.get("entry_time") as string || null,
+      exit_time: formData.get("exit_time") as string || null,
       plate: formData.get("plate") as string,
       driver: formData.get("driver") as string,
       rolls: parseInt(formData.get("rolls") as string),
       observations: formData.get("observations") as string,
     };
+
+    console.log('=== DEBUG EDIT ===');
+    console.log('Dados do form:', Object.fromEntries(formData.entries()));
+    console.log('Updates que serão enviados:', updates);
 
     try {
       await updateRecord(editingRecord.id, updates);
@@ -670,6 +676,27 @@ const CottonPull = () => {
                   defaultValue={editingRecord.talhao || ""}
                   placeholder="Ex: T001, T002..."
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-entry-time">Hora Entrada</Label>
+                  <Input
+                    id="edit-entry-time"
+                    name="entry_time"
+                    type="time"
+                    defaultValue={editingRecord.entry_time || ""}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-exit-time">Hora Saída</Label>
+                  <Input
+                    id="edit-exit-time"
+                    name="exit_time"
+                    type="time"
+                    defaultValue={editingRecord.exit_time || ""}
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
