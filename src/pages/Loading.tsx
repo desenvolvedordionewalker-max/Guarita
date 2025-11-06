@@ -612,65 +612,170 @@ const Loading = () => {
               <CardDescription>Carregamentos finalizados</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3 max-h-[600px] overflow-y-auto">
-                {completedLoadings.length > 0 ? (
-                  completedLoadings.map(l => (
-                    <Card key={l.id} className={`border-l-4 ${getProductColor(l.product)}`}>
-                      <CardContent className="p-4">
-                        <div className="flex justify-between mb-2">
-                          <div className="flex-1">
-                            <div className="flex gap-2 mb-2 items-center flex-wrap">
-                              <span className={`px-2 py-1 rounded text-xs font-bold ${getProductColor(l.product)}`}>
-                                {l.product}
-                              </span>
-                              {l.acompanhante && (
-                                <span className="px-2 py-0.5 rounded bg-green-100 text-green-800 text-xs flex items-center gap-1">
-                                  <UserPlus className="w-3 h-3" />
-                                  ACOMP
+              {completedLoadings.length > 0 ? (
+                <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-green-50 sticky top-0">
+                      <tr>
+                        <th className="p-2 text-left border text-xs">Placa</th>
+                        <th className="p-2 text-left border text-xs">Motorista</th>
+                        <th className="p-2 text-left border text-xs">Produto</th>
+                        <th className="p-2 text-left border text-xs">Entrada</th>
+                        <th className="p-2 text-left border text-xs">Saída</th>
+                        <th className="p-2 text-left border text-xs">Tempo</th>
+                        <th className="p-2 text-left border text-xs">Qtd</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {completedLoadings
+                        .sort((a, b) => {
+                          const timeA = a.exit_time ? new Date(`2000-01-01 ${a.exit_time}`).getTime() : 0;
+                          const timeB = b.exit_time ? new Date(`2000-01-01 ${b.exit_time}`).getTime() : 0;
+                          return timeB - timeA;
+                        })
+                        .slice(0, 10)
+                        .map((loading) => {
+                          const entryTime = loading.entry_time;
+                          const exitTime = loading.exit_time;
+                          const permanencia = entryTime && exitTime ? 
+                            (() => {
+                              const [entryH, entryM] = entryTime.split(':').map(Number);
+                              const [exitH, exitM] = exitTime.split(':').map(Number);
+                              const totalMinutes = (exitH * 60 + exitM) - (entryH * 60 + entryM);
+                              const hours = Math.floor(totalMinutes / 60);
+                              const minutes = totalMinutes % 60;
+                              return `${hours}h ${minutes}min`;
+                            })() : '-';
+                          
+                          return (
+                            <tr key={loading.id} className="border-b hover:bg-green-50 transition-colors">
+                              <td className="p-2 font-medium border border-gray-200">{loading.plate}</td>
+                              <td className="p-2 border border-gray-200 truncate max-w-24">{loading.driver}</td>
+                              <td className="p-2 border border-gray-200">
+                                <span className={`px-2 py-1 rounded text-xs ${
+                                  loading.product === 'Pluma' ? 'bg-yellow-100 text-yellow-800' :
+                                  loading.product === 'Caroço' ? 'bg-red-100 text-red-800' :
+                                  loading.product === 'Fibrilha' ? 'bg-green-100 text-green-800' :
+                                  'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {loading.product}
                                 </span>
-                              )}
-                              <span className="text-xs font-bold text-green-600">✓ CONCLUÍDO</span>
-                            </div>
-                            <p className="font-semibold text-base">{l.plate}</p>
-                          </div>
-                          <div className="flex flex-col gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => handleEditClick(l, e)}
-                              className="hover:bg-blue-50 hover:text-blue-600 h-8 w-8 p-0"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => handleDeleteClick(l, e)}
-                              className="hover:bg-red-50 hover:text-red-600 h-8 w-8 p-0"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </div>
-                        <div className="text-xs space-y-1">
-                          <p className="truncate"><span className="text-muted-foreground">Saída:</span> {l.exit_date} {l.exit_time}</p>
-                          <p className="truncate"><span className="text-muted-foreground">Motorista:</span> {l.driver}</p>
-                          {l.bales > 0 && <p><span className="text-muted-foreground">Fardos:</span> {l.bales}</p>}
-                          {l.weight > 0 && <p><span className="text-muted-foreground">Peso:</span> {l.weight} kg</p>}
-                          {l.invoice_number && <p><span className="text-muted-foreground">NF:</span> {l.invoice_number}</p>}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground text-sm">
-                    Nenhum carregamento concluído
-                  </div>
-                )}
-              </div>
+                              </td>
+                              <td className="p-2 border border-gray-200">{entryTime || '-'}</td>
+                              <td className="p-2 border border-gray-200 text-green-600 font-medium">{exitTime || '-'}</td>
+                              <td className="p-2 border border-gray-200 text-center font-medium text-green-600">{permanencia}</td>
+                              <td className="p-2 border border-gray-200 text-center">
+                                {loading.weight ? `${loading.weight}kg` : loading.bales ? `${loading.bales} fardos` : '-'}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground text-sm">
+                  Nenhum carregamento concluído
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
+
+        {/* Resumo Geral de Carregamentos */}
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Package className="w-5 h-5" />
+              Resumo Geral de Carregamentos
+            </CardTitle>
+            <CardDescription>Todos os registros com opções de edição e exclusão</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="text-center py-8">
+                <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
+              </div>
+            ) : loadings.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50">
+                    <tr>
+                      <th className="p-2 text-left border">Status</th>
+                      <th className="p-2 text-left border">Placa</th>
+                      <th className="p-2 text-left border">Produto</th>
+                      <th className="p-2 text-left border">Motorista</th>
+                      <th className="p-2 text-left border">Transportadora</th>
+                      <th className="p-2 text-left border">Destino</th>
+                      <th className="p-2 text-left border">Data</th>
+                      <th className="p-2 text-left border">Entrada</th>
+                      <th className="p-2 text-left border">Saída</th>
+                      <th className="p-2 text-center border">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {loadings
+                      .sort((a, b) => new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime())
+                      .map((loading) => {
+                        const status = loading.exit_date ? 'Concluído' : loading.entry_date ? 'Carregando' : 'Na Fila';
+                        const statusColor = status === 'Concluído' ? 'text-green-600' : status === 'Carregando' ? 'text-orange-600' : 'text-yellow-600';
+                        
+                        return (
+                          <tr key={loading.id} className="hover:bg-muted/30 transition-colors">
+                            <td className="p-2 border">
+                              <span className={`text-xs font-semibold ${statusColor}`}>{status}</span>
+                            </td>
+                            <td className="p-2 border font-medium">{loading.plate}</td>
+                            <td className="p-2 border">
+                              <span className={`px-2 py-1 rounded text-xs ${
+                                loading.product === 'Pluma' ? 'bg-yellow-100 text-yellow-800' :
+                                loading.product === 'Caroço' ? 'bg-red-100 text-red-800' :
+                                loading.product === 'Fibrilha' ? 'bg-green-100 text-green-800' :
+                                loading.product === 'Briquete' ? 'bg-purple-100 text-purple-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                {loading.product}
+                              </span>
+                            </td>
+                            <td className="p-2 border truncate max-w-32">{loading.driver}</td>
+                            <td className="p-2 border truncate max-w-32">{loading.carrier}</td>
+                            <td className="p-2 border truncate max-w-32">{loading.destination}</td>
+                            <td className="p-2 border">{loading.date}</td>
+                            <td className="p-2 border">{loading.entry_date ? `${loading.entry_date} ${loading.entry_time}` : '-'}</td>
+                            <td className="p-2 border">{loading.exit_date ? `${loading.exit_date} ${loading.exit_time}` : '-'}</td>
+                            <td className="p-2 border">
+                              <div className="flex gap-1 justify-center">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleEditClick(loading, {} as React.MouseEvent)}
+                                  className="h-7 w-7 p-0 hover:bg-blue-50 hover:text-blue-600"
+                                >
+                                  <Edit2 className="w-3 h-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteClick(loading, {} as React.MouseEvent)}
+                                  className="h-7 w-7 p-0 hover:bg-red-50 hover:text-red-600"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                Nenhum carregamento registrado
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </main>
 
       <Dialog open={isDialogOpen} onOpenChange={() => {setIsDialogOpen(false); setIsEditMode(false);}}>

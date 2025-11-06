@@ -344,7 +344,7 @@ const Dashboard = () => {
       color: "text-green-600" 
     },
     { 
-      label: "Total Carregamentos", 
+      label: "Total Veículos Embarque", 
       value: (loadingVehicles || loadingCarregamentos) ? "..." : `${totalFila + totalCarregando + totalConcluidos}`, 
       icon: Truck, 
       color: "text-primary" 
@@ -532,10 +532,10 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <Card>
             <CardContent className="flex items-center p-4">
-              <Container className="w-6 h-6 text-primary mr-3" />
+              <Truck className="w-6 h-6 text-primary mr-3" />
               <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Carregamentos</p>
-                <p className="text-xl font-bold">{loadingCarregamentos ? "..." : todayLoadings.length}</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Veículos Embarque</p>
+                <p className="text-xl font-bold">{loadingCarregamentos ? "..." : (totalFila + totalCarregando + totalConcluidos)}</p>
                 <div className="text-xs text-muted-foreground mt-1">
                   Fila: {totalFila} | Carregando: {totalCarregando} | Concluído: {totalConcluidos}
                 </div>
