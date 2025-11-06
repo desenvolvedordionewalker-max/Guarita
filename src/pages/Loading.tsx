@@ -264,20 +264,14 @@ const Loading = () => {
   const handleMarkAsLoaded = async () => {
     if (!selectedLoading) return;
     
-    // Pega os valores dos campos se foram preenchidos
-    const invoiceNumber = (document.getElementById("invoiceNumber") as HTMLInputElement)?.value;
-    const destination = (document.getElementById("confirmDestinationExit") as HTMLInputElement)?.value;
-    const client = (document.getElementById("confirmClientExit") as HTMLInputElement)?.value;
+    // Pega apenas Fardos ou Peso (os campos que estão no modal CARREGADO)
     const bales = Number((document.getElementById("bales") as HTMLInputElement)?.value || 0);
     const weight = Number((document.getElementById("weight") as HTMLInputElement)?.value || 0);
     
     try {
       await updateRecord(selectedLoading.id, {
         status: 'carregado', // Marca como carregado mas não concluído
-        // Salva os dados que foram preenchidos
-        invoice_number: invoiceNumber || selectedLoading.invoice_number || null,
-        destination: destination || selectedLoading.destination,
-        client: client || selectedLoading.client || "",
+        // Salva apenas a quantidade
         bales: bales || selectedLoading.bales,
         weight: weight || selectedLoading.weight,
       });
@@ -1111,37 +1105,19 @@ const Loading = () => {
                     </Button>
                   </div>
                   
-                  <div className="space-y-2 border-b pb-4">
-                    <Label>Confirmar Destino</Label>
-                    <Input 
-                      type="text" 
-                      id="confirmDestinationExit" 
-                      placeholder="Digite ou confirme o destino"
-                      defaultValue={selectedLoading.destination || ""} 
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Cliente (opcional)</Label>
-                    <Input 
-                      type="text" 
-                      id="confirmClientExit" 
-                      placeholder="Digite o nome do cliente"
-                      defaultValue={selectedLoading.client || ""} 
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Número da Nota Fiscal (opcional)</Label>
-                    <Input type="text" id="invoiceNumber" placeholder="Digite o número da NF se tiver" />
-                  </div>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Informe apenas a quantidade para marcar como carregado:
+                  </p>
+                  
                   {selectedLoading.product === "Pluma" && (
                     <div className="space-y-2">
-                      <Label>Fardos (opcional)</Label>
+                      <Label>Fardos</Label>
                       <Input type="number" id="bales" placeholder="Quantidade de fardos" />
                     </div>
                   )}
                   {(selectedLoading.product === "Caroço" || selectedLoading.product === "Briquete") && (
                     <div className="space-y-2">
-                      <Label>Peso em kg (opcional)</Label>
+                      <Label>Peso (kg)</Label>
                       <Input type="number" id="weight" placeholder="Peso em quilogramas" />
                     </div>
                   )}
@@ -1153,7 +1129,7 @@ const Loading = () => {
                     ✅ Confirmar - Carregado (fica visível na lista)
                   </Button>
                   <p className="text-xs text-muted-foreground text-center">
-                    Salva os dados e mantém o caminhão visível com badge de alerta para registrar saída depois.
+                    Salva a quantidade e mantém o caminhão visível com badge de alerta para registrar saída depois.
                   </p>
                 </div>
               ) : (

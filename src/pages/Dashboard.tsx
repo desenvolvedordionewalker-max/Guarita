@@ -1424,37 +1424,22 @@ const Dashboard = () => {
                   </Button>
                 </div>
               ) : modalAction === 'carregado' ? (
-                // FORMULÁRIO CARREGADO (sem data de saída)
+                // FORMULÁRIO CARREGADO (apenas quantidade)
                 <div className="space-y-4">
-                  <div className="space-y-2 border-b pb-4">
-                    <Label htmlFor="dashDestinationCarregado">Destino</Label>
-                    <Input
-                      id="dashDestinationCarregado"
-                      type="text"
-                      placeholder="Digite ou confirme o destino"
-                      defaultValue={selectedLoading.destination || ""}
-                    />
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold">📦 Carregado - Aguardando NF</h3>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => setModalAction('escolher')}
+                    >
+                      ← Voltar
+                    </Button>
                   </div>
                   
-                  <div className="space-y-2">
-                    <Label htmlFor="dashClientCarregado">Cliente (opcional)</Label>
-                    <Input
-                      id="dashClientCarregado"
-                      type="text"
-                      placeholder="Digite o nome do cliente"
-                      defaultValue={selectedLoading.client || ""}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="invoiceNumberCarregado">Número da Nota Fiscal</Label>
-                    <Input
-                      id="invoiceNumberCarregado"
-                      type="text"
-                      placeholder="Ex: 123.456"
-                      defaultValue={selectedLoading.invoice_number || ""}
-                    />
-                  </div>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Informe apenas a quantidade para marcar como carregado:
+                  </p>
 
                   {(selectedLoading.product === 'Caroço' || selectedLoading.product === 'Briquete') && (
                     <div className="space-y-2">
@@ -1483,24 +1468,12 @@ const Dashboard = () => {
 
                   <DialogFooter className="gap-2">
                     <Button
-                      variant="outline"
-                      onClick={() => setModalAction('escolher')}
-                    >
-                      Voltar
-                    </Button>
-                    <Button
                       onClick={() => {
-                        const destination = (document.getElementById("dashDestinationCarregado") as HTMLInputElement)?.value;
-                        const client = (document.getElementById("dashClientCarregado") as HTMLInputElement)?.value;
-                        const invoiceNumber = (document.getElementById("invoiceNumberCarregado") as HTMLInputElement)?.value;
                         const weight = (document.getElementById("weightCarregado") as HTMLInputElement)?.value;
                         const bales = (document.getElementById("balesCarregado") as HTMLInputElement)?.value;
                         
                         const updateData: Partial<LoadingRecord> = {
                           status: 'carregado',
-                          destination: destination || selectedLoading.destination,
-                          client: client || selectedLoading.client || "",
-                          invoice_number: invoiceNumber || selectedLoading.invoice_number || null,
                           weight: weight ? parseFloat(weight) : selectedLoading.weight,
                           bales: bales ? parseInt(bales) : selectedLoading.bales,
                         };
@@ -1514,7 +1487,7 @@ const Dashboard = () => {
                       }}
                       className="bg-orange-500 hover:bg-orange-600"
                     >
-                      📦 Salvar como Carregado
+                      ✅ Confirmar - Carregado (fica visível na lista)
                     </Button>
                   </DialogFooter>
                 </div>
