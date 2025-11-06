@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, Plus, Package, Clock, Edit2, Trash2, Crown, Users } from "lucide-react";
+import { ArrowLeft, Plus, Package, Clock, Edit2, Trash2, Crown, Users, Loader2, CheckCircle, UserPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useLoadingRecords } from "@/hooks/use-supabase";
@@ -407,156 +407,235 @@ const Loading = () => {
         </Card>
         )}
 
-        <Tabs defaultValue="queue"><TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="queue" className="data-[state=active]:bg-warning data-[state=active]:text-warning-foreground">Fila ({queuedLoadings.length})</TabsTrigger>
-            <TabsTrigger value="loading" className="data-[state=active]:bg-info data-[state=active]:text-info-foreground">Carregando ({loadingInProgress.length})</TabsTrigger>
-            <TabsTrigger value="completed" className="data-[state=active]:bg-success data-[state=active]:text-success-foreground">Concluídos ({completedLoadings.length})</TabsTrigger>
-          </TabsList>
-          <TabsContent value="queue" className="space-y-4 mt-6">
-            {queuedLoadings.map(l => (
-              <Card key={l.id} className={`border-l-4 cursor-pointer hover:shadow-md transition-shadow ${getProductColor(l.product)}`} onClick={() => handleCardClick(l)}>
-                <CardContent className="pt-6">
-                  <div className="flex justify-between mb-3">
-                    <div>
-                      <div className="flex gap-2 mb-1 items-center">
-                        <span className={`px-3 py-1 rounded-full text-sm font-bold ${getProductColor(l.product)}`}>
-                          {l.product}
-                        </span>
-                        {l.is_sider && <span className="px-2 py-0.5 rounded bg-info/20 text-info text-xs">SIDER</span>}
-                        {getQueuePosition(l).position === 1 && (
-                          <div className="flex items-center gap-1">
-                            <Crown className="w-4 h-4 text-yellow-500" />
-                            <span className="text-xs font-bold text-yellow-600">1º DA VEZ</span>
+        {/* Cards lado a lado - Fila, Carregando, Concluídos */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* FILA */}
+          <Card className="border-t-4 border-orange-500">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-orange-600" />
+                  <span>Fila</span>
+                </div>
+                <span className="text-sm font-normal bg-orange-100 text-orange-800 px-3 py-1 rounded-full">
+                  {queuedLoadings.length}
+                </span>
+              </CardTitle>
+              <CardDescription>Aguardando carregamento</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3 max-h-[600px] overflow-y-auto">
+                {queuedLoadings.length > 0 ? (
+                  queuedLoadings.map(l => (
+                    <Card key={l.id} className={`border-l-4 cursor-pointer hover:shadow-md transition-shadow ${getProductColor(l.product)}`} onClick={() => handleCardClick(l)}>
+                      <CardContent className="p-4">
+                        <div className="flex justify-between mb-2">
+                          <div className="flex-1">
+                            <div className="flex gap-2 mb-2 items-center flex-wrap">
+                              <span className={`px-2 py-1 rounded text-xs font-bold ${getProductColor(l.product)}`}>
+                                {l.product}
+                              </span>
+                              {l.is_sider && <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-xs">SIDER</span>}
+                              {l.acompanhante && (
+                                <span className="px-2 py-0.5 rounded bg-green-100 text-green-800 text-xs flex items-center gap-1">
+                                  <UserPlus className="w-3 h-3" />
+                                  ACOMP
+                                </span>
+                              )}
+                              {getQueuePosition(l).position === 1 && (
+                                <div className="flex items-center gap-1">
+                                  <Crown className="w-4 h-4 text-yellow-500" />
+                                  <span className="text-xs font-bold text-yellow-600">1º</span>
+                                </div>
+                              )}
+                            </div>
+                            <p className="font-semibold text-base">{l.plate}</p>
+                            <p className="text-xs text-muted-foreground">{getPositionMessage(l)}</p>
                           </div>
-                        )}
-                        {getQueuePosition(l).position === 2 && (
-                          <div className="flex items-center gap-1">
-                            <Users className="w-4 h-4 text-blue-500" />
-                            <span className="text-xs font-bold text-blue-600">PRÓXIMO DA VEZ</span>
+                          <div className="flex flex-col gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => handleEditClick(l, e)}
+                              className="hover:bg-blue-50 hover:text-blue-600 h-8 w-8 p-0"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => handleDeleteClick(l, e)}
+                              className="hover:bg-red-50 hover:text-red-600 h-8 w-8 p-0"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
                           </div>
-                        )}
-                      </div>
-                      <p className="font-semibold text-lg">{l.plate}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {getPositionMessage(l)}
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => handleEditClick(l, e)}
-                        className="hover:bg-blue-50 hover:text-blue-600"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => handleDeleteClick(l, e)}
-                        className="hover:bg-red-50 hover:text-red-600"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
+                        </div>
+                        <div className="text-xs space-y-1">
+                          <p className="truncate"><span className="text-muted-foreground">Transportadora:</span> {l.carrier}</p>
+                          <p className="truncate"><span className="text-muted-foreground">Destino:</span> {l.destination}</p>
+                          <p className="truncate"><span className="text-muted-foreground">Motorista:</span> {l.driver}</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground text-sm">
+                    Nenhum carregamento na fila
                   </div>
-                  <div className="text-sm">
-                    <p><span className="text-muted-foreground">Transportadora:</span> {l.carrier}</p>
-                    <p><span className="text-muted-foreground">Destino:</span> {l.destination}</p>
-                    <p><span className="text-muted-foreground">Motorista:</span> {l.driver}</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* CARREGANDO */}
+          <Card className="border-t-4 border-blue-500">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+                  <span>Carregando</span>
+                </div>
+                <span className="text-sm font-normal bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
+                  {loadingInProgress.length}
+                </span>
+              </CardTitle>
+              <CardDescription>Em processo de carregamento</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3 max-h-[600px] overflow-y-auto">
+                {loadingInProgress.length > 0 ? (
+                  loadingInProgress.map(l => (
+                    <Card key={l.id} className={`border-l-4 cursor-pointer hover:shadow-md transition-shadow ${getProductColor(l.product)}`} onClick={() => handleCardClick(l)}>
+                      <CardContent className="p-4">
+                        <div className="flex justify-between mb-2">
+                          <div className="flex-1">
+                            <div className="flex gap-2 mb-2 items-center flex-wrap">
+                              <span className={`px-2 py-1 rounded text-xs font-bold ${getProductColor(l.product)}`}>
+                                {l.product}
+                              </span>
+                              {l.acompanhante && (
+                                <span className="px-2 py-0.5 rounded bg-green-100 text-green-800 text-xs flex items-center gap-1">
+                                  <UserPlus className="w-3 h-3" />
+                                  ACOMP
+                                </span>
+                              )}
+                              <div className="flex items-center gap-1">
+                                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                                <span className="text-xs font-bold text-blue-600">ATIVO</span>
+                              </div>
+                            </div>
+                            <p className="font-semibold text-base">{l.plate}</p>
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => handleEditClick(l, e)}
+                              className="hover:bg-blue-50 hover:text-blue-600 h-8 w-8 p-0"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => handleDeleteClick(l, e)}
+                              className="hover:bg-red-50 hover:text-red-600 h-8 w-8 p-0"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="text-xs space-y-1">
+                          <p className="truncate"><span className="text-muted-foreground">Entrada:</span> {l.entry_date} {l.entry_time}</p>
+                          <p className="truncate"><span className="text-muted-foreground">Motorista:</span> {l.driver}</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground text-sm">
+                    Nenhum carregamento em andamento
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </TabsContent>
-          <TabsContent value="loading" className="space-y-4 mt-6">
-            {loadingInProgress.map(l => (
-              <Card key={l.id} className={`border-l-4 cursor-pointer ${getProductColor(l.product)}`} onClick={() => handleCardClick(l)}>
-                <CardContent className="pt-6">
-                  <div className="flex justify-between">
-                    <div>
-                      <div className="flex gap-2 mb-1 items-center">
-                        <span className={`px-3 py-1 rounded-full text-sm font-bold ${getProductColor(l.product)}`}>
-                          {l.product}
-                        </span>
-                        <Clock className="w-4 h-4 text-info" />
-                        <span className="text-xs font-bold text-green-600">EM CARREGAMENTO</span>
-                      </div>
-                      <p className="font-semibold text-lg mt-1">{l.plate}</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => handleEditClick(l, e)}
-                        className="hover:bg-blue-50 hover:text-blue-600"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => handleDeleteClick(l, e)}
-                        className="hover:bg-red-50 hover:text-red-600"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* CONCLUÍDOS */}
+          <Card className="border-t-4 border-green-500">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  <span>Concluídos</span>
+                </div>
+                <span className="text-sm font-normal bg-green-100 text-green-800 px-3 py-1 rounded-full">
+                  {completedLoadings.length}
+                </span>
+              </CardTitle>
+              <CardDescription>Carregamentos finalizados</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3 max-h-[600px] overflow-y-auto">
+                {completedLoadings.length > 0 ? (
+                  completedLoadings.map(l => (
+                    <Card key={l.id} className={`border-l-4 ${getProductColor(l.product)}`}>
+                      <CardContent className="p-4">
+                        <div className="flex justify-between mb-2">
+                          <div className="flex-1">
+                            <div className="flex gap-2 mb-2 items-center flex-wrap">
+                              <span className={`px-2 py-1 rounded text-xs font-bold ${getProductColor(l.product)}`}>
+                                {l.product}
+                              </span>
+                              {l.acompanhante && (
+                                <span className="px-2 py-0.5 rounded bg-green-100 text-green-800 text-xs flex items-center gap-1">
+                                  <UserPlus className="w-3 h-3" />
+                                  ACOMP
+                                </span>
+                              )}
+                              <span className="text-xs font-bold text-green-600">✓ CONCLUÍDO</span>
+                            </div>
+                            <p className="font-semibold text-base">{l.plate}</p>
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => handleEditClick(l, e)}
+                              className="hover:bg-blue-50 hover:text-blue-600 h-8 w-8 p-0"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => handleDeleteClick(l, e)}
+                              className="hover:bg-red-50 hover:text-red-600 h-8 w-8 p-0"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="text-xs space-y-1">
+                          <p className="truncate"><span className="text-muted-foreground">Saída:</span> {l.exit_date} {l.exit_time}</p>
+                          <p className="truncate"><span className="text-muted-foreground">Motorista:</span> {l.driver}</p>
+                          {l.bales > 0 && <p><span className="text-muted-foreground">Fardos:</span> {l.bales}</p>}
+                          {l.weight > 0 && <p><span className="text-muted-foreground">Peso:</span> {l.weight} kg</p>}
+                          {l.invoice_number && <p><span className="text-muted-foreground">NF:</span> {l.invoice_number}</p>}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground text-sm">
+                    Nenhum carregamento concluído
                   </div>
-                  <p className="text-sm mt-2">
-                    <span className="text-muted-foreground">Entrada:</span> {l.entry_date} {l.entry_time}
-                  </p>
-                  <p className="text-sm">
-                    <span className="text-muted-foreground">Motorista:</span> {l.driver}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
-          </TabsContent>
-          <TabsContent value="completed" className="space-y-4 mt-6">
-            {completedLoadings.map(l => (
-              <Card key={l.id} className={`border-l-4 ${getProductColor(l.product)}`}>
-                <CardContent className="pt-6">
-                  <div className="flex justify-between">
-                    <div>
-                      <div className="flex gap-2 mb-1 items-center">
-                        <span className={`px-3 py-1 rounded-full text-sm font-bold ${getProductColor(l.product)}`}>
-                          {l.product}
-                        </span>
-                        <span className="text-xs font-bold text-green-600">CONCLUÍDO</span>
-                      </div>
-                      <p className="font-semibold mt-1">{l.plate}</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => handleEditClick(l, e)}
-                        className="hover:bg-blue-50 hover:text-blue-600"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => handleDeleteClick(l, e)}
-                        className="hover:bg-red-50 hover:text-red-600"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="text-sm mt-2">
-                    <p><span className="text-muted-foreground">Saída:</span> {l.exit_date} {l.exit_time}</p>
-                    <p><span className="text-muted-foreground">Motorista:</span> {l.driver}</p>
-                    {l.bales > 0 && <p><span className="text-muted-foreground">Fardos:</span> {l.bales}</p>}
-                    {l.weight > 0 && <p><span className="text-muted-foreground">Peso:</span> {l.weight} kg</p>}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </TabsContent>
-        </Tabs>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </main>
 
       <Dialog open={isDialogOpen} onOpenChange={() => {setIsDialogOpen(false); setIsEditMode(false);}}>
