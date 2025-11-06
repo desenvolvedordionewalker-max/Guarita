@@ -706,52 +706,39 @@ const Dashboard = () => {
 
           {/* Fila de Carregamento - Layout Otimizado */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Fila de Carregamento */}
-            <Card className="lg:col-span-3">
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-5 h-5 text-blue-600" />
-                    Fila de Carregamento
-                  </div>
-                  <span className="text-sm font-normal bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                    {loadingCarregamentos ? '...' : loadingsFila.length}
-                  </span>
-                </CardTitle>
-                <CardDescription>
-                  Aguardando carregamento
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {!loadingCarregamentos && loadingsFila.length > 0 ? (
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {loadingsFila
-                      .sort((a, b) => new Date(a.created_at!).getTime() - new Date(b.created_at!).getTime())
-                      .map((loading) => {
-                        const { position } = getQueuePosition(loading);
-                        return (
+            {/* Fila de Carregamento - 3 Cards por Produto */}
+            <div className="lg:col-span-9 grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Card Pluma */}
+              <Card className="border-l-4 border-yellow-500">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-yellow-600" />
+                      <span>Pluma</span>
+                    </div>
+                    <span className="text-xs font-normal bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
+                      {loadingCarregamentos ? '...' : loadingsFila.filter(l => l.product === 'Pluma').length}
+                    </span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {!loadingCarregamentos && loadingsFila.filter(l => l.product === 'Pluma').length > 0 ? (
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {loadingsFila
+                        .filter(l => l.product === 'Pluma')
+                        .sort((a, b) => new Date(a.created_at!).getTime() - new Date(b.created_at!).getTime())
+                        .map((loading, idx) => (
                           <Card 
                             key={loading.id} 
-                            className={`border-l-4 cursor-pointer hover:shadow-md transition-shadow ${getProductColor(loading.product)}`}
+                            className="cursor-pointer hover:shadow-md transition-shadow border-yellow-200"
                             onClick={() => handleLoadingCardClick(loading)}
                           >
                             <CardContent className="p-3">
-                              <div className="flex justify-between items-start mb-2">
+                              <div className="flex justify-between items-start mb-1">
                                 <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <span className={`px-2 py-1 rounded text-xs font-bold ${
-                                      loading.product === 'Pluma' ? 'bg-yellow-100 text-yellow-800' :
-                                      loading.product === 'Caroço' ? 'bg-red-100 text-red-800' :
-                                      loading.product === 'Fibrilha' ? 'bg-green-100 text-green-800' :
-                                      loading.product === 'Briquete' ? 'bg-purple-100 text-purple-800' :
-                                      loading.product === 'Reciclados' ? 'bg-blue-100 text-blue-800' :
-                                      loading.product === 'Cavaco' ? 'bg-orange-100 text-orange-800' :
-                                      loading.product === 'Outros' ? 'bg-pink-100 text-pink-800' :
-                                      'bg-gray-100 text-gray-800'
-                                    }`}>
-                                      {loading.product}
-                                    </span>
-                                    {position === 1 && (
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <p className="font-semibold text-sm">{loading.plate}</p>
+                                    {idx === 0 && (
                                       <div className="flex items-center gap-1">
                                         <Crown className="w-3 h-3 text-yellow-500" />
                                         <span className="text-xs font-bold text-yellow-600">1º</span>
@@ -761,32 +748,137 @@ const Dashboard = () => {
                                       <span className="px-1 py-0.5 rounded bg-blue-100 text-blue-800 text-xs">SIDER</span>
                                     )}
                                   </div>
-                                  <p className="font-semibold">{loading.plate}</p>
+                                  <p className="text-xs text-muted-foreground truncate">{loading.driver}</p>
+                                  <p className="text-xs font-medium text-blue-600 truncate">{loading.destination}</p>
                                 </div>
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                <p className="truncate">{loading.driver}</p>
-                                <p className="truncate">{loading.carrier}</p>
                               </div>
                             </CardContent>
                           </Card>
-                        );
-                      })}
-                  </div>
-                ) : (
-                  <div className="text-center py-6 text-muted-foreground text-sm">
-                    {loadingCarregamentos ? (
-                      <div className="flex items-center justify-center">
-                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                        Carregando...
-                      </div>
-                    ) : (
-                      "Nenhum veículo na fila"
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                        ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4 text-muted-foreground text-xs">
+                      {loadingCarregamentos ? 'Carregando...' : 'Nenhum na fila'}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Card Caroço */}
+              <Card className="border-l-4 border-red-500">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-red-600" />
+                      <span>Caroço</span>
+                    </div>
+                    <span className="text-xs font-normal bg-red-100 text-red-800 px-2 py-1 rounded-full">
+                      {loadingCarregamentos ? '...' : loadingsFila.filter(l => l.product === 'Caroço').length}
+                    </span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {!loadingCarregamentos && loadingsFila.filter(l => l.product === 'Caroço').length > 0 ? (
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {loadingsFila
+                        .filter(l => l.product === 'Caroço')
+                        .sort((a, b) => new Date(a.created_at!).getTime() - new Date(b.created_at!).getTime())
+                        .map((loading, idx) => (
+                          <Card 
+                            key={loading.id} 
+                            className="cursor-pointer hover:shadow-md transition-shadow border-red-200"
+                            onClick={() => handleLoadingCardClick(loading)}
+                          >
+                            <CardContent className="p-3">
+                              <div className="flex justify-between items-start mb-1">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <p className="font-semibold text-sm">{loading.plate}</p>
+                                    {idx === 0 && (
+                                      <div className="flex items-center gap-1">
+                                        <Crown className="w-3 h-3 text-yellow-500" />
+                                        <span className="text-xs font-bold text-yellow-600">1º</span>
+                                      </div>
+                                    )}
+                                    {loading.is_sider && (
+                                      <span className="px-1 py-0.5 rounded bg-blue-100 text-blue-800 text-xs">SIDER</span>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-muted-foreground truncate">{loading.driver}</p>
+                                  <p className="text-xs font-medium text-blue-600 truncate">{loading.destination}</p>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4 text-muted-foreground text-xs">
+                      {loadingCarregamentos ? 'Carregando...' : 'Nenhum na fila'}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Card Outros (Fibrilha, Briquete, Reciclados, Cavaco, Outros) */}
+              <Card className="border-l-4 border-gray-500">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-gray-600" />
+                      <span>Outros</span>
+                    </div>
+                    <span className="text-xs font-normal bg-gray-100 text-gray-800 px-2 py-1 rounded-full">
+                      {loadingCarregamentos ? '...' : loadingsFila.filter(l => !['Pluma', 'Caroço'].includes(l.product)).length}
+                    </span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {!loadingCarregamentos && loadingsFila.filter(l => !['Pluma', 'Caroço'].includes(l.product)).length > 0 ? (
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {loadingsFila
+                        .filter(l => !['Pluma', 'Caroço'].includes(l.product))
+                        .sort((a, b) => new Date(a.created_at!).getTime() - new Date(b.created_at!).getTime())
+                        .map((loading, idx) => (
+                          <Card 
+                            key={loading.id} 
+                            className="cursor-pointer hover:shadow-md transition-shadow border-gray-200"
+                            onClick={() => handleLoadingCardClick(loading)}
+                          >
+                            <CardContent className="p-3">
+                              <div className="flex justify-between items-start mb-1">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                                      loading.product === 'Fibrilha' ? 'bg-green-100 text-green-800' :
+                                      loading.product === 'Briquete' ? 'bg-purple-100 text-purple-800' :
+                                      loading.product === 'Reciclados' ? 'bg-blue-100 text-blue-800' :
+                                      loading.product === 'Cavaco' ? 'bg-orange-100 text-orange-800' :
+                                      'bg-pink-100 text-pink-800'
+                                    }`}>
+                                      {loading.product}
+                                    </span>
+                                    {loading.is_sider && (
+                                      <span className="px-1 py-0.5 rounded bg-blue-100 text-blue-800 text-xs">SIDER</span>
+                                    )}
+                                  </div>
+                                  <p className="font-semibold text-sm">{loading.plate}</p>
+                                  <p className="text-xs text-muted-foreground truncate">{loading.driver}</p>
+                                  <p className="text-xs font-medium text-blue-600 truncate">{loading.destination}</p>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4 text-muted-foreground text-xs">
+                      {loadingCarregamentos ? 'Carregando...' : 'Nenhum na fila'}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
 
             {/* Carregando */}
             <Card className="lg:col-span-3">

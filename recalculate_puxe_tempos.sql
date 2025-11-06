@@ -6,7 +6,7 @@
 -- ===========================================================
 
 -- PASSO 1: Desabilitar o trigger temporariamente para evitar conflito
-ALTER TABLE puxe_viagens DISABLE TRIGGER calcular_tempos_viagem_trigger;
+ALTER TABLE puxe_viagens DISABLE TRIGGER trigger_calcular_tempos;
 
 -- PASSO 2: Para cada viagem, calcular o tempo entre a saída da viagem anterior
 -- e a chegada desta viagem (para a mesma placa)
@@ -30,7 +30,7 @@ WHERE pv1.id = pv2.viagem_id
     AND pv2.saida_anterior IS NOT NULL;
 
 -- PASSO 3: Reabilitar o trigger
-ALTER TABLE puxe_viagens ENABLE TRIGGER calcular_tempos_viagem_trigger;
+ALTER TABLE puxe_viagens ENABLE TRIGGER trigger_calcular_tempos;
 
 -- Verificar resultados
 SELECT 
