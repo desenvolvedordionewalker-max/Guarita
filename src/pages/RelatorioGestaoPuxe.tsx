@@ -4,11 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ArrowLeft, TrendingUp, Clock, Users, BarChart3 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
 import logo from "@/assets/BF_logo.png";
 import { useCottonPull } from "@/hooks/use-supabase";
+import type { CottonPull } from "@/lib/supabase";
 
 interface DadosDiario {
   dia: string;
@@ -43,8 +45,14 @@ interface ResumoPlaca {
   motorista: string;
   viagens: number;
   rolos: number;
-  tempoTotal: number;
+  tempoAlgodoeira: number;
+  tempoViagemLavoura: number;
   talhoes: Set<string>;
+}
+
+interface DetalhePuxe extends CottonPull {
+  tempo_algodoeira_min?: number;
+  tempo_viagem_lavoura_min?: number;
 }
 
 const RelatorioGestaoPuxe = () => {
@@ -57,6 +65,8 @@ const RelatorioGestaoPuxe = () => {
   const [mediasGerais, setMediasGerais] = useState({ algodoeira: 0, viagem: 0, totalViagens: 0 });
   const [filtroMotorista, setFiltroMotorista] = useState("");
   const [filtroPlaca, setFiltroPlaca] = useState("");
+  const [rankingDetalhado, setRankingDetalhado] = useState<DetalhePuxe[] | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const { records: cottonRecords } = useCottonPull();
 
   useEffect(() => {
@@ -154,6 +164,36 @@ const RelatorioGestaoPuxe = () => {
     const hours = Math.floor(minutes / 60);
     const mins = Math.round(minutes % 60);
     return hours > 0 ? `${hours}h ${mins}min` : `${mins}min`;
+  };
+
+  const handleRankingClick = async (placa: string, motorista: string) => {
+    try {
+      // Buscar todos os registros dessa placa/motorista
+      const registrosPlaca = cottonRecords.filter(
+        r => r.plate === placa && r.driver === motorista
+      ).sort((a, b) => `${b.date} ${b.entry_time}`.localeCompare(`${a.date} ${a.entry_time}`));
+      
+      // Adicionar cálculos de tempo
+      const detalhesComTempo = registrosPlaca.map(r => {
+        let tempo_algodoeira_min = null;
+        if (r.entry_time && r.exit_time) {
+          const [eH, eM] = r.entry_time.split(':').map(Number);
+          const [sH, sM] = r.exit_time.split(':').map(Number);
+          tempo_algodoeira_min = (sH * 60 + sM) - (eH * 60 + eM);
+        }
+        
+        return {
+          ...r,
+          tempo_algodoeira_min,
+          tempo_viagem_lavoura_min: null // Virá da tabela puxe_viagens no futuro
+        };
+      });
+      
+      setRankingDetalhado(detalhesComTempo);
+      setDialogOpen(true);
+    } catch (error) {
+      console.error("Erro ao buscar detalhes do ranking:", error);
+    }
   };
 
   if (loading) {
@@ -297,7 +337,8 @@ const RelatorioGestaoPuxe = () => {
                         motorista: r.driver,
                         viagens: 0,
                         rolos: 0,
-                        tempoTotal: 0,
+                        tempoAlgodoeira: 0,
+                        tempoViagemLavoura: 0,
                         talhoes: new Set<string>(),
                       };
                     }
@@ -305,13 +346,16 @@ const RelatorioGestaoPuxe = () => {
                     acc[key].rolos += r.rolls;
                     if (r.talhao) acc[key].talhoes.add(r.talhao);
                     
-                    // Calcular tempo se tiver entrada e saída
+                    // Calcular tempo algodoeira (permanência) se tiver entrada e saída
                     if (r.entry_time && r.exit_time) {
                       const [eH, eM] = r.entry_time.split(':').map(Number);
                       const [sH, sM] = r.exit_time.split(':').map(Number);
                       const tempo = (sH * 60 + sM) - (eH * 60 + eM);
-                      if (tempo > 0) acc[key].tempoTotal += tempo;
+                      if (tempo > 0) acc[key].tempoAlgodoeira += tempo;
                     }
+                    
+                    // Nota: tempoViagemLavoura virá da tabela puxe_viagens através de join futuro
+                    // Por ora, mantemos em 0 pois cotton_pull não tem essa informação
                     
                     return acc;
                   }, {} as Record<string, ResumoPlaca>);
@@ -336,9 +380,17 @@ const RelatorioGestaoPuxe = () => {
                             <span className="text-white font-medium">{dados.rolos.toLocaleString('pt-BR')}</span>
                           </div>
                           <div className="flex justify-between text-sm">
-                            <span className="text-gray-400">Tempo Médio:</span>
+                            <span className="text-gray-400">🏭 Tempo Algodoeira:</span>
                             <span className="text-yellow-400 font-medium">
-                              {formatTime(dados.viagens > 0 ? Math.round(dados.tempoTotal / dados.viagens) : 0)}
+                              {formatTime(dados.viagens > 0 ? Math.round(dados.tempoAlgodoeira / dados.viagens) : 0)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-400">🚜 Tempo Viagem:</span>
+                            <span className="text-blue-400 font-medium">
+                              {dados.tempoViagemLavoura > 0 
+                                ? formatTime(Math.round(dados.tempoViagemLavoura / dados.viagens))
+                                : 'N/A'}
                             </span>
                           </div>
                           {dados.talhoes.size > 0 && (
@@ -415,7 +467,8 @@ const RelatorioGestaoPuxe = () => {
                       <th className="text-left py-3 px-2">Fazenda</th>
                       <th className="text-left py-3 px-2">TH</th>
                       <th className="text-center py-3 px-2">Rolos</th>
-                      <th className="text-center py-3 px-2">Tempo</th>
+                      <th className="text-center py-3 px-2">🏭 T. Algod.</th>
+                      <th className="text-center py-3 px-2">🚜 T. Viagem</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -427,13 +480,16 @@ const RelatorioGestaoPuxe = () => {
                       .sort((a, b) => `${b.date} ${b.entry_time}`.localeCompare(`${a.date} ${a.entry_time}`))
                       .slice(0, 100)
                       .map((r, i) => {
-                        const tempoMin = r.entry_time && r.exit_time 
+                        const tempoAlgodoeira = r.entry_time && r.exit_time 
                           ? (() => {
                               const [eH, eM] = r.entry_time.split(':').map(Number);
                               const [sH, sM] = r.exit_time.split(':').map(Number);
                               return (sH * 60 + sM) - (eH * 60 + eM);
                             })()
                           : null;
+                        
+                        // Tempo viagem lavoura virá da tabela puxe_viagens (futuro)
+                        const tempoViagemLavoura = null;
                         
                         return (
                           <tr key={i} className="border-b border-gray-800 hover:bg-gray-800/50 text-white">
@@ -447,8 +503,11 @@ const RelatorioGestaoPuxe = () => {
                             <td className="py-3 px-2 text-emerald-400">{r.farm}</td>
                             <td className="py-3 px-2 text-yellow-400">{r.talhao || "-"}</td>
                             <td className="text-center py-3 px-2 text-blue-400 font-medium">{r.rolls}</td>
-                            <td className="text-center py-3 px-2 text-white font-medium">
-                              {tempoMin ? formatTime(tempoMin) : "-"}
+                            <td className="text-center py-3 px-2 text-yellow-400 font-medium">
+                              {tempoAlgodoeira ? formatTime(tempoAlgodoeira) : "-"}
+                            </td>
+                            <td className="text-center py-3 px-2 text-blue-400 font-medium">
+                              {tempoViagemLavoura ? formatTime(tempoViagemLavoura) : "N/A"}
                             </td>
                           </tr>
                         );
@@ -487,7 +546,8 @@ const RelatorioGestaoPuxe = () => {
                     {ranking.map((r, i) => (
                       <tr
                         key={i}
-                        className={`border-b border-gray-800 hover:bg-gray-800/50 text-gray-100 ${
+                        onClick={() => handleRankingClick(r.placa, r.motorista)}
+                        className={`border-b border-gray-800 hover:bg-emerald-900/30 text-gray-100 cursor-pointer transition-colors ${
                           i < 3 ? "bg-emerald-900/20" : ""
                         }`}
                       >
@@ -523,6 +583,98 @@ const RelatorioGestaoPuxe = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Dialog para detalhes do ranking */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-6xl max-h-[80vh] overflow-y-auto bg-gray-900 border-gray-700">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-emerald-400">
+              Histórico Completo - {rankingDetalhado?.[0]?.plate || ''} / {rankingDetalhado?.[0]?.driver || ''}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {rankingDetalhado && (
+            <div className="space-y-4">
+              {/* Totalizadores */}
+              <div className="grid grid-cols-3 gap-4">
+                <Card className="bg-gray-800/60 border-gray-700">
+                  <CardContent className="pt-4">
+                    <div className="text-center">
+                      <p className="text-sm text-gray-400">Total de Viagens</p>
+                      <p className="text-2xl font-bold text-emerald-400">{rankingDetalhado.length}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-gray-800/60 border-gray-700">
+                  <CardContent className="pt-4">
+                    <div className="text-center">
+                      <p className="text-sm text-gray-400">Total de Rolos</p>
+                      <p className="text-2xl font-bold text-blue-400">
+                        {rankingDetalhado.reduce((sum, r) => sum + r.rolls, 0).toLocaleString('pt-BR')}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-gray-800/60 border-gray-700">
+                  <CardContent className="pt-4">
+                    <div className="text-center">
+                      <p className="text-sm text-gray-400">Média Algodoeira</p>
+                      <p className="text-2xl font-bold text-yellow-400">
+                        {formatTime(
+                          Math.round(
+                            rankingDetalhado
+                              .filter(r => r.tempo_algodoeira_min)
+                              .reduce((sum, r) => sum + (r.tempo_algodoeira_min || 0), 0) /
+                            rankingDetalhado.filter(r => r.tempo_algodoeira_min).length
+                          )
+                        )}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Tabela detalhada */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="text-emerald-400 border-b border-gray-700">
+                    <tr>
+                      <th className="text-left py-2 px-2">Data</th>
+                      <th className="text-left py-2 px-2">Entrada</th>
+                      <th className="text-left py-2 px-2">Saída</th>
+                      <th className="text-left py-2 px-2">Fazenda</th>
+                      <th className="text-left py-2 px-2">TH</th>
+                      <th className="text-center py-2 px-2">Rolos</th>
+                      <th className="text-center py-2 px-2">🏭 T. Algod.</th>
+                      <th className="text-center py-2 px-2">🚜 T. Viagem</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rankingDetalhado.map((r, i) => (
+                      <tr key={i} className="border-b border-gray-800 hover:bg-gray-800/50">
+                        <td className="py-2 px-2 text-gray-100">
+                          {new Date(r.date + "T00:00:00").toLocaleDateString("pt-BR")}
+                        </td>
+                        <td className="py-2 px-2 text-cyan-400">{r.entry_time}</td>
+                        <td className="py-2 px-2 text-orange-400">{r.exit_time || "-"}</td>
+                        <td className="py-2 px-2 text-emerald-400">{r.farm}</td>
+                        <td className="py-2 px-2 text-yellow-400">{r.talhao || "-"}</td>
+                        <td className="text-center py-2 px-2 text-blue-400 font-medium">{r.rolls}</td>
+                        <td className="text-center py-2 px-2 text-yellow-400 font-medium">
+                          {r.tempo_algodoeira_min ? formatTime(r.tempo_algodoeira_min) : "-"}
+                        </td>
+                        <td className="text-center py-2 px-2 text-blue-400 font-medium">
+                          {r.tempo_viagem_lavoura_min ? formatTime(r.tempo_viagem_lavoura_min) : "N/A"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -823,6 +823,7 @@ const Reports = () => {
                     <tr className="bg-gray-50">
                       <th className="border border-gray-300 p-2 text-left text-sm">Data</th>
                       <th className="border border-gray-300 p-2 text-left text-sm">Tipo</th>
+                      <th className="border border-gray-300 p-2 text-left text-sm">Empresa</th>
                       <th className="border border-gray-300 p-2 text-left text-sm">Placa</th>
                       <th className="border border-gray-300 p-2 text-left text-sm">Produto</th>
                       <th className="border border-gray-300 p-2 text-left text-sm">Motorista</th>
@@ -842,6 +843,7 @@ const Reports = () => {
                         <tr key={`loading-${loading.id}`} className="hover:bg-gray-50">
                           <td className="border border-gray-300 p-2 text-sm">{loading.date}</td>
                           <td className="border border-gray-300 p-2 text-sm">Carregamento</td>
+                          <td className="border border-gray-300 p-2 text-sm">{toTitleCase(loading.carrier)}</td>
                           <td className="border border-gray-300 p-2 font-medium text-sm">{loading.plate.toUpperCase()}</td>
                           <td className="border border-gray-300 p-2">
                             <span className={`px-2 py-1 rounded text-xs ${
@@ -854,7 +856,7 @@ const Reports = () => {
                             </span>
                           </td>
                           <td className="border border-gray-300 p-2 text-sm">{toTitleCase(loading.driver)}</td>
-                          <td className="border border-gray-300 p-2 text-sm">{toTitleCase(loading.carrier)} → {toTitleCase(loading.destination)}</td>
+                          <td className="border border-gray-300 p-2 text-sm">→ {toTitleCase(loading.destination)}</td>
                         </tr>
                       ))
                     }
@@ -869,6 +871,7 @@ const Reports = () => {
                         <tr key={`cotton-${cotton.id}`} className="hover:bg-green-50">
                           <td className="border border-gray-300 p-2">{cotton.date}</td>
                           <td className="border border-gray-300 p-2">Puxe Algodão</td>
+                          <td className="border border-gray-300 p-2">-</td>
                           <td className="border border-gray-300 p-2 font-medium">{cotton.plate}</td>
                           <td className="border border-gray-300 p-2">
                             <span className="px-2 py-1 rounded text-xs bg-green-100 text-green-800">
@@ -891,6 +894,7 @@ const Reports = () => {
                         <tr key={`vehicle-${vehicle.id}`} className="hover:bg-blue-50">
                           <td className="border border-gray-300 p-2 text-sm">{vehicle.date}</td>
                           <td className="border border-gray-300 p-2 text-sm">{toTitleCase(vehicle.type)}</td>
+                          <td className="border border-gray-300 p-2 text-sm">{vehicle.company ? toTitleCase(vehicle.company) : '-'}</td>
                           <td className="border border-gray-300 p-2 font-medium text-sm">{vehicle.plate.toUpperCase()}</td>
                           <td className="border border-gray-300 p-2">
                             <span className="px-2 py-1 rounded text-xs bg-blue-100 text-blue-800">
