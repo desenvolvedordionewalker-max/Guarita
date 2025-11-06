@@ -88,24 +88,25 @@ const RelatorioGestaoPuxe = () => {
     }
   };
 
-  // Calcular totalizadores
+  // Calcular totalizadores - CORRIGIDO para calcular média corretamente
   const totalizadoresGerais = dadosDiario.reduce(
     (acc, d) => ({
       viagensTotal: acc.viagensTotal + d.total_viagens,
       veiculosTotal: acc.veiculosTotal + d.total_veiculos,
-      mediaAlgodoeira: acc.mediaAlgodoeira + d.media_algodoeira_min,
-      mediaViagem: acc.mediaViagem + d.media_viagem_min,
+      somaAlgodoeira: acc.somaAlgodoeira + (d.media_algodoeira_min || 0),
+      somaViagem: acc.somaViagem + (d.media_viagem_min || 0),
+      diasComDados: acc.diasComDados + (d.media_algodoeira_min ? 1 : 0),
     }),
-    { viagensTotal: 0, veiculosTotal: 0, mediaAlgodoeira: 0, mediaViagem: 0 }
+    { viagensTotal: 0, veiculosTotal: 0, somaAlgodoeira: 0, somaViagem: 0, diasComDados: 0 }
   );
 
   const mediaGeralAlgodoeira =
-    dadosDiario.length > 0
-      ? Math.round(totalizadoresGerais.mediaAlgodoeira / dadosDiario.length)
+    totalizadoresGerais.diasComDados > 0
+      ? Math.round(totalizadoresGerais.somaAlgodoeira / totalizadoresGerais.diasComDados)
       : 0;
   const mediaGeralViagem =
-    dadosDiario.length > 0
-      ? Math.round(totalizadoresGerais.mediaViagem / dadosDiario.length)
+    totalizadoresGerais.diasComDados > 0
+      ? Math.round(totalizadoresGerais.somaViagem / totalizadoresGerais.diasComDados)
       : 0;
 
   // Formatar data para exibição
@@ -133,14 +134,24 @@ const RelatorioGestaoPuxe = () => {
   return (
     <div className="container mx-auto p-4 space-y-6 bg-gradient-to-b from-gray-950 to-gray-900 min-h-screen text-gray-100">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/reports")}>
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-4 w-full sm:w-auto">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/reports")} className="flex-shrink-0">
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <div>
-            <h1 className="text-3xl font-bold text-emerald-400">Gestão do Puxe de Rolos</h1>
-            <p className="text-gray-400 mt-1">Análise de tempos e performance</p>
+          <div className="flex-1">
+            <h1 className="text-2xl sm:text-3xl font-bold text-emerald-400">Gestão do Puxe de Rolos</h1>
+            <p className="text-gray-400 mt-1 text-sm sm:text-base">Análise de tempos e performance</p>
+          </div>
+        </div>
+        {/* Logo da Empresa */}
+        <div className="flex items-center gap-3 bg-gray-800/60 px-4 py-2 rounded-lg border border-emerald-500/30">
+          <div className="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center font-bold text-white text-lg">
+            IBA
+          </div>
+          <div className="text-right">
+            <p className="font-bold text-emerald-400 text-sm">IBA Santa Luzia</p>
+            <p className="text-xs text-gray-400">Controle Guarita</p>
           </div>
         </div>
       </div>
@@ -231,10 +242,58 @@ const RelatorioGestaoPuxe = () => {
 
         {/* === RELATÓRIO DIÁRIO === */}
         <TabsContent value="diario" className="space-y-4">
+          {/* Tabela Principal Diária */}
           <Card className="bg-gray-900/40 border-gray-700">
             <CardHeader>
               <CardTitle className="text-lg font-semibold text-emerald-400">
-                Média de Tempos por Dia
+                Detalhamento Diário
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="text-emerald-400 border-b border-gray-700">
+                    <tr>
+                      <th className="text-left py-3 px-2">Data</th>
+                      <th className="text-center py-3 px-2">Viagens</th>
+                      <th className="text-center py-3 px-2">Veículos</th>
+                      <th className="text-center py-3 px-2">Tempo Algodoeira</th>
+                      <th className="text-center py-3 px-2">Tempo Viagem</th>
+                      <th className="text-center py-3 px-2">Tempo Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {dadosDiario.map((d, i) => (
+                      <tr key={i} className="border-b border-gray-800 hover:bg-gray-800/50 text-gray-100">
+                        <td className="py-3 px-2 text-white font-medium">
+                          {new Date(d.dia + "T00:00:00").toLocaleDateString("pt-BR")}
+                        </td>
+                        <td className="text-center py-3 px-2 font-semibold text-emerald-400">
+                          {d.total_viagens}
+                        </td>
+                        <td className="text-center py-3 px-2 text-white">{d.total_veiculos}</td>
+                        <td className="text-center py-3 px-2 text-yellow-400 font-medium">
+                          {formatTime(d.media_algodoeira_min)}
+                        </td>
+                        <td className="text-center py-3 px-2 text-cyan-400 font-medium">
+                          {formatTime(d.media_viagem_min)}
+                        </td>
+                        <td className="text-center py-3 px-2 font-bold text-white">
+                          {formatTime(d.media_total_min)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Gráfico de Barras */}
+          <Card className="bg-gray-900/40 border-gray-700">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold text-emerald-400">
+                Média de Tempos por Dia (Últimos 15 dias)
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -271,53 +330,6 @@ const RelatorioGestaoPuxe = () => {
                   />
                 </BarChart>
               </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          {/* Tabela Detalhada Diária */}
-          <Card className="bg-gray-900/40 border-gray-700">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold text-emerald-400">
-                Detalhamento Diário
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="text-emerald-400 border-b border-gray-700">
-                    <tr>
-                      <th className="text-left py-3 px-2">Data</th>
-                      <th className="text-center py-3 px-2">Viagens</th>
-                      <th className="text-center py-3 px-2">Veículos</th>
-                      <th className="text-center py-3 px-2">Tempo Algodoeira</th>
-                      <th className="text-center py-3 px-2">Tempo Viagem</th>
-                      <th className="text-center py-3 px-2">Tempo Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {dadosDiario.map((d, i) => (
-                      <tr key={i} className="border-b border-gray-800 hover:bg-gray-800/50">
-                        <td className="py-3 px-2">
-                          {new Date(d.dia + "T00:00:00").toLocaleDateString("pt-BR")}
-                        </td>
-                        <td className="text-center py-3 px-2 font-semibold">
-                          {d.total_viagens}
-                        </td>
-                        <td className="text-center py-3 px-2">{d.total_veiculos}</td>
-                        <td className="text-center py-3 px-2 text-yellow-400">
-                          {formatTime(d.media_algodoeira_min)}
-                        </td>
-                        <td className="text-center py-3 px-2 text-cyan-400">
-                          {formatTime(d.media_viagem_min)}
-                        </td>
-                        <td className="text-center py-3 px-2 font-bold text-emerald-400">
-                          {formatTime(d.media_total_min)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -433,7 +445,7 @@ const RelatorioGestaoPuxe = () => {
                     {ranking.map((r, i) => (
                       <tr
                         key={i}
-                        className={`border-b border-gray-800 hover:bg-gray-800/50 ${
+                        className={`border-b border-gray-800 hover:bg-gray-800/50 text-gray-100 ${
                           i < 3 ? "bg-emerald-900/20" : ""
                         }`}
                       >
@@ -441,9 +453,9 @@ const RelatorioGestaoPuxe = () => {
                           {i === 0 && <span className="text-yellow-400 text-lg">🥇</span>}
                           {i === 1 && <span className="text-gray-300 text-lg">🥈</span>}
                           {i === 2 && <span className="text-orange-400 text-lg">🥉</span>}
-                          {i > 2 && <span className="text-gray-500">{i + 1}</span>}
+                          {i > 2 && <span className="text-gray-400">{i + 1}</span>}
                         </td>
-                        <td className="py-3 px-2 font-medium">{r.motorista}</td>
+                        <td className="py-3 px-2 font-medium text-white">{r.motorista}</td>
                         <td className="py-3 px-2 text-cyan-400">{r.placa}</td>
                         <td className="text-center py-3 px-2 font-bold text-emerald-400">
                           {r.viagens}
@@ -454,10 +466,10 @@ const RelatorioGestaoPuxe = () => {
                         <td className="text-center py-3 px-2 text-cyan-400">
                           {formatTime(r.media_viagem_min)}
                         </td>
-                        <td className="text-center py-3 px-2 font-semibold">
+                        <td className="text-center py-3 px-2 font-semibold text-white">
                           {formatTime(r.media_total_min)}
                         </td>
-                        <td className="text-center py-3 px-2 text-gray-400 text-xs">
+                        <td className="text-center py-3 px-2 text-white text-xs">
                           {new Date(r.ultima_viagem + "T00:00:00").toLocaleDateString("pt-BR")}
                         </td>
                       </tr>
