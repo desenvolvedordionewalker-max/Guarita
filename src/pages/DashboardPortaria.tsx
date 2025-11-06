@@ -115,8 +115,30 @@ export default function DashboardPortariaTV() {
 
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
-  const thisWeekStart = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  
+  // Calcular início da semana (Segunda-feira)
+  const dayOfWeek = today.getDay(); // 0 = domingo, 1 = segunda, etc
+  const thisWeekStart = new Date(today);
+  thisWeekStart.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1)); // Segunda-feira
+  thisWeekStart.setHours(0, 0, 0, 0);
+  const thisWeekEnd = new Date(thisWeekStart);
+  thisWeekEnd.setDate(thisWeekStart.getDate() + 6); // Domingo
+  thisWeekEnd.setHours(23, 59, 59, 999);
+  
+  const thisWeekStartStr = thisWeekStart.toISOString().split('T')[0];
+  const thisWeekEndStr = thisWeekEnd.toISOString().split('T')[0];
+  
+  // Início e fim do mês atual
   const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const thisMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  const thisMonthStartStr = thisMonthStart.toISOString().split('T')[0];
+  const thisMonthEndStr = thisMonthEnd.toISOString().split('T')[0];
+  
+  // Início e fim do ano atual
+  const thisYearStart = new Date(today.getFullYear(), 0, 1);
+  const thisYearEnd = new Date(today.getFullYear(), 11, 31);
+  const thisYearStartStr = thisYearStart.toISOString().split('T')[0];
+  const thisYearEndStr = thisYearEnd.toISOString().split('T')[0];
 
   // Primeiro filtramos os carregamentos do dia (temporariamente todos)
   const todayLoadings = loadingRecords; // Mostrando todos temporariamente
@@ -142,10 +164,11 @@ export default function DashboardPortariaTV() {
   // Rolos puxados hoje
   const todayRolls = cottonPullRecords?.filter(r => r.date === todayStr) || [];
 
-  // Estatísticas de chuva
-  const chuvaHoje = rainRecords?.filter(r => r.date === todayStr).reduce((sum, r) => sum + r.millimeters, 0) || 0;
-  const chuvaMes = rainRecords?.filter(r => r.date >= thisMonthStart.toISOString().split('T')[0]).reduce((sum, r) => sum + r.millimeters, 0) || 0;
-  const chuvaSemana = rainRecords?.filter(r => r.date >= thisWeekStart.toISOString().split('T')[0]).reduce((sum, r) => sum + r.millimeters, 0) || 0;
+  // Estatísticas de chuva - corrigido para respeitar as datas corretas
+  const chuvaHoje = rainRecords?.filter(r => r.date === todayStr && r.millimeters !== null).reduce((sum, r) => sum + (r.millimeters || 0), 0) || 0;
+  const chuvaSemana = rainRecords?.filter(r => r.date >= thisWeekStartStr && r.date <= thisWeekEndStr && r.millimeters !== null).reduce((sum, r) => sum + (r.millimeters || 0), 0) || 0;
+  const chuvaMes = rainRecords?.filter(r => r.date >= thisMonthStartStr && r.date <= thisMonthEndStr && r.millimeters !== null).reduce((sum, r) => sum + (r.millimeters || 0), 0) || 0;
+  const chuvaAno = rainRecords?.filter(r => r.date >= thisYearStartStr && r.date <= thisYearEndStr && r.millimeters !== null).reduce((sum, r) => sum + (r.millimeters || 0), 0) || 0;
   
   // Última chuva
   const ultimaChuva = rainRecords && rainRecords.length > 0 
@@ -566,7 +589,7 @@ export default function DashboardPortariaTV() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-[clamp(0.4rem,0.7vw,0.9rem)]">
-            <div className="grid grid-cols-3 gap-[clamp(0.3rem,0.6vw,0.8rem)] text-center">
+            <div className="grid grid-cols-4 gap-[clamp(0.3rem,0.6vw,0.8rem)] text-center">
               <div className="bg-black/30 border border-blue-600/20 rounded-lg p-[clamp(0.3rem,0.6vw,0.8rem)]">
                 <p className="text-[clamp(0.5rem,0.8vw,0.9rem)] text-blue-300 mb-[clamp(0.15rem,0.3vh,0.3rem)]">HOJE</p>
                 <p className="text-[clamp(0.9rem,1.4vw,1.8rem)] font-bold text-blue-400">{chuvaHoje.toFixed(1)}</p>
@@ -580,6 +603,11 @@ export default function DashboardPortariaTV() {
               <div className="bg-black/30 border border-blue-600/20 rounded-lg p-[clamp(0.3rem,0.6vw,0.8rem)]">
                 <p className="text-[clamp(0.5rem,0.8vw,0.9rem)] text-blue-300 mb-[clamp(0.15rem,0.3vh,0.3rem)]">MÊS</p>
                 <p className="text-[clamp(0.9rem,1.4vw,1.8rem)] font-bold text-blue-400">{chuvaMes.toFixed(1)}</p>
+                <p className="text-[clamp(0.4rem,0.6vw,0.7rem)] text-blue-300">mm</p>
+              </div>
+              <div className="bg-black/30 border border-blue-600/20 rounded-lg p-[clamp(0.3rem,0.6vw,0.8rem)]">
+                <p className="text-[clamp(0.5rem,0.8vw,0.9rem)] text-blue-300 mb-[clamp(0.15rem,0.3vh,0.3rem)]">ANO</p>
+                <p className="text-[clamp(0.9rem,1.4vw,1.8rem)] font-bold text-blue-400">{chuvaAno.toFixed(1)}</p>
                 <p className="text-[clamp(0.4rem,0.6vw,0.7rem)] text-blue-300">mm</p>
               </div>
             </div>

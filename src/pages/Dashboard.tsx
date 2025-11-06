@@ -125,12 +125,16 @@ const Dashboard = () => {
     const exitDate = formData.get('exitDate') as string;
     const exitTime = formData.get('exitTime') as string;
     const invoiceNumber = formData.get('invoiceNumber') as string;
+    const weight = formData.get('weight') as string;
+    const bales = formData.get('bales') as string;
 
     try {
       await updateRecord(selectedLoading.id, {
         exit_date: exitDate,
         exit_time: exitTime,
-        invoice_number: invoiceNumber
+        invoice_number: invoiceNumber,
+        weight: weight ? parseFloat(weight) : selectedLoading.weight,
+        bales: bales ? parseInt(bales) : selectedLoading.bales
       });
       
       setIsManageModalOpen(false);
@@ -1167,6 +1171,30 @@ const Dashboard = () => {
                       placeholder="Ex: 123.456"
                       required
                     />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="weight">Peso (kg)</Label>
+                      <Input
+                        id="weight"
+                        name="weight"
+                        type="number"
+                        step="0.01"
+                        placeholder="Peso em kg"
+                        defaultValue={selectedLoading.weight || ""}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="bales">Fardos</Label>
+                      <Input
+                        id="bales"
+                        name="bales"
+                        type="number"
+                        placeholder="Quantidade de fardos"
+                        defaultValue={selectedLoading.bales || ""}
+                      />
+                    </div>
                   </div>
 
                   <DialogFooter className="gap-2">
