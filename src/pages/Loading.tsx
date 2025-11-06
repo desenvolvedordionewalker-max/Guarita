@@ -84,6 +84,7 @@ const Loading = () => {
       harvest_year: formData.get("harvestYear") as string,
       truck_type: formData.get("truckType") as string,
       is_sider: formData.get("isSider") === "on",
+      acompanhante: formData.get("acompanhante") === "on",
       carrier: formData.get("carrier") as string,
       destination: formData.get("destination") as string || "",
       plate: formData.get("plate") as string,
@@ -353,8 +354,13 @@ const Loading = () => {
                   </div>
                 </div>
                 <div className="space-y-2"><Label>Características</Label>
-                  <div className="flex items-center space-x-2 h-10"><Checkbox id="isSider" name="isSider" />
-                    <label htmlFor="isSider" className="text-sm font-medium">Caminhão SIDER</label>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center space-x-2 h-10"><Checkbox id="isSider" name="isSider" />
+                      <label htmlFor="isSider" className="text-sm font-medium">Caminhão SIDER</label>
+                    </div>
+                    <div className="flex items-center space-x-2 h-10"><Checkbox id="acompanhante" name="acompanhante" />
+                      <label htmlFor="acompanhante" className="text-sm font-medium">Com Acompanhante</label>
+                    </div>
                   </div>
                 </div>
               </div>

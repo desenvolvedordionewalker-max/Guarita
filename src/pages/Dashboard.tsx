@@ -22,7 +22,8 @@ import {
   Container,
   Plus,
   Crown,
-  CheckCircle
+  CheckCircle,
+  UserPlus
 } from "lucide-react";
 import { useVehicles, useCottonPull, useRainRecords, useEquipment, useLoadingRecords } from "@/hooks/use-supabase";
 import { useMaterialReceipts } from "@/hooks/use-material-receipts";
@@ -47,6 +48,7 @@ const Dashboard = () => {
   
   const [selectedLoading, setSelectedLoading] = useState<LoadingRecord | null>(null);
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
+  const [filtroCarregando, setFiltroCarregando] = useState<string>("Todos");
 
   const handleRegisterVehicleExit = async (id: string) => {
     const now = new Date();
@@ -338,7 +340,7 @@ const Dashboard = () => {
     },
     { 
       label: "Total Carregamentos", 
-      value: (loadingVehicles || loadingCarregamentos) ? "..." : `${totalFila + totalCarregando + totalConcluidos} carregamentos`, 
+      value: (loadingVehicles || loadingCarregamentos) ? "..." : `${totalFila + totalCarregando + totalConcluidos}`, 
       icon: Truck, 
       color: "text-primary" 
     },
@@ -747,6 +749,12 @@ const Dashboard = () => {
                                     {loading.is_sider && (
                                       <span className="px-1 py-0.5 rounded bg-blue-100 text-blue-800 text-xs">SIDER</span>
                                     )}
+                                    {loading.acompanhante && (
+                                      <span className="px-1 py-0.5 rounded bg-green-100 text-green-800 text-xs flex items-center gap-1">
+                                        <UserPlus className="w-3 h-3" />
+                                        ACOMP
+                                      </span>
+                                    )}
                                   </div>
                                   <p className="text-xs text-muted-foreground truncate">{loading.driver}</p>
                                   <p className="text-xs font-medium text-blue-600 truncate">{loading.destination}</p>
@@ -802,6 +810,12 @@ const Dashboard = () => {
                                     )}
                                     {loading.is_sider && (
                                       <span className="px-1 py-0.5 rounded bg-blue-100 text-blue-800 text-xs">SIDER</span>
+                                    )}
+                                    {loading.acompanhante && (
+                                      <span className="px-1 py-0.5 rounded bg-green-100 text-green-800 text-xs flex items-center gap-1">
+                                        <UserPlus className="w-3 h-3" />
+                                        ACOMP
+                                      </span>
                                     )}
                                   </div>
                                   <p className="text-xs text-muted-foreground truncate">{loading.driver}</p>
@@ -861,6 +875,12 @@ const Dashboard = () => {
                                     {loading.is_sider && (
                                       <span className="px-1 py-0.5 rounded bg-blue-100 text-blue-800 text-xs">SIDER</span>
                                     )}
+                                    {loading.acompanhante && (
+                                      <span className="px-1 py-0.5 rounded bg-green-100 text-green-800 text-xs flex items-center gap-1">
+                                        <UserPlus className="w-3 h-3" />
+                                        ACOMP
+                                      </span>
+                                    )}
                                   </div>
                                   <p className="font-semibold text-sm">{loading.plate}</p>
                                   <p className="text-xs text-muted-foreground truncate">{loading.driver}</p>
@@ -889,17 +909,71 @@ const Dashboard = () => {
                     Carregando
                   </div>
                   <span className="text-sm font-normal bg-orange-100 text-orange-800 px-2 py-1 rounded-full">
-                    {loadingCarregamentos ? '...' : loadingsCarregando.length}
+                    {loadingCarregamentos ? '...' : loadingsCarregando.filter(l => filtroCarregando === "Todos" || l.product === filtroCarregando).length}
                   </span>
                 </CardTitle>
                 <CardDescription>
                   Em processo de carregamento
                 </CardDescription>
+                {/* Filtros por produto */}
+                <div className="flex flex-wrap gap-1 mt-2">
+                  <button
+                    onClick={() => setFiltroCarregando("Todos")}
+                    className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                      filtroCarregando === "Todos" 
+                        ? 'bg-orange-600 text-white' 
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    Todos
+                  </button>
+                  <button
+                    onClick={() => setFiltroCarregando("Pluma")}
+                    className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                      filtroCarregando === "Pluma" 
+                        ? 'bg-yellow-600 text-white' 
+                        : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
+                    }`}
+                  >
+                    Pluma
+                  </button>
+                  <button
+                    onClick={() => setFiltroCarregando("Caroço")}
+                    className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                      filtroCarregando === "Caroço" 
+                        ? 'bg-red-600 text-white' 
+                        : 'bg-red-100 text-red-800 hover:bg-red-200'
+                    }`}
+                  >
+                    Caroço
+                  </button>
+                  <button
+                    onClick={() => setFiltroCarregando("Fibrilha")}
+                    className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                      filtroCarregando === "Fibrilha" 
+                        ? 'bg-green-600 text-white' 
+                        : 'bg-green-100 text-green-800 hover:bg-green-200'
+                    }`}
+                  >
+                    Fibrilha
+                  </button>
+                  <button
+                    onClick={() => setFiltroCarregando("Briquete")}
+                    className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                      filtroCarregando === "Briquete" 
+                        ? 'bg-purple-600 text-white' 
+                        : 'bg-purple-100 text-purple-800 hover:bg-purple-200'
+                    }`}
+                  >
+                    Briquete
+                  </button>
+                </div>
               </CardHeader>
               <CardContent>
-                {!loadingCarregamentos && loadingsCarregando.length > 0 ? (
+                {!loadingCarregamentos && loadingsCarregando.filter(l => filtroCarregando === "Todos" || l.product === filtroCarregando).length > 0 ? (
                   <div className="space-y-2 max-h-64 overflow-y-auto">
                     {loadingsCarregando
+                      .filter(l => filtroCarregando === "Todos" || l.product === filtroCarregando)
                       .map((loading) => (
                         <Card 
                           key={loading.id} 
@@ -926,6 +1000,12 @@ const Dashboard = () => {
                                     <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
                                     <span className="text-xs font-bold text-orange-600">CARREGANDO</span>
                                   </div>
+                                  {loading.acompanhante && (
+                                    <span className="px-1 py-0.5 rounded bg-green-100 text-green-800 text-xs flex items-center gap-1">
+                                      <UserPlus className="w-3 h-3" />
+                                      ACOMP
+                                    </span>
+                                  )}
                                 </div>
                                 <p className="font-semibold">{loading.plate}</p>
                               </div>

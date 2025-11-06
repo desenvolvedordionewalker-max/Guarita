@@ -107,6 +107,7 @@ export interface LoadingRecord {
   weight: number
   notes?: string
   invoice_number?: string
+  acompanhante?: boolean
   created_by?: string
   created_at?: string
   updated_at?: string
