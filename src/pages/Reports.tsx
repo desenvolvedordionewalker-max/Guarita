@@ -362,8 +362,47 @@ const Reports = () => {
 
     message += `\n\n📦 RECEBIMENTO DE MATERIAIS:`;
     if (todayMaterials.length > 0) {
-      todayMaterials.forEach(material => {
-        message += `\n• ${material.material_type} de ${material.supplier || 'Fornecedor não informado'}`;
+      // Agrupar materiais por tipo e fornecedor
+      const groupedMaterials = todayMaterials.reduce((acc, material) => {
+        const key = `${material.material_type}|${material.supplier || 'Fornecedor não informado'}`;
+        if (!acc[key]) {
+          acc[key] = {
+            material_type: material.material_type,
+            supplier: material.supplier || 'Fornecedor não informado',
+            quantity: 0,
+            unit: material.unit || 'un'
+          };
+        }
+        acc[key].quantity += material.quantity || 0;
+        return acc;
+      }, {} as Record<string, { material_type: string, supplier: string, quantity: number, unit: string }>);
+
+      // Mostrar apenas um resumo por produto
+      const materialsByType = Object.values(groupedMaterials).reduce((acc, item) => {
+        if (!acc[item.material_type]) {
+          acc[item.material_type] = {
+            total: 0,
+            unit: item.unit,
+            suppliers: new Set<string>()
+          };
+        }
+        acc[item.material_type].total += item.quantity;
+        acc[item.material_type].suppliers.add(item.supplier);
+        return acc;
+      }, {} as Record<string, { total: number, unit: string, suppliers: Set<string> }>);
+
+      // Se houver múltiplos fornecedores para o mesmo produto, mostrar separado
+      Object.entries(materialsByType).forEach(([materialType, data]) => {
+        if (data.suppliers.size === 1) {
+          const supplier = Array.from(data.suppliers)[0];
+          message += `\n• ${materialType}: ${data.total.toLocaleString('pt-BR')} ${data.unit} de ${supplier}`;
+        } else {
+          // Múltiplos fornecedores - mostrar cada um
+          const itemsForType = Object.values(groupedMaterials).filter(item => item.material_type === materialType);
+          itemsForType.forEach(item => {
+            message += `\n• ${item.material_type}: ${item.quantity.toLocaleString('pt-BR')} ${item.unit} de ${item.supplier}`;
+          });
+        }
       });
     } else {
       message += `\n❌ Nenhum material recebido hoje`;
@@ -386,8 +425,6 @@ const Reports = () => {
     if (filaAtual.length === 0) {
       message += `\n✅ Fila vazia no momento`;
     }
-
-    message += `\n\n📌 Mensagem automática gerada via Controle Guarita`;
 
     if (sendToWhatsAppFlag) {
       sendToWhatsApp(message);
@@ -461,8 +498,6 @@ const Reports = () => {
     if (filaCarregamento.length === 0) {
       message += '✅ Não há carretas aguardando na fila no momento.\n\n';
     }
-
-    message += '📌 Mensagem automática gerada via Controle Guarita';
 
     if (sendToWhatsAppFlag) {
       sendToWhatsApp(message);
@@ -577,12 +612,7 @@ const Reports = () => {
       if (vehicle.totalTime > 0) {
         message += `  ⏱️ Tempo médio: ${timeStr}\n`;
       }
-      if (vehicle.firstEntry && vehicle.lastExit) {
-        message += `  🕐 ${vehicle.firstEntry} → ${vehicle.lastExit}\n`;
-      }
     });
-
-    message += `\n📌 Mensagem automática gerada via Controle Guarita`;
 
     if (sendToWhatsAppFlag) {
       sendToWhatsApp(message);
