@@ -214,8 +214,11 @@ const Loading = () => {
     const exitDate = (document.getElementById("exitDate") as HTMLInputElement)?.value;
     const exitTime = (document.getElementById("exitTime") as HTMLInputElement)?.value;
     const invoiceNumber = (document.getElementById("invoiceNumber") as HTMLInputElement)?.value;
+    const destination = (document.getElementById("confirmDestinationExit") as HTMLInputElement)?.value;
+    const client = (document.getElementById("confirmClientExit") as HTMLInputElement)?.value;
     const bales = Number((document.getElementById("bales") as HTMLInputElement)?.value || 0);
     const weight = Number((document.getElementById("weight") as HTMLInputElement)?.value || 0);
+    
     if (!exitDate || !exitTime) {
       toast({ title: "Campos obrigatórios", description: "Preencha data e hora de saída.", variant: "destructive" });
       return;
@@ -226,6 +229,8 @@ const Loading = () => {
         exit_date: exitDate,
         exit_time: exitTime,
         invoice_number: invoiceNumber || null,
+        destination: destination || selectedLoading.destination,
+        client: client || selectedLoading.client || "",
         bales,
         weight
       });
@@ -993,6 +998,24 @@ const Loading = () => {
           {/* Modo Gerenciamento - Concluir Carregamento */}
           {!isEditMode && selectedLoading && selectedLoading.entry_date && !selectedLoading.exit_date && (
             <div className="space-y-4">
+              <div className="space-y-2 border-b pb-4">
+                <Label>Confirmar Destino</Label>
+                <Input 
+                  type="text" 
+                  id="confirmDestinationExit" 
+                  placeholder="Digite ou confirme o destino"
+                  defaultValue={selectedLoading.destination || ""} 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Cliente (opcional)</Label>
+                <Input 
+                  type="text" 
+                  id="confirmClientExit" 
+                  placeholder="Digite o nome do cliente"
+                  defaultValue={selectedLoading.client || ""} 
+                />
+              </div>
               <div className="space-y-2">
                 <Label>Data de Saída</Label>
                 <Input type="date" id="exitDate" defaultValue={new Date().toISOString().split('T')[0]} />
