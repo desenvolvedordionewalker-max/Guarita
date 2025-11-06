@@ -617,9 +617,15 @@ export const useLoadingRecords = () => {
 
   const addRecord = async (recordData: Omit<LoadingRecord, 'id' | 'created_at' | 'updated_at'>) => {
     try {
+      // Define status inicial baseado nos dados fornecidos
+      const dataWithStatus = {
+        ...recordData,
+        status: recordData.status || 'fila' as const
+      };
+      
       const { data, error } = await supabase
         .from('loading_records')
-        .insert([recordData])
+        .insert([dataWithStatus])
         .select()
         .single()
 

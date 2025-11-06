@@ -202,7 +202,8 @@ const Loading = () => {
         entry_date: entryDate,
         entry_time: entryTime,
         destination: destination || selectedLoading.destination,
-        client: client || selectedLoading.client || ""
+        client: client || selectedLoading.client || "",
+        status: 'carregando' // Define status como carregando
       });
       setIsDialogOpen(false);
     } catch (error) {
@@ -220,8 +221,18 @@ const Loading = () => {
     const bales = Number((document.getElementById("bales") as HTMLInputElement)?.value || 0);
     const weight = Number((document.getElementById("weight") as HTMLInputElement)?.value || 0);
     
+    // Validação: Para concluir completamente precisa de exit_date, exit_time, invoice, bales e weight
     if (!exitDate || !exitTime) {
-      toast({ title: "Campos obrigatórios", description: "Preencha data e hora de saída.", variant: "destructive" });
+      toast({ title: "Campos obrigatórios", description: "Para finalizar completamente, preencha data e hora de saída.", variant: "destructive" });
+      return;
+    }
+    
+    if (!invoiceNumber || !bales || !weight) {
+      toast({ 
+        title: "Dados incompletos", 
+        description: "Para finalizar completamente, preencha Nota Fiscal, Peso e Fardos.", 
+        variant: "destructive" 
+      });
       return;
     }
     
@@ -229,22 +240,46 @@ const Loading = () => {
       await updateRecord(selectedLoading.id, {
         exit_date: exitDate,
         exit_time: exitTime,
-        invoice_number: invoiceNumber || null,
+        invoice_number: invoiceNumber,
         destination: destination || selectedLoading.destination,
         client: client || selectedLoading.client || "",
         bales,
-        weight
+        weight,
+        status: 'concluido' // Marca como totalmente concluído
       });
       setIsDialogOpen(false);
       toast({
         title: "Carregamento finalizado!",
-        description: `Placa ${selectedLoading.plate} - Nota Fiscal: ${invoiceNumber || 'N/A'}`,
+        description: `Placa ${selectedLoading.plate} - Nota Fiscal: ${invoiceNumber}`,
       });
     } catch (error) {
       console.error('Erro ao finalizar carregamento:', error);
       toast({
         title: "Erro ao finalizar carregamento",
         description: "Verifique os dados e tente novamente.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Nova função para marcar como carregado (sem precisar de todos os dados)
+  const handleMarkAsLoaded = async () => {
+    if (!selectedLoading) return;
+    
+    try {
+      await updateRecord(selectedLoading.id, {
+        status: 'carregado' // Marca como carregado mas não concluído
+      });
+      setIsDialogOpen(false);
+      toast({
+        title: "Marcado como Carregado!",
+        description: `Placa ${selectedLoading.plate} - Aguardando dados finais para conclusão.`,
+      });
+    } catch (error) {
+      console.error('Erro ao marcar como carregado:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar o status.",
         variant: "destructive",
       });
     }
@@ -274,9 +309,20 @@ const Loading = () => {
     }
   };
 
-  const queuedLoadings = loadings.filter(l => !l.entry_date);
-  const loadingInProgress = loadings.filter(l => l.entry_date && !l.exit_date);
-  const completedLoadings = loadings.filter(l => l.exit_date);
+  const queuedLoadings = loadings.filter(l => 
+    l.status === 'fila' || (!l.status && !l.entry_date)
+  );
+  
+  const loadingInProgress = loadings.filter(l => 
+    l.status === 'carregando' || 
+    l.status === 'carregado' || 
+    (!l.status && l.entry_date && !l.exit_date)
+  );
+  
+  const completedLoadings = loadings.filter(l => 
+    l.status === 'concluido' || 
+    (!l.status && l.exit_date)
+  );
 
   const getProductColor = (product: string) => {
     switch (product) {
@@ -1041,9 +1087,27 @@ const Loading = () => {
                   <Input type="number" id="weight" placeholder="Peso em quilogramas" />
                 </div>
               )}
+              
+              {/* Dois botões: Marcar como Carregado (rápido) ou Concluir Completamente */}
+              <div className="space-y-2">
+                <Button 
+                  onClick={handleMarkAsLoaded} 
+                  className="w-full bg-orange-500 hover:bg-orange-600"
+                  variant="outline"
+                >
+                  ✓ Marcar como Carregado (sem finalizar)
+                </Button>
+                <p className="text-xs text-muted-foreground text-center">
+                  Use este botão se o caminhão está carregado mas faltam dados (NF, peso, etc)
+                </p>
+              </div>
+              
               <Button onClick={handleCompleteLoading} className="w-full bg-success hover:bg-success/90">
-                Concluir Carregamento
+                ✓✓ Concluir Completamente
               </Button>
+              <p className="text-xs text-muted-foreground text-center">
+                Preencha todos os campos acima para finalizar e remover da lista
+              </p>
             </div>
           )}
         </DialogContent>

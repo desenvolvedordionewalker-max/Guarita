@@ -296,15 +296,26 @@ const Dashboard = () => {
   const todayMaterials = materialRecords.filter(m => m.date === today);
 
   // Estatísticas da nova tabela de carregamentos
-  // FILA: apenas os criados hoje que ainda não entraram
+  // Usar campo status quando disponível, senão fallback para lógica antiga
   const todayLoadings = loadingRecords.filter(l => l.date === today);
-  const loadingsFila = todayLoadings.filter(l => !l.entry_date);
   
-  // CARREGANDO: todos que têm entry_date mas não tem exit_date (independente da data de criação)
-  const loadingsCarregando = loadingRecords.filter(l => l.entry_date && !l.exit_date);
+  // FILA: status 'fila' OU (não tem status E não tem entry_date)
+  const loadingsFila = todayLoadings.filter(l => 
+    l.status === 'fila' || (!l.status && !l.entry_date)
+  );
   
-  // CONCLUÍDOS: que saíram HOJE (tem exit_date e exit_date é hoje)
-  const loadingsConcluidos = loadingRecords.filter(l => l.exit_date === today);
+  // CARREGANDO: status 'carregando' OU 'carregado' OU (não tem status E tem entry_date mas não exit_date)
+  const loadingsCarregando = loadingRecords.filter(l => 
+    l.status === 'carregando' || 
+    l.status === 'carregado' || 
+    (!l.status && l.entry_date && !l.exit_date)
+  );
+  
+  // CONCLUÍDOS: status 'concluido' OU (não tem status E saiu hoje)
+  const loadingsConcluidos = loadingRecords.filter(l => 
+    l.status === 'concluido' || 
+    (!l.status && l.exit_date === today)
+  );
 
   // Apenas veículos (separado dos carregamentos)
   const veiculosFila = todayVehicles.filter(v => !v.exit_time && v.purpose?.toLowerCase().includes('fila'));
