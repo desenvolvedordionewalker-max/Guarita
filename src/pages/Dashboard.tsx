@@ -292,8 +292,8 @@ const Dashboard = () => {
   const todayLoadings = loadingRecords.filter(l => l.date === today);
   const loadingsFila = todayLoadings.filter(l => !l.entry_date);
   const loadingsCarregando = todayLoadings.filter(l => l.entry_date && !l.exit_date);
-  // Concluídos: apenas os que saíram HOJE
-  const loadingsConcluidos = todayLoadings.filter(l => l.exit_date === today);
+  // Concluídos: apenas os que saíram HOJE (exit_date existe e é hoje)
+  const loadingsConcluidos = todayLoadings.filter(l => l.exit_date && l.exit_date === today);
 
   // Apenas veículos (separado dos carregamentos)
   const veiculosFila = todayVehicles.filter(v => !v.exit_time && v.purpose?.toLowerCase().includes('fila'));
