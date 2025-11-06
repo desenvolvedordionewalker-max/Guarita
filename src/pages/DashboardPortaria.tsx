@@ -191,6 +191,13 @@ export default function DashboardPortariaTV() {
     .sort((a, b) => b.rolos - a.rolos)
     .slice(0, 10);
 
+  // Verificar quais caminhões estão na algodoeira agora
+  const trucksInAlgodoeira = new Set(
+    cottonPullRecords
+      ?.filter(r => r.entry_time && !r.exit_time)
+      .map(r => r.plate) || []
+  );
+
   // Ranking de placas - Acumulado do mês
   const thisMonth = new Date().toISOString().substring(0, 7); // YYYY-MM
   const monthRolls = cottonPullRecords?.filter(r => r.date && r.date.startsWith(thisMonth)) || [];
@@ -505,31 +512,46 @@ export default function DashboardPortariaTV() {
                 </h3>
                 <div className="space-y-[clamp(0.1rem,0.2vh,0.25rem)] flex-1 overflow-y-auto">
                   {rankingDiaArray.length > 0 ? (
-                    rankingDiaArray.slice(0, totalCards <= 3 ? 8 : totalCards <= 4 ? 10 : totalCards <= 6 ? 12 : 15).map((item, index) => (
-                      <div
-                        key={item.plate}
-                        className="bg-black/40 border border-emerald-600/20 rounded p-[clamp(0.2rem,0.4vw,0.5rem)] flex justify-between items-center hover:border-emerald-500/40 transition-colors"
-                      >
-                        <div className="flex items-center gap-[clamp(0.2rem,0.4vw,0.5rem)] min-w-0 flex-1">
-                          <span className={`w-[clamp(0.9rem,1.4vw,1.4rem)] h-[clamp(0.9rem,1.4vw,1.4rem)] rounded-full flex items-center justify-center text-[clamp(0.3rem,0.5vw,0.55rem)] font-bold ${
-                            index === 0 ? 'bg-yellow-500 text-black' :
-                            index === 1 ? 'bg-gray-400 text-black' :
-                            index === 2 ? 'bg-orange-500 text-black' :
-                            'bg-emerald-600/30 text-emerald-300'
-                          }`}>
-                            {index + 1}
-                          </span>
+                    rankingDiaArray.slice(0, totalCards <= 3 ? 8 : totalCards <= 4 ? 10 : totalCards <= 6 ? 12 : 15).map((item, index) => {
+                      const isInAlgodoeira = trucksInAlgodoeira.has(item.plate);
+                      return (
+                        <div
+                          key={item.plate}
+                          className={`bg-black/40 border rounded p-[clamp(0.2rem,0.4vw,0.5rem)] flex justify-between items-center hover:border-emerald-500/40 transition-colors ${
+                            isInAlgodoeira 
+                              ? 'loading-truck-alert border-yellow-400' 
+                              : 'border-emerald-600/20'
+                          }`}
+                        >
+                          <div className="flex items-center gap-[clamp(0.2rem,0.4vw,0.5rem)] min-w-0 flex-1">
+                            <span className={`w-[clamp(0.9rem,1.4vw,1.4rem)] h-[clamp(0.9rem,1.4vw,1.4rem)] rounded-full flex items-center justify-center text-[clamp(0.3rem,0.5vw,0.55rem)] font-bold ${
+                              index === 0 ? 'bg-yellow-500 text-black' :
+                              index === 1 ? 'bg-gray-400 text-black' :
+                              index === 2 ? 'bg-orange-500 text-black' :
+                              'bg-emerald-600/30 text-emerald-300'
+                            }`}>
+                              {index + 1}
+                            </span>
                             <div className="min-w-0 flex-1">
-                              <p className="font-semibold text-emerald-400 text-[clamp(0.4rem,0.65vw,0.8rem)]">{item.plate}</p>
-                              <p className="text-[clamp(0.35rem,0.55vw,0.7rem)] text-emerald-300">{item.driver}</p>
+                              <p className={`font-semibold text-[clamp(0.4rem,0.65vw,0.8rem)] ${isInAlgodoeira ? 'text-yellow-300' : 'text-emerald-400'}`}>
+                                {item.plate} {isInAlgodoeira && '🚛'}
+                              </p>
+                              <p className={`text-[clamp(0.35rem,0.55vw,0.7rem)] ${isInAlgodoeira ? 'text-yellow-200' : 'text-emerald-300'}`}>
+                                {item.driver}
+                              </p>
                             </div>
                           </div>
                           <div className="text-right flex-shrink-0 ml-1">
-                            <p className="font-bold text-emerald-400 text-[clamp(0.4rem,0.65vw,0.8rem)]">{item.rolos.toLocaleString('pt-BR')}</p>
-                            <p className="text-[clamp(0.35rem,0.55vw,0.7rem)] text-emerald-300">{item.viagens} viagens</p>
+                            <p className={`font-bold text-[clamp(0.4rem,0.65vw,0.8rem)] ${isInAlgodoeira ? 'text-yellow-300' : 'text-emerald-400'}`}>
+                              {item.rolos.toLocaleString('pt-BR')}
+                            </p>
+                            <p className={`text-[clamp(0.35rem,0.55vw,0.7rem)] ${isInAlgodoeira ? 'text-yellow-200' : 'text-emerald-300'}`}>
+                              {item.viagens} viagens
+                            </p>
                           </div>
-                      </div>
-                    ))
+                        </div>
+                      );
+                    })
                   ) : (
                     <p className="text-emerald-400 text-center py-4 text-[clamp(0.6rem,0.9vw,1rem)]">Nenhum rolo hoje</p>
                   )}

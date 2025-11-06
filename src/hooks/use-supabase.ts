@@ -653,7 +653,11 @@ export const useLoadingRecords = () => {
         )
       )
       
-      console.log('Atualizando carregamento:', id, cleanUpdates)
+      console.log('=== DEBUG UPDATE LOADING ===')
+      console.log('ID:', id)
+      console.log('Updates originais:', updates)
+      console.log('Updates limpos:', cleanUpdates)
+      console.log('Campos enviados:', Object.keys(cleanUpdates))
       
       const { data, error } = await supabase
         .from('loading_records')
@@ -663,7 +667,11 @@ export const useLoadingRecords = () => {
         .single()
 
       if (error) {
-        console.error('Erro ao atualizar carregamento:', error)
+        console.error('=== ERRO SUPABASE ===')
+        console.error('Status:', error.code)
+        console.error('Mensagem:', error.message)
+        console.error('Detalhes:', error.details)
+        console.error('Hint:', error.hint)
         throw error
       }
       

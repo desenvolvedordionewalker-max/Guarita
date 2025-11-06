@@ -19,7 +19,10 @@ const Loading = () => {
   const { toast } = useToast();
   const { records: loadings, addRecord, updateRecord, deleteRecord, loading } = useLoadingRecords();
   
-  const [truckTypes, setTruckTypes] = useState<string[]>(["Rodotrem", "Bitrem", "Toco", "LS Simples", "LS Trucada", "Vanderleia"]);
+  const [truckTypes, setTruckTypes] = useState<string[]>(() => {
+    const saved = localStorage.getItem('guarita_truck_types');
+    return saved ? JSON.parse(saved) : ["Rodotrem", "Bitrem", "Toco", "LS Simples", "LS Trucada", "Vanderleia"];
+  });
   const [carriers] = useState<string[]>(["Fribon", "Bom Futuro", "RDM"]);
   const [destinations] = useState<string[]>(["Santos-SP", "Guararapes-SP", "Cubatão-SP", "Guarujá-SP", "Paranaguá-PR", "Tangará da Serra-MT", "Alto Araguaia-MT"]);
   const [harvestYears] = useState<string[]>(["2024/2025", "2023/2024", "2022/2023", "2021/2022"]);
@@ -31,6 +34,11 @@ const Loading = () => {
   const [isCreatingNewProduct, setIsCreatingNewProduct] = useState(false);
   const [newProduct, setNewProduct] = useState("");
   const [showForm, setShowForm] = useState(false);
+
+  // Salvar tipos de caminhão no localStorage sempre que mudar
+  useEffect(() => {
+    localStorage.setItem('guarita_truck_types', JSON.stringify(truckTypes));
+  }, [truckTypes]);
 
   // Sistema de autocomplete
   const [savedPlates, setSavedPlates] = useState<string[]>(() => {
