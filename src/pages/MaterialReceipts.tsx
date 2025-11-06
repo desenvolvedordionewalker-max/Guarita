@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { MaterialReceipt } from "@/lib/supabase";
 import { useMaterialReceipts } from "@/hooks/use-material-receipts";
-import { getTodayLocalDate, normalizeLocalDate } from "@/lib/date-utils";
+import { getTodayLocalDate, normalizeLocalDate, formatDateForDisplay } from "@/lib/date-utils";
 
 const MaterialReceipts = () => {
   const { records, loading, addRecord, updateRecord, deleteRecord } = useMaterialReceipts();
@@ -219,7 +219,7 @@ const MaterialReceipts = () => {
                           {record.exit_time ? "Concluído" : "Pendente"}
                         </Badge>
                         <span className="text-sm text-muted-foreground">
-                          {new Date(record.date).toLocaleDateString('pt-BR')} às {record.entry_time}
+                          {formatDateForDisplay(record.date)} às {record.entry_time}
                         </span>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">

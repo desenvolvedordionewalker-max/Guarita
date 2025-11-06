@@ -37,3 +37,20 @@ export function toLocalDateString(date: Date): string {
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
+
+/**
+ * Formata uma string de data YYYY-MM-DD para exibição DD/MM/YYYY
+ * SEM fazer conversão de timezone - usa a data exatamente como está no banco
+ */
+export function formatDateForDisplay(dateString: string): string {
+  if (!dateString) return '';
+  
+  // Se já está no formato YYYY-MM-DD, apenas formata para DD/MM/YYYY
+  const parts = dateString.split('-');
+  if (parts.length === 3) {
+    const [year, month, day] = parts;
+    return `${day}/${month}/${year}`;
+  }
+  
+  return dateString;
+}

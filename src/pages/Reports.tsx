@@ -666,6 +666,22 @@ const Reports = () => {
     const totalRolls = vehiclesArray.reduce((sum, v) => sum + v.rolls, 0);
     const totalTrips = vehiclesArray.reduce((sum, v) => sum + v.trips, 0);
     
+    // Calcular média de tempo na algodoeira (entry_time até exit_time de cada viagem)
+    const recordsWithBothTimes = todayRecords.filter(r => r.entry_time && r.exit_time);
+    let totalAlgodoeiraTime = 0;
+    recordsWithBothTimes.forEach(record => {
+      const [entryH, entryM] = record.entry_time.split(':').map(Number);
+      const [exitH, exitM] = record.exit_time!.split(':').map(Number);
+      const timeInMinutes = (exitH * 60 + exitM) - (entryH * 60 + entryM);
+      if (timeInMinutes > 0) {
+        totalAlgodoeiraTime += timeInMinutes;
+      }
+    });
+    const avgAlgodoeiraTime = recordsWithBothTimes.length > 0 ? Math.round(totalAlgodoeiraTime / recordsWithBothTimes.length) : 0;
+    const algodoeiraHours = Math.floor(avgAlgodoeiraTime / 60);
+    const algodoeiraMinutes = avgAlgodoeiraTime % 60;
+    const algodoeiraTimeStr = algodoeiraHours > 0 ? `${algodoeiraHours}h ${algodoeiraMinutes}min` : `${algodoeiraMinutes}min`;
+    
     // Calcular média de tempo de viagem do dia (todas as viagens)
     const totalTimeAllVehicles = vehiclesArray.reduce((sum, v) => sum + v.totalTime, 0);
     const avgTripTime = totalTrips > 0 ? Math.round(totalTimeAllVehicles / totalTrips) : 0;
@@ -677,7 +693,8 @@ const Reports = () => {
     message += `🚛 Veículos: ${vehiclesArray.length}\n`;
     message += `� Viagens: ${totalTrips}\n`;
     message += `📦 Rolos: ${totalRolls.toLocaleString('pt-BR')}\n`;
-    message += `⏱️ Tempo Viagem: ${avgTimeStr}\n\n`;
+    message += `⏱️ Tempo Médio na Algodoeira: ${algodoeiraTimeStr}\n`;
+    message += `🚗 Tempo Médio de Viagem: ${avgTimeStr}\n\n`;
 
     message += `📋 DETALHAMENTO POR VEÍCULO:\n`;
     
