@@ -205,3 +205,20 @@ All colors MUST be HSL.
 .tv-mode * {
   transition: font-size 0.3s ease, padding 0.3s ease, line-height 0.3s ease;
 }
+
+/* Animação de alerta piscando para caminhões carregando */
+@keyframes blink-alert {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 10px rgba(234, 179, 8, 0.5);
+  }
+  50% {
+    opacity: 0.7;
+    box-shadow: 0 0 20px rgba(234, 179, 8, 0.8);
+  }
+}
+
+.loading-truck-alert {
+  animation: blink-alert 1.5s ease-in-out infinite;
+  border-color: rgb(234, 179, 8) !important;
+}

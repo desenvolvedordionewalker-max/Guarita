@@ -646,14 +646,26 @@ export const useLoadingRecords = () => {
 
   const updateRecord = async (id: string, updates: Partial<LoadingRecord>) => {
     try {
+      // Remove campos undefined, null ou vazios
+      const cleanUpdates = Object.fromEntries(
+        Object.entries(updates).filter(([_, value]) => 
+          value !== undefined && value !== null && value !== ""
+        )
+      )
+      
+      console.log('Atualizando carregamento:', id, cleanUpdates)
+      
       const { data, error } = await supabase
         .from('loading_records')
-        .update(updates)
+        .update(cleanUpdates)
         .eq('id', id)
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('Erro ao atualizar carregamento:', error)
+        throw error
+      }
       
       setRecords(prev => prev.map(r => r.id === id ? data : r))
       toast({

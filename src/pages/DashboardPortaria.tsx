@@ -382,10 +382,10 @@ export default function DashboardPortariaTV() {
                       {carregandoItems.length > 0 ? (
                         <div className={`space-y-[clamp(0.25rem,0.5vh,0.5rem)] overflow-y-auto h-full flex flex-col justify-center`}>
                           {carregandoItems.slice(0, totalCards <= 4 ? 3 : totalCards <= 6 ? 2 : 2).map((item) => (
-                            <div key={item.id} className={`bg-black/20 rounded p-[clamp(0.2rem,0.4vw,0.5rem)] border border-emerald-600/20`}>
-                              <div className="text-[clamp(0.5rem,0.8vw,1rem)] text-emerald-400 font-bold text-center leading-tight">
+                            <div key={item.id} className={`loading-truck-alert bg-black/20 rounded p-[clamp(0.2rem,0.4vw,0.5rem)] border border-yellow-400`}>
+                              <div className="text-[clamp(0.5rem,0.8vw,1rem)] text-yellow-300 font-bold text-center leading-tight">
                                 <span className="block">{item.plate}</span>
-                                <div className="text-[clamp(0.4rem,0.65vw,0.8rem)] text-emerald-300 mt-[clamp(0.1rem,0.2vh,0.2rem)]">
+                                <div className="text-[clamp(0.4rem,0.65vw,0.8rem)] text-yellow-200 mt-[clamp(0.1rem,0.2vh,0.2rem)]">
                                   {item.client || 'S/Cliente'} • {item.truck_type || 'S/Tipo'} • {item.carrier || 'S/Transp'}
                                 </div>
                               </div>
