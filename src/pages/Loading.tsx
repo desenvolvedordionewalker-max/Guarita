@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useLoadingRecords } from "@/hooks/use-supabase";
 import { LoadingRecord } from "@/lib/supabase";
-import { getTodayLocalDate } from "@/lib/date-utils";
+import { getTodayLocalDate, normalizeLocalDate } from "@/lib/date-utils";
 
 const Loading = () => {
   const navigate = useNavigate();
@@ -88,7 +88,7 @@ const Loading = () => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const loadingData = {
-      date: formData.get("date") as string,
+      date: normalizeLocalDate(formData.get("date") as string),
       time: formData.get("time") as string,
       product: formData.get("product") as string,
       harvest_year: formData.get("harvestYear") as string,

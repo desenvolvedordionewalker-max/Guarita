@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { MaterialReceipt } from "@/lib/supabase";
 import { useMaterialReceipts } from "@/hooks/use-material-receipts";
-import { getTodayLocalDate } from "@/lib/date-utils";
+import { getTodayLocalDate, normalizeLocalDate } from "@/lib/date-utils";
 
 const MaterialReceipts = () => {
   const { records, loading, addRecord, updateRecord, deleteRecord } = useMaterialReceipts();
@@ -42,7 +42,7 @@ const MaterialReceipts = () => {
     const unitType = formData.get("unit_type") as MaterialReceipt['unit_type'];
     
     const recordData: Omit<MaterialReceipt, 'id' | 'created_at' | 'updated_at'> = {
-      date: formData.get("date") as string,
+      date: normalizeLocalDate(formData.get("date") as string),
       entry_time: formData.get("time") as string,
       material_type: formData.get("material_type") as string,
       plate: formData.get("plate") as string,
