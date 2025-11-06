@@ -276,13 +276,17 @@ const MaterialReceipts = () => {
       </Card>
 
       {/* Modal Criar/Editar */}
-      <Dialog open={isCreateModalOpen || isEditModalOpen} onOpenChange={(open) => {
-        if (!open) {
-          setIsCreateModalOpen(false);
-          setIsEditModalOpen(false);
-          setSelectedRecord(null);
-        }
-      }}>
+      <Dialog 
+        key={selectedRecord?.id || 'new'} 
+        open={isCreateModalOpen || isEditModalOpen} 
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsCreateModalOpen(false);
+            setIsEditModalOpen(false);
+            setSelectedRecord(null);
+          }
+        }}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
