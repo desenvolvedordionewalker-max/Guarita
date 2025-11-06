@@ -140,11 +140,12 @@ export default function DashboardPortariaTV() {
   const thisYearStartStr = thisYearStart.toISOString().split('T')[0];
   const thisYearEndStr = thisYearEnd.toISOString().split('T')[0];
 
-  // Primeiro filtramos os carregamentos do dia (temporariamente todos)
-  const todayLoadings = loadingRecords; // Mostrando todos temporariamente
+  // Primeiro filtramos os carregamentos do dia
+  const todayLoadings = loadingRecords; // Todos para fila e carregando
   const fila = todayLoadings.filter(l => !l.entry_date);
   const carregando = todayLoadings.filter(l => l.entry_date && !l.exit_date);
-  const concluidos = todayLoadings.filter(l => l.exit_date);
+  // Concluídos: apenas os que saíram HOJE
+  const concluidos = todayLoadings.filter(l => l.exit_date === todayStr);
 
   // Estatísticas de carregamento por produto
   const produtosFixos = ["PLUMA", "CAROÇO", "FIBRILHA", "BRIQUETE"];

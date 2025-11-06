@@ -128,14 +128,28 @@ const Dashboard = () => {
     const weight = formData.get('weight') as string;
     const bales = formData.get('bales') as string;
 
+    // Determinar quais campos enviar baseado no produto
+    const updateData: Partial<LoadingRecord> = {
+      exit_date: exitDate,
+      exit_time: exitTime,
+      invoice_number: invoiceNumber
+    };
+
+    // Caroço e Briquete usam peso
+    if (selectedLoading.product === 'Caroço' || selectedLoading.product === 'Briquete') {
+      if (weight) {
+        updateData.weight = parseFloat(weight);
+      }
+    }
+    // Pluma e Fibrilha usam fardos
+    else if (selectedLoading.product === 'Pluma' || selectedLoading.product === 'Fibrilha') {
+      if (bales) {
+        updateData.bales = parseInt(bales);
+      }
+    }
+
     try {
-      await updateRecord(selectedLoading.id, {
-        exit_date: exitDate,
-        exit_time: exitTime,
-        invoice_number: invoiceNumber,
-        weight: weight ? parseFloat(weight) : selectedLoading.weight,
-        bales: bales ? parseInt(bales) : selectedLoading.bales
-      });
+      await updateRecord(selectedLoading.id, updateData);
       
       setIsManageModalOpen(false);
       setSelectedLoading(null);
@@ -1174,9 +1188,10 @@ const Dashboard = () => {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  {/* Campos condicionais baseados no produto */}
+                  {(selectedLoading.product === 'Caroço' || selectedLoading.product === 'Briquete') && (
                     <div className="space-y-2">
-                      <Label htmlFor="weight">Peso (kg)</Label>
+                      <Label htmlFor="weight">Peso (kg) *</Label>
                       <Input
                         id="weight"
                         name="weight"
@@ -1184,19 +1199,24 @@ const Dashboard = () => {
                         step="0.01"
                         placeholder="Peso em kg"
                         defaultValue={selectedLoading.weight || ""}
+                        required
                       />
                     </div>
+                  )}
+
+                  {(selectedLoading.product === 'Pluma' || selectedLoading.product === 'Fibrilha') && (
                     <div className="space-y-2">
-                      <Label htmlFor="bales">Fardos</Label>
+                      <Label htmlFor="bales">Fardos *</Label>
                       <Input
                         id="bales"
                         name="bales"
                         type="number"
                         placeholder="Quantidade de fardos"
                         defaultValue={selectedLoading.bales || ""}
+                        required
                       />
                     </div>
-                  </div>
+                  )}
 
                   <DialogFooter className="gap-2">
                     <Button 
