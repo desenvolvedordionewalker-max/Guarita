@@ -38,6 +38,15 @@ interface RankingData {
   ultima_viagem: string;
 }
 
+interface ResumoPlaca {
+  placa: string;
+  motorista: string;
+  viagens: number;
+  rolos: number;
+  tempoTotal: number;
+  talhoes: Set<string>;
+}
+
 const RelatorioGestaoPuxe = () => {
   const navigate = useNavigate();
   const [tab, setTab] = useState("analitico");
@@ -249,12 +258,6 @@ const RelatorioGestaoPuxe = () => {
             � Analítico
           </TabsTrigger>
           <TabsTrigger
-            value="mensal"
-            className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white"
-          >
-            📆 Mensal
-          </TabsTrigger>
-          <TabsTrigger
             value="ranking"
             className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white"
           >
@@ -262,13 +265,103 @@ const RelatorioGestaoPuxe = () => {
           </TabsTrigger>
         </TabsList>
 
-        {/* === RELATÓRIO ANALÍTICO (VIAGEM A VIAGEM) === */}
+        {/* === RELATÓRIO ANALÍTICO === */}
         <TabsContent value="analitico" className="space-y-4">
-          {/* Filtros */}
+          {/* Resumo Diário por Placa/Motorista */}
           <Card className="bg-gray-900/40 border-gray-700">
             <CardHeader>
               <CardTitle className="text-lg font-semibold text-emerald-400">
-                Filtros
+                Resumo Diário - Últimos 7 Dias
+              </CardTitle>
+              <p className="text-sm text-gray-400 mt-1">Performance por veículo</p>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {(() => {
+                  // Agrupar registros dos últimos 7 dias por placa
+                  const hoje = new Date();
+                  const seteDiasAtras = new Date(hoje);
+                  seteDiasAtras.setDate(hoje.getDate() - 7);
+                  
+                  const registrosRecentes = cottonRecords.filter(r => {
+                    const dataRegistro = new Date(r.date);
+                    return dataRegistro >= seteDiasAtras && dataRegistro <= hoje;
+                  });
+
+                  // Agrupar por placa
+                  const porPlaca = registrosRecentes.reduce((acc, r) => {
+                    const key = r.plate;
+                    if (!acc[key]) {
+                      acc[key] = {
+                        placa: r.plate,
+                        motorista: r.driver,
+                        viagens: 0,
+                        rolos: 0,
+                        tempoTotal: 0,
+                        talhoes: new Set<string>(),
+                      };
+                    }
+                    acc[key].viagens += 1;
+                    acc[key].rolos += r.rolls;
+                    if (r.talhao) acc[key].talhoes.add(r.talhao);
+                    
+                    // Calcular tempo se tiver entrada e saída
+                    if (r.entry_time && r.exit_time) {
+                      const [eH, eM] = r.entry_time.split(':').map(Number);
+                      const [sH, sM] = r.exit_time.split(':').map(Number);
+                      const tempo = (sH * 60 + sM) - (eH * 60 + eM);
+                      if (tempo > 0) acc[key].tempoTotal += tempo;
+                    }
+                    
+                    return acc;
+                  }, {} as Record<string, ResumoPlaca>);
+
+                  return Object.values(porPlaca)
+                    .sort((a: ResumoPlaca, b: ResumoPlaca) => b.viagens - a.viagens)
+                    .slice(0, 12)
+                    .map((dados: ResumoPlaca, idx) => (
+                      <Card key={idx} className="bg-gray-800/60 border-gray-700 hover:border-emerald-500/50 transition-colors">
+                        <CardHeader className="pb-2">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-emerald-400 text-lg">{dados.placa}</span>
+                            <span className="text-xs bg-emerald-600/20 text-emerald-400 px-2 py-1 rounded">
+                              {dados.viagens} viagens
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-300 mt-1">{dados.motorista}</p>
+                        </CardHeader>
+                        <CardContent className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-400">Rolos:</span>
+                            <span className="text-white font-medium">{dados.rolos.toLocaleString('pt-BR')}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-400">Tempo Médio:</span>
+                            <span className="text-yellow-400 font-medium">
+                              {formatTime(dados.viagens > 0 ? Math.round(dados.tempoTotal / dados.viagens) : 0)}
+                            </span>
+                          </div>
+                          {dados.talhoes.size > 0 && (
+                            <div className="text-sm pt-2 border-t border-gray-700">
+                              <span className="text-gray-400">TH: </span>
+                              <span className="text-cyan-400 font-medium">
+                                {Array.from(dados.talhoes).join(', ')}
+                              </span>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ));
+                })()}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Filtros para tabela detalhada */}
+          <Card className="bg-gray-900/40 border-gray-700">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold text-emerald-400">
+                Filtrar Viagens Detalhadas
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -295,7 +388,7 @@ const RelatorioGestaoPuxe = () => {
             </CardContent>
           </Card>
 
-          {/* Tabela de Viagens */}
+          {/* Tabela Carga a Carga */}
           <Card className="bg-gray-900/40 border-gray-700">
             <CardHeader>
               <CardTitle className="text-lg font-semibold text-emerald-400">
@@ -360,90 +453,6 @@ const RelatorioGestaoPuxe = () => {
                           </tr>
                         );
                       })}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* === RELATÓRIO MENSAL === */}
-        <TabsContent value="mensal" className="space-y-4">
-          <Card className="bg-gray-900/40 border-gray-700">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold text-emerald-400">
-                Análise Mensal por Fazenda
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={350}>
-                <BarChart data={dadosMensal.slice(0, 12)}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis dataKey="fazenda" tick={{ fill: "#9ca3af" }} />
-                  <YAxis tick={{ fill: "#9ca3af" }} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#1f2937",
-                      border: "1px solid #374151",
-                      borderRadius: "8px",
-                    }}
-                    formatter={(value: number) => [formatTime(value), ""]}
-                  />
-                  <Legend />
-                  <Bar
-                    dataKey="media_viagem_min"
-                    fill="#22d3ee"
-                    name="Tempo Viagem"
-                    radius={[8, 8, 0, 0]}
-                  />
-                  <Bar
-                    dataKey="media_algodoeira_min"
-                    fill="#fbbf24"
-                    name="Tempo Algodoeira"
-                    radius={[8, 8, 0, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          {/* Tabela Mensal */}
-          <Card className="bg-gray-900/40 border-gray-700">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold text-emerald-400">
-                Dados Mensais Detalhados
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="text-emerald-400 border-b border-gray-700">
-                    <tr>
-                      <th className="text-left py-3 px-2">Mês</th>
-                      <th className="text-left py-3 px-2">Fazenda</th>
-                      <th className="text-center py-3 px-2">Viagens</th>
-                      <th className="text-center py-3 px-2">Tempo Algodoeira</th>
-                      <th className="text-center py-3 px-2">Tempo Viagem</th>
-                      <th className="text-center py-3 px-2">Tempo Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {dadosMensal.map((d, i) => (
-                      <tr key={i} className="border-b border-gray-800 hover:bg-gray-800/50 text-white">
-                        <td className="py-3 px-2 text-gray-100">{d.mes}</td>
-                        <td className="py-3 px-2 font-medium text-white">{d.fazenda}</td>
-                        <td className="text-center py-3 px-2 font-semibold text-emerald-400">{d.viagens}</td>
-                        <td className="text-center py-3 px-2 text-yellow-400 font-medium">
-                          {formatTime(d.media_algodoeira_min)}
-                        </td>
-                        <td className="text-center py-3 px-2 text-cyan-400 font-medium">
-                          {formatTime(d.media_viagem_min)}
-                        </td>
-                        <td className="text-center py-3 px-2 font-bold text-white">
-                          {formatTime(d.media_total_min)}
-                        </td>
-                      </tr>
-                    ))}
                   </tbody>
                 </table>
               </div>
