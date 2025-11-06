@@ -328,10 +328,12 @@ const Loading = () => {
     (!l.status && l.entry_date && !l.exit_date)
   );
   
-  const completedLoadings = loadings.filter(l => 
-    l.status === 'concluido' || 
-    (!l.status && l.exit_date)
-  );
+  const completedLoadings = loadings.filter(l => {
+    // Se tem status concluido = mostra
+    if (l.status === 'concluido') return true;
+    // Fallback para registros sem status
+    return !l.status && l.exit_date;
+  });
 
   const getProductColor = (product: string) => {
     switch (product) {
