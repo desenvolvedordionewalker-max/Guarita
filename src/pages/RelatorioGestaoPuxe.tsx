@@ -67,7 +67,7 @@ const RelatorioGestaoPuxe = () => {
   const [filtroPlaca, setFiltroPlaca] = useState("");
   const [rankingDetalhado, setRankingDetalhado] = useState<DetalhePuxe[] | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [puxeViagensMap, setPuxeViagensMap] = useState<Map<string, number>>(new Map());
+  const [puxeViagensMap, setPuxeViagensMap] = useState<Map<string, { algodoeira: number; viagem: number }>>(new Map());
   const { records: cottonRecords } = useCottonPull();
 
   useEffect(() => {
@@ -111,16 +111,16 @@ const RelatorioGestaoPuxe = () => {
 
       // Buscar médias gerais DIRETO da tabela puxe_viagens
       // FILTRO: apenas viagens onde entrada E saída são NO MESMO DIA
-      const { data: viagensCompletas, error: erroViagens } = await supabase
+      const { data: viagensMedias, error: erroMedias } = await supabase
         .from("puxe_viagens")
         .select("hora_chegada, hora_saida, tempo_unidade_min, tempo_lavoura_min")
         .not("hora_chegada", "is", null)
         .not("hora_saida", "is", null)
         .not("tempo_unidade_min", "is", null);
 
-      if (!erroViagens && viagensCompletas && viagensCompletas.length > 0) {
+      if (!erroMedias && viagensMedias && viagensMedias.length > 0) {
         // Filtrar apenas viagens onde entrada e saída são no mesmo dia
-        const viagensMesmoDia = viagensCompletas.filter(v => {
+        const viagensMesmoDia = viagensMedias.filter(v => {
           const dataChegada = new Date(v.hora_chegada).toDateString();
           const dataSaida = new Date(v.hora_saida).toDateString();
           return dataChegada === dataSaida && (v.tempo_unidade_min || 0) > 0;
@@ -138,30 +138,43 @@ const RelatorioGestaoPuxe = () => {
         }
       }
 
-      // Buscar tempo_lavoura_min da tabela puxe_viagens para mapear por placa/data/hora
-      const { data: viagensLavoura, error: erroLavoura } = await supabase
-        .from("puxe_viagens")
-        .select("placa, data, hora_chegada, tempo_lavoura_min")
-        .not("tempo_lavoura_min", "is", null);
+      // Buscar tempo_lavoura_min da view view_relatorio_puxe que já tem tudo calculado
+      const { data: viagensRelatorio, error: erroRelatorio } = await supabase
+        .from("view_relatorio_puxe")
+        .select("placa, data, hora_chegada, tempo_unidade_min, tempo_lavoura_min");
 
-      if (!erroLavoura && viagensLavoura) {
-        const mapaViagens = new Map<string, number>();
-        console.log('=== DEBUG PUXE VIAGENS ===');
-        console.log('Total de registros com tempo_lavoura:', viagensLavoura.length);
+      if (!erroRelatorio && viagensRelatorio) {
+        const mapaViagens = new Map<string, { algodoeira: number; viagem: number }>();
+        console.log('=== DEBUG VIEW_RELATORIO_PUXE ===');
+        console.log('Total de registros:', viagensRelatorio.length);
         
-        viagensLavoura.forEach(v => {
-          // Criar chave: placa + data + hora
-          const hora = new Date(v.hora_chegada).toTimeString().substring(0, 5);
-          const key = `${v.placa}_${v.data}_${hora}`;
-          mapaViagens.set(key, v.tempo_lavoura_min || 0);
+        if (viagensRelatorio.length === 0) {
+          console.warn('⚠️ VIEW view_relatorio_puxe ESTÁ VAZIA!');
+          console.warn('Você precisa executar os seguintes scripts no Supabase SQL Editor:');
+          console.warn('1. create_puxe_views.sql (cria tabela, triggers e views)');
+          console.warn('2. migrate_historical_puxe_data.sql (migra dados históricos)');
+        } else {
+          viagensRelatorio.forEach(v => {
+            // Criar chave: placa + data + hora (extrair apenas HH:mm do timestamp)
+            const dataHora = new Date(v.hora_chegada);
+            const hora = dataHora.toTimeString().substring(0, 5); // HH:mm
+            const data = dataHora.toISOString().split('T')[0]; // yyyy-mm-dd
+            const key = `${v.placa}_${data}_${hora}`;
+            
+            mapaViagens.set(key, {
+              algodoeira: v.tempo_unidade_min || 0,
+              viagem: v.tempo_lavoura_min || 0
+            });
+            
+            // Log primeiros 5 para debug
+            if (mapaViagens.size <= 5) {
+              console.log(`Key: ${key}`);
+              console.log(`  Algodoeira: ${v.tempo_unidade_min}min, Viagem: ${v.tempo_lavoura_min}min`);
+            }
+          });
           
-          // Log primeiros 5 para debug
-          if (mapaViagens.size <= 5) {
-            console.log(`Key: ${key}, Tempo: ${v.tempo_lavoura_min}min`);
-          }
-        });
-        
-        console.log('Total de chaves no mapa:', mapaViagens.size);
+          console.log('Total de chaves no mapa:', mapaViagens.size);
+        }
         setPuxeViagensMap(mapaViagens);
       }
     } catch (error) {
@@ -212,7 +225,8 @@ const RelatorioGestaoPuxe = () => {
         
         // Buscar tempo viagem lavoura do mapa
         const mapKey = r.entry_time ? `${r.plate}_${r.date}_${r.entry_time}` : '';
-        const tempo_viagem_lavoura_min = mapKey ? puxeViagensMap.get(mapKey) || null : null;
+        const tempos = mapKey ? puxeViagensMap.get(mapKey) : null;
+        const tempo_viagem_lavoura_min = tempos?.viagem || null;
         
         return {
           ...r,
@@ -389,15 +403,16 @@ const RelatorioGestaoPuxe = () => {
                     // Buscar tempo de viagem lavoura do mapa puxe_viagens
                     if (r.entry_time) {
                       const mapKey = `${r.plate}_${r.date}_${r.entry_time}`;
-                      const tempoViagem = puxeViagensMap.get(mapKey);
+                      const tempos = puxeViagensMap.get(mapKey);
                       
                       // Debug: log primeiras tentativas
                       if (acc[key].viagens === 1) {
-                        console.log(`Buscando: ${mapKey}, Encontrado: ${tempoViagem || 'NÃO ENCONTRADO'}`);
+                        console.log(`Buscando: ${mapKey}`);
+                        console.log(`Encontrado:`, tempos || 'NÃO ENCONTRADO');
                       }
                       
-                      if (tempoViagem && tempoViagem > 0) {
-                        acc[key].tempoViagemLavoura += tempoViagem;
+                      if (tempos && tempos.viagem > 0) {
+                        acc[key].tempoViagemLavoura += tempos.viagem;
                       }
                     }
                     
@@ -534,7 +549,8 @@ const RelatorioGestaoPuxe = () => {
                         
                         // Buscar tempo viagem lavoura do mapa
                         const mapKey = r.entry_time ? `${r.plate}_${r.date}_${r.entry_time}` : '';
-                        const tempoViagemLavoura = mapKey ? puxeViagensMap.get(mapKey) || null : null;
+                        const tempos = mapKey ? puxeViagensMap.get(mapKey) : null;
+                        const tempoViagemLavoura = tempos?.viagem || null;
                         
                         // Debug primeiros registros
                         if (i < 3) {
@@ -543,7 +559,8 @@ const RelatorioGestaoPuxe = () => {
                             data: r.date,
                             hora: r.entry_time,
                             mapKey,
-                            tempoEncontrado: tempoViagemLavoura
+                            temposEncontrados: tempos,
+                            tempoViagem: tempoViagemLavoura
                           });
                         }
                         
