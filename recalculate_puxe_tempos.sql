@@ -5,7 +5,10 @@
 -- RECALCULAR TEMPOS DE LAVOURA (VIAGEM)
 -- ===========================================================
 
--- Para cada viagem, calcular o tempo entre a saída da viagem anterior
+-- PASSO 1: Desabilitar o trigger temporariamente para evitar conflito
+ALTER TABLE puxe_viagens DISABLE TRIGGER calcular_tempos_viagem_trigger;
+
+-- PASSO 2: Para cada viagem, calcular o tempo entre a saída da viagem anterior
 -- e a chegada desta viagem (para a mesma placa)
 UPDATE puxe_viagens pv1
 SET tempo_lavoura_min = EXTRACT(EPOCH FROM (pv1.hora_chegada - pv2.saida_anterior)) / 60,
@@ -25,6 +28,9 @@ FROM (
 ) pv2
 WHERE pv1.id = pv2.viagem_id
     AND pv2.saida_anterior IS NOT NULL;
+
+-- PASSO 3: Reabilitar o trigger
+ALTER TABLE puxe_viagens ENABLE TRIGGER calcular_tempos_viagem_trigger;
 
 -- Verificar resultados
 SELECT 

@@ -65,6 +65,8 @@ const RelatorioGestaoPuxe = () => {
   const [mediasGerais, setMediasGerais] = useState({ algodoeira: 0, viagem: 0, totalViagens: 0 });
   const [filtroMotorista, setFiltroMotorista] = useState("");
   const [filtroPlaca, setFiltroPlaca] = useState("");
+  const [filtroDataInicial, setFiltroDataInicial] = useState("");
+  const [filtroDataFinal, setFiltroDataFinal] = useState("");
   const [rankingDetalhado, setRankingDetalhado] = useState<DetalhePuxe[] | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [puxeViagensMap, setPuxeViagensMap] = useState<Map<string, { algodoeira: number; viagem: number }>>(new Map());
@@ -358,25 +360,21 @@ const RelatorioGestaoPuxe = () => {
           <Card className="bg-gray-900/40 border-gray-700">
             <CardHeader>
               <CardTitle className="text-lg font-semibold text-emerald-400">
-                Resumo Diário - Últimos 7 Dias
+                Resumo Diário - Hoje
               </CardTitle>
-              <p className="text-sm text-gray-400 mt-1">Performance por veículo</p>
+              <p className="text-sm text-gray-400 mt-1">Performance de hoje por veículo</p>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {(() => {
-                  // Agrupar registros dos últimos 7 dias por placa
+                  // Agrupar registros APENAS de HOJE por placa
                   const hoje = new Date();
-                  const seteDiasAtras = new Date(hoje);
-                  seteDiasAtras.setDate(hoje.getDate() - 7);
+                  const dataHoje = hoje.toISOString().split('T')[0];
                   
-                  const registrosRecentes = cottonRecords.filter(r => {
-                    const dataRegistro = new Date(r.date);
-                    return dataRegistro >= seteDiasAtras && dataRegistro <= hoje;
-                  });
+                  const registrosHoje = cottonRecords.filter(r => r.date === dataHoje);
 
                   // Agrupar por placa
-                  const porPlaca = registrosRecentes.reduce((acc, r) => {
+                  const porPlaca = registrosHoje.reduce((acc, r) => {
                     const key = r.plate;
                     if (!acc[key]) {
                       acc[key] = {
@@ -479,7 +477,25 @@ const RelatorioGestaoPuxe = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Data Inicial</label>
+                  <Input
+                    type="date"
+                    value={filtroDataInicial}
+                    onChange={(e) => setFiltroDataInicial(e.target.value)}
+                    className="bg-gray-800 border-gray-700 text-white"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Data Final</label>
+                  <Input
+                    type="date"
+                    value={filtroDataFinal}
+                    onChange={(e) => setFiltroDataFinal(e.target.value)}
+                    className="bg-gray-800 border-gray-700 text-white"
+                  />
+                </div>
                 <div>
                   <label className="text-sm text-gray-400 mb-2 block">Motorista</label>
                   <Input
@@ -509,11 +525,16 @@ const RelatorioGestaoPuxe = () => {
                 Relatório Carga a Carga
               </CardTitle>
               <p className="text-sm text-gray-400 mt-1">
-                {cottonRecords
-                  .filter(r => 
+                {(() => {
+                  const registrosFiltrados = cottonRecords.filter(r => 
                     (!filtroMotorista || r.driver.toLowerCase().includes(filtroMotorista.toLowerCase())) &&
-                    (!filtroPlaca || r.plate.toLowerCase().includes(filtroPlaca.toLowerCase()))
-                  ).length} registros encontrados
+                    (!filtroPlaca || r.plate.toLowerCase().includes(filtroPlaca.toLowerCase())) &&
+                    (!filtroDataInicial || r.date >= filtroDataInicial) &&
+                    (!filtroDataFinal || r.date <= filtroDataFinal)
+                  );
+                  const totalRolos = registrosFiltrados.reduce((sum, r) => sum + r.rolls, 0);
+                  return `${registrosFiltrados.length} registros encontrados | Total: ${totalRolos.toLocaleString('pt-BR')} rolos`;
+                })()}
               </p>
             </CardHeader>
             <CardContent>
@@ -537,7 +558,9 @@ const RelatorioGestaoPuxe = () => {
                     {cottonRecords
                       .filter(r => 
                         (!filtroMotorista || r.driver.toLowerCase().includes(filtroMotorista.toLowerCase())) &&
-                        (!filtroPlaca || r.plate.toLowerCase().includes(filtroPlaca.toLowerCase()))
+                        (!filtroPlaca || r.plate.toLowerCase().includes(filtroPlaca.toLowerCase())) &&
+                        (!filtroDataInicial || r.date >= filtroDataInicial) &&
+                        (!filtroDataFinal || r.date <= filtroDataFinal)
                       )
                       .sort((a, b) => `${b.date} ${b.entry_time}`.localeCompare(`${a.date} ${a.entry_time}`))
                       .slice(0, 100)
