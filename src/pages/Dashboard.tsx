@@ -961,7 +961,7 @@ const Dashboard = () => {
                             </div>
                             <div className="text-xs text-muted-foreground">
                               <p className="truncate">{loading.driver}</p>
-                              <p className="truncate">{loading.carrier}</p>
+                              <p className="truncate font-medium text-purple-600">{loading.carrier}</p>
                               {loading.entry_time && (
                                 <p className="text-orange-600 font-medium">
                                   Iniciado: {loading.entry_time}

@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { MaterialReceipt } from "@/lib/supabase";
 import { useMaterialReceipts } from "@/hooks/use-material-receipts";
+import { getTodayLocalDate } from "@/lib/date-utils";
 
 const MaterialReceipts = () => {
   const { records, loading, addRecord, updateRecord, deleteRecord } = useMaterialReceipts();
@@ -298,7 +299,7 @@ const MaterialReceipts = () => {
                 <Input 
                   name="date" 
                   type="date" 
-                  defaultValue={selectedRecord?.date || new Date().toISOString().split('T')[0]}
+                  defaultValue={selectedRecord?.date || getTodayLocalDate()}
                   required 
                 />
               </div>

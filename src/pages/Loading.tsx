@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useLoadingRecords } from "@/hooks/use-supabase";
 import { LoadingRecord } from "@/lib/supabase";
+import { getTodayLocalDate } from "@/lib/date-utils";
 
 const Loading = () => {
   const navigate = useNavigate();
@@ -317,7 +318,7 @@ const Loading = () => {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid sm:grid-cols-3 gap-4">
-                <div className="space-y-2"><Label>Data</Label><Input type="date" name="date" required defaultValue={new Date().toISOString().split('T')[0]} /></div>
+                <div className="space-y-2"><Label>Data</Label><Input type="date" name="date" required defaultValue={getTodayLocalDate()} /></div>
                 <div className="space-y-2"><Label>Hora</Label><Input type="time" name="time" required /></div>
                 <div className="space-y-2"><Label>Produto</Label>
                   {!isCreatingNewProduct ? (
@@ -965,7 +966,7 @@ const Loading = () => {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Data de Entrada</Label>
-                <Input type="date" id="entryDate" defaultValue={new Date().toISOString().split('T')[0]} />
+                <Input type="date" id="entryDate" defaultValue={getTodayLocalDate()} />
               </div>
               <div className="space-y-2">
                 <Label>Hora de Entrada</Label>
@@ -1018,7 +1019,7 @@ const Loading = () => {
               </div>
               <div className="space-y-2">
                 <Label>Data de Saída</Label>
-                <Input type="date" id="exitDate" defaultValue={new Date().toISOString().split('T')[0]} />
+                <Input type="date" id="exitDate" defaultValue={getTodayLocalDate()} />
               </div>
               <div className="space-y-2">
                 <Label>Hora de Saída</Label>
