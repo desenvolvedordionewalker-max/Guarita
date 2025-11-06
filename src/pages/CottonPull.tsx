@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Plus, Package, Loader2, Trash2, Edit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useCottonPull, useProducers } from "@/hooks/use-supabase";
+import { useCottonPull, useProducers, usePuxeViagens } from "@/hooks/use-supabase";
 import { supabase, CottonPull as CottonPullRecord } from "@/lib/supabase";
 
 const CottonPull = () => {
@@ -18,6 +18,7 @@ const CottonPull = () => {
   const { toast } = useToast();
   const { records, loading, addRecord, updateRecord, deleteRecord } = useCottonPull();
   const { producers, loading: loadingProducers } = useProducers();
+  const { addViagem, updateViagem } = usePuxeViagens();
   const [selectedRecord, setSelectedRecord] = useState<CottonPullRecord | null>(null);
   const [exitModalOpen, setExitModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -187,7 +188,20 @@ const CottonPull = () => {
     }
 
     try {
-      await addRecord(recordData);
+      const newRecord = await addRecord(recordData);
+      
+      // Registrar também na tabela de viagens para gestão de tempos
+      if (newRecord && newRecord.id) {
+        const horaChegada = new Date(`${date}T${entryTime}:00`);
+        await addViagem({
+          placa: plate.toUpperCase(),
+          motorista: driver,
+          fazenda_origem: farm,
+          data: date,
+          hora_chegada: horaChegada.toISOString(),
+        });
+      }
+      
       // Reset do formulário de forma segura
       const form = e.currentTarget;
       if (form) {
@@ -231,8 +245,32 @@ const CottonPull = () => {
     }
 
     try {
-      // Usar o hook updateRecord ao invés do supabase direto
+      // Encontrar o registro que está saindo
+      const record = records.find(r => r.id === exitRecordId);
+      
+      // Atualizar cotton_pull
       await updateRecord(exitRecordId, { exit_time: exitTime });
+
+      // Atualizar também a tabela de viagens com hora de saída
+      if (record) {
+        const horaSaida = new Date(`${record.date}T${exitTime}:00`);
+        
+        // Buscar a viagem correspondente na tabela puxe_viagens
+        const { data: viagens } = await supabase
+          .from('puxe_viagens')
+          .select('*')
+          .eq('placa', record.plate)
+          .eq('data', record.date)
+          .is('hora_saida', null)
+          .order('hora_chegada', { ascending: false })
+          .limit(1);
+        
+        if (viagens && viagens.length > 0) {
+          await updateViagem(viagens[0].id, {
+            hora_saida: horaSaida.toISOString()
+          });
+        }
+      }
 
       toast({
         title: "Saída registrada",
