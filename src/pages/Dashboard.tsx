@@ -32,6 +32,7 @@ import { useMaterialReceipts } from "@/hooks/use-material-receipts";
 import { LoadingRecord } from "@/lib/supabase";
 import QueueDisplay from "@/components/QueueDisplay";
 import { useTheme } from "@/lib/theme";
+import { useToast } from "@/hooks/use-toast";
 import logo from "@/assets/BF_logo.png";
 
 // Função helper para converter texto para Title Case
@@ -42,6 +43,7 @@ const toTitleCase = (str: string): string => {
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const { vehicles, loading: loadingVehicles, updateVehicle } = useVehicles();
   const { records: cottonRecords, loading: loadingCotton, updateRecord: updateCottonRecord } = useCottonPull();
   const { records: rainRecords, loading: loadingRain } = useRainRecords();
@@ -132,26 +134,45 @@ const Dashboard = () => {
     const exitDate = formData.get('exitDate') as string;
     const exitTime = formData.get('exitTime') as string;
     const invoiceNumber = formData.get('invoiceNumber') as string;
+    const destination = formData.get('destination') as string;
+    const client = formData.get('client') as string;
     const weight = formData.get('weight') as string;
     const bales = formData.get('bales') as string;
+
+    // Validação: hora de saída obrigatória para remover da lista
+    if (!exitDate || !exitTime) {
+      toast({
+        title: "Hora de saída obrigatória",
+        description: "Para remover da lista, informe a hora de saída.",
+        variant: "destructive"
+      });
+      return;
+    }
 
     // Determinar quais campos enviar baseado no produto
     const updateData: Partial<LoadingRecord> = {
       exit_date: exitDate,
       exit_time: exitTime,
-      invoice_number: invoiceNumber
+      invoice_number: invoiceNumber || selectedLoading.invoice_number || null,
+      destination: destination || selectedLoading.destination,
+      client: client || selectedLoading.client || "",
+      status: 'concluido' // Com hora de saída = concluído
     };
 
     // Caroço e Briquete usam peso
     if (selectedLoading.product === 'Caroço' || selectedLoading.product === 'Briquete') {
       if (weight) {
         updateData.weight = parseFloat(weight);
+      } else {
+        updateData.weight = selectedLoading.weight;
       }
     }
     // Pluma e Fibrilha usam fardos
     else if (selectedLoading.product === 'Pluma' || selectedLoading.product === 'Fibrilha') {
       if (bales) {
         updateData.bales = parseInt(bales);
+      } else {
+        updateData.bales = selectedLoading.bales;
       }
     }
 
@@ -160,10 +181,61 @@ const Dashboard = () => {
       
       setIsManageModalOpen(false);
       setSelectedLoading(null);
+      
+      toast({
+        title: "Carregamento finalizado!",
+        description: `Placa ${selectedLoading.plate} saiu às ${exitTime}`,
+      });
     } catch (error) {
       console.error('Erro ao finalizar carregamento:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível finalizar o carregamento.",
+        variant: "destructive"
+      });
     }
-  };  const getProductColor = (product: string) => {
+  };
+
+  // Função para marcar como carregado sem hora de saída
+  const handleMarkAsLoaded = async () => {
+    if (!selectedLoading) return;
+    
+    // Pega valores do formulário
+    const invoiceNumber = (document.getElementById("invoiceNumber") as HTMLInputElement)?.value;
+    const destination = (document.getElementById("dashDestination") as HTMLInputElement)?.value;
+    const client = (document.getElementById("dashClient") as HTMLInputElement)?.value;
+    const bales = Number((document.getElementById("bales") as HTMLInputElement)?.value || 0);
+    const weight = Number((document.getElementById("weight") as HTMLInputElement)?.value || 0);
+    
+    const updateData: Partial<LoadingRecord> = {
+      status: 'carregado',
+      invoice_number: invoiceNumber || selectedLoading.invoice_number || null,
+      destination: destination || selectedLoading.destination,
+      client: client || selectedLoading.client || "",
+      bales: bales || selectedLoading.bales,
+      weight: weight || selectedLoading.weight,
+    };
+
+    try {
+      await updateRecord(selectedLoading.id, updateData);
+      setIsManageModalOpen(false);
+      setSelectedLoading(null);
+      
+      toast({
+        title: "Marcado como Carregado!",
+        description: `Placa ${selectedLoading.plate} - Aguardando hora de saída.`,
+      });
+    } catch (error) {
+      console.error('Erro:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const getProductColor = (product: string) => {
     switch (product) {
       case 'Pluma':
         return 'border-l-yellow-500 bg-yellow-50 text-yellow-800';
@@ -311,9 +383,9 @@ const Dashboard = () => {
     (!l.status && l.entry_date && !l.exit_date)
   );
   
-  // CONCLUÍDOS: status 'concluido' OU (não tem status E saiu hoje)
+  // CONCLUÍDOS: status 'concluido' E saiu hoje OU (não tem status E saiu hoje)
   const loadingsConcluidos = loadingRecords.filter(l => 
-    l.status === 'concluido' || 
+    (l.status === 'concluido' && l.exit_date === today) || 
     (!l.status && l.exit_date === today)
   );
 
@@ -1292,6 +1364,28 @@ const Dashboard = () => {
               ) : (
                 // Formulário para FINALIZAR carregamento
                 <form onSubmit={handleFinishLoading} className="space-y-4">
+                  <div className="space-y-2 border-b pb-4">
+                    <Label htmlFor="dashDestination">Destino</Label>
+                    <Input
+                      id="dashDestination"
+                      name="destination"
+                      type="text"
+                      placeholder="Digite ou confirme o destino"
+                      defaultValue={selectedLoading.destination || ""}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="dashClient">Cliente (opcional)</Label>
+                    <Input
+                      id="dashClient"
+                      name="client"
+                      type="text"
+                      placeholder="Digite o nome do cliente"
+                      defaultValue={selectedLoading.client || ""}
+                    />
+                  </div>
+                  
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="exitDate">Data de Saída</Label>
@@ -1316,20 +1410,20 @@ const Dashboard = () => {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="invoiceNumber">Número da Nota Fiscal *</Label>
+                    <Label htmlFor="invoiceNumber">Número da Nota Fiscal</Label>
                     <Input
                       id="invoiceNumber"
                       name="invoiceNumber"
                       type="text"
                       placeholder="Ex: 123.456"
-                      required
+                      defaultValue={selectedLoading.invoice_number || ""}
                     />
                   </div>
 
                   {/* Campos condicionais baseados no produto */}
                   {(selectedLoading.product === 'Caroço' || selectedLoading.product === 'Briquete') && (
                     <div className="space-y-2">
-                      <Label htmlFor="weight">Peso (kg) *</Label>
+                      <Label htmlFor="weight">Peso (kg)</Label>
                       <Input
                         id="weight"
                         name="weight"
@@ -1337,24 +1431,39 @@ const Dashboard = () => {
                         step="0.01"
                         placeholder="Peso em kg"
                         defaultValue={selectedLoading.weight || ""}
-                        required
                       />
                     </div>
                   )}
 
                   {(selectedLoading.product === 'Pluma' || selectedLoading.product === 'Fibrilha') && (
                     <div className="space-y-2">
-                      <Label htmlFor="bales">Fardos *</Label>
+                      <Label htmlFor="bales">Fardos</Label>
                       <Input
                         id="bales"
                         name="bales"
                         type="number"
                         placeholder="Quantidade de fardos"
                         defaultValue={selectedLoading.bales || ""}
-                        required
                       />
                     </div>
                   )}
+                  
+                  <div className="space-y-2">
+                    <Button 
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleMarkAsLoaded();
+                      }}
+                      className="w-full bg-orange-500 hover:bg-orange-600"
+                      variant="outline"
+                    >
+                      📦 Carregado (aguardando saída)
+                    </Button>
+                    <p className="text-xs text-muted-foreground text-center">
+                      Caminhão carregado mas ainda não saiu. Salva os dados acima.
+                    </p>
+                  </div>
 
                   <DialogFooter className="gap-2">
                     <Button 
@@ -1365,7 +1474,7 @@ const Dashboard = () => {
                       Cancelar
                     </Button>
                     <Button type="submit" className="bg-green-600 hover:bg-green-700">
-                      Finalizar Carregamento
+                      ✅ Saiu - Finalizar e Remover
                     </Button>
                   </DialogFooter>
                 </form>

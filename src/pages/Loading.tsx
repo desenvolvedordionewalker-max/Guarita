@@ -221,36 +221,32 @@ const Loading = () => {
     const bales = Number((document.getElementById("bales") as HTMLInputElement)?.value || 0);
     const weight = Number((document.getElementById("weight") as HTMLInputElement)?.value || 0);
     
-    // Validação: Para concluir completamente precisa de exit_date, exit_time, invoice, bales e weight
+    // Para concluir COMPLETAMENTE (e remover da lista), precisa de hora de saída
     if (!exitDate || !exitTime) {
-      toast({ title: "Campos obrigatórios", description: "Para finalizar completamente, preencha data e hora de saída.", variant: "destructive" });
-      return;
-    }
-    
-    if (!invoiceNumber || !bales || !weight) {
       toast({ 
-        title: "Dados incompletos", 
-        description: "Para finalizar completamente, preencha Nota Fiscal, Peso e Fardos.", 
+        title: "Hora de saída obrigatória", 
+        description: "Para remover da lista, informe a hora de saída do caminhão.", 
         variant: "destructive" 
       });
       return;
     }
     
     try {
+      // Atualiza com os dados disponíveis + hora de saída = status concluido
       await updateRecord(selectedLoading.id, {
         exit_date: exitDate,
         exit_time: exitTime,
-        invoice_number: invoiceNumber,
+        invoice_number: invoiceNumber || selectedLoading.invoice_number || null,
         destination: destination || selectedLoading.destination,
         client: client || selectedLoading.client || "",
-        bales,
-        weight,
-        status: 'concluido' // Marca como totalmente concluído
+        bales: bales || selectedLoading.bales,
+        weight: weight || selectedLoading.weight,
+        status: 'concluido' // Com hora de saída = concluído e some da lista
       });
       setIsDialogOpen(false);
       toast({
         title: "Carregamento finalizado!",
-        description: `Placa ${selectedLoading.plate} - Nota Fiscal: ${invoiceNumber}`,
+        description: `Placa ${selectedLoading.plate} saiu às ${exitTime}`,
       });
     } catch (error) {
       console.error('Erro ao finalizar carregamento:', error);
@@ -266,14 +262,27 @@ const Loading = () => {
   const handleMarkAsLoaded = async () => {
     if (!selectedLoading) return;
     
+    // Pega os valores dos campos se foram preenchidos
+    const invoiceNumber = (document.getElementById("invoiceNumber") as HTMLInputElement)?.value;
+    const destination = (document.getElementById("confirmDestinationExit") as HTMLInputElement)?.value;
+    const client = (document.getElementById("confirmClientExit") as HTMLInputElement)?.value;
+    const bales = Number((document.getElementById("bales") as HTMLInputElement)?.value || 0);
+    const weight = Number((document.getElementById("weight") as HTMLInputElement)?.value || 0);
+    
     try {
       await updateRecord(selectedLoading.id, {
-        status: 'carregado' // Marca como carregado mas não concluído
+        status: 'carregado', // Marca como carregado mas não concluído
+        // Salva os dados que foram preenchidos
+        invoice_number: invoiceNumber || selectedLoading.invoice_number || null,
+        destination: destination || selectedLoading.destination,
+        client: client || selectedLoading.client || "",
+        bales: bales || selectedLoading.bales,
+        weight: weight || selectedLoading.weight,
       });
       setIsDialogOpen(false);
       toast({
         title: "Marcado como Carregado!",
-        description: `Placa ${selectedLoading.plate} - Aguardando dados finais para conclusão.`,
+        description: `Placa ${selectedLoading.plate} - Aguardando hora de saída para conclusão.`,
       });
     } catch (error) {
       console.error('Erro ao marcar como carregado:', error);
@@ -452,8 +461,8 @@ const Loading = () => {
               </div>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Destino</Label>
-                  <Select name="destination" required>
+                  <Label>Destino (opcional)</Label>
+                  <Select name="destination">
                     <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                     <SelectContent>
                       {destinations.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
@@ -1095,18 +1104,18 @@ const Loading = () => {
                   className="w-full bg-orange-500 hover:bg-orange-600"
                   variant="outline"
                 >
-                  ✓ Marcar como Carregado (sem finalizar)
+                  📦 Carregado (aguardando saída)
                 </Button>
                 <p className="text-xs text-muted-foreground text-center">
-                  Use este botão se o caminhão está carregado mas faltam dados (NF, peso, etc)
+                  Caminhão carregado mas ainda não saiu. Salva os dados preenchidos acima.
                 </p>
               </div>
               
               <Button onClick={handleCompleteLoading} className="w-full bg-success hover:bg-success/90">
-                ✓✓ Concluir Completamente
+                ✅ Saiu - Finalizar e Remover
               </Button>
               <p className="text-xs text-muted-foreground text-center">
-                Preencha todos os campos acima para finalizar e remover da lista
+                Caminhão saiu. Preencha hora de saída acima para remover da lista.
               </p>
             </div>
           )}
