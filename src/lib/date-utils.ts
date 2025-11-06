@@ -22,19 +22,9 @@ export function getTodayLocalDate(): string {
 export function normalizeLocalDate(dateString: string): string {
   if (!dateString) return getTodayLocalDate();
   
-  // Se já está no formato correto YYYY-MM-DD, parse localmente
-  const parts = dateString.split('-');
-  if (parts.length === 3) {
-    const year = parseInt(parts[0]);
-    const month = parseInt(parts[1]);
-    const day = parseInt(parts[2]);
-    
-    // Cria data no timezone local (meio-dia para evitar mudanças de DST)
-    const localDate = new Date(year, month - 1, day, 12, 0, 0);
-    
-    return `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-${String(localDate.getDate()).padStart(2, '0')}`;
-  }
-  
+  // O input date já retorna no formato YYYY-MM-DD
+  // Apenas retornamos o valor exatamente como veio, sem fazer parse
+  // Isso evita qualquer conversão de timezone
   return dateString;
 }
 
