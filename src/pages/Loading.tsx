@@ -37,6 +37,7 @@ const Loading = () => {
   const [selectedLoading, setSelectedLoading] = useState<LoadingRecord | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [modalAction, setModalAction] = useState<'escolher' | 'carregado' | 'saiu'>('escolher');
   const [newTruckType, setNewTruckType] = useState("");
   const [newCarrier, setNewCarrier] = useState("");
   const [newDestination, setNewDestination] = useState("");
@@ -143,6 +144,7 @@ const Loading = () => {
   const handleCardClick = (loading: LoadingRecord) => { 
     setSelectedLoading(loading); 
     setIsEditMode(false);
+    setModalAction('escolher');
     setIsDialogOpen(true); 
   };
 
@@ -1069,71 +1071,156 @@ const Loading = () => {
 
           {/* Modo Gerenciamento - Concluir Carregamento */}
           {!isEditMode && selectedLoading && selectedLoading.entry_date && !selectedLoading.exit_date && (
-            <div className="space-y-4">
-              <div className="space-y-2 border-b pb-4">
-                <Label>Confirmar Destino</Label>
-                <Input 
-                  type="text" 
-                  id="confirmDestinationExit" 
-                  placeholder="Digite ou confirme o destino"
-                  defaultValue={selectedLoading.destination || ""} 
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Cliente (opcional)</Label>
-                <Input 
-                  type="text" 
-                  id="confirmClientExit" 
-                  placeholder="Digite o nome do cliente"
-                  defaultValue={selectedLoading.client || ""} 
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Data de Saída</Label>
-                <Input type="date" id="exitDate" defaultValue={getTodayLocalDate()} />
-              </div>
-              <div className="space-y-2">
-                <Label>Hora de Saída</Label>
-                <Input type="time" id="exitTime" />
-              </div>
-              <div className="space-y-2">
-                <Label>Número da Nota Fiscal</Label>
-                <Input type="text" id="invoiceNumber" placeholder="Digite o número da NF" />
-              </div>
-              {selectedLoading.product === "Pluma" && (
-                <div className="space-y-2">
-                  <Label>Fardos</Label>
-                  <Input type="number" id="bales" placeholder="Quantidade de fardos" />
+            <>
+              {modalAction === 'escolher' ? (
+                <div className="space-y-4">
+                  <div className="text-center mb-6">
+                    <p className="text-sm text-muted-foreground mb-4">
+                      O caminhão já está carregado ou ainda está aguardando a nota fiscal?
+                    </p>
+                  </div>
+                  
+                  <Button 
+                    onClick={() => setModalAction('carregado')} 
+                    className="w-full h-auto py-6 bg-orange-500 hover:bg-orange-600 flex flex-col items-center gap-2"
+                  >
+                    <Package className="w-8 h-8" />
+                    <span className="text-lg font-bold">CARREGADO</span>
+                    <span className="text-xs font-normal">Aguardando NF</span>
+                  </Button>
+                  
+                  <Button 
+                    onClick={() => setModalAction('saiu')} 
+                    className="w-full h-auto py-6 bg-green-600 hover:bg-green-700 flex flex-col items-center gap-2"
+                  >
+                    <CheckCircle className="w-8 h-8" />
+                    <span className="text-lg font-bold">SAIR</span>
+                    <span className="text-xs font-normal">Já pegou a NF - Sair da unidade</span>
+                  </Button>
+                </div>
+              ) : modalAction === 'carregado' ? (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold">📦 Carregado - Aguardando NF</h3>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => setModalAction('escolher')}
+                    >
+                      ← Voltar
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-2 border-b pb-4">
+                    <Label>Confirmar Destino</Label>
+                    <Input 
+                      type="text" 
+                      id="confirmDestinationExit" 
+                      placeholder="Digite ou confirme o destino"
+                      defaultValue={selectedLoading.destination || ""} 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Cliente (opcional)</Label>
+                    <Input 
+                      type="text" 
+                      id="confirmClientExit" 
+                      placeholder="Digite o nome do cliente"
+                      defaultValue={selectedLoading.client || ""} 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Número da Nota Fiscal (opcional)</Label>
+                    <Input type="text" id="invoiceNumber" placeholder="Digite o número da NF se tiver" />
+                  </div>
+                  {selectedLoading.product === "Pluma" && (
+                    <div className="space-y-2">
+                      <Label>Fardos (opcional)</Label>
+                      <Input type="number" id="bales" placeholder="Quantidade de fardos" />
+                    </div>
+                  )}
+                  {(selectedLoading.product === "Caroço" || selectedLoading.product === "Briquete") && (
+                    <div className="space-y-2">
+                      <Label>Peso em kg (opcional)</Label>
+                      <Input type="number" id="weight" placeholder="Peso em quilogramas" />
+                    </div>
+                  )}
+                  
+                  <Button 
+                    onClick={handleMarkAsLoaded} 
+                    className="w-full bg-orange-500 hover:bg-orange-600"
+                  >
+                    ✅ Confirmar - Carregado (fica visível na lista)
+                  </Button>
+                  <p className="text-xs text-muted-foreground text-center">
+                    Salva os dados e mantém o caminhão visível com badge de alerta para registrar saída depois.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold">✅ Finalizar e Remover</h3>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => setModalAction('escolher')}
+                    >
+                      ← Voltar
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-2 border-b pb-4">
+                    <Label>Confirmar Destino</Label>
+                    <Input 
+                      type="text" 
+                      id="confirmDestinationExit" 
+                      placeholder="Digite ou confirme o destino"
+                      defaultValue={selectedLoading.destination || ""} 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Cliente (opcional)</Label>
+                    <Input 
+                      type="text" 
+                      id="confirmClientExit" 
+                      placeholder="Digite o nome do cliente"
+                      defaultValue={selectedLoading.client || ""} 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Data de Saída</Label>
+                    <Input type="date" id="exitDate" defaultValue={getTodayLocalDate()} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Hora de Saída *</Label>
+                    <Input type="time" id="exitTime" required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Número da Nota Fiscal</Label>
+                    <Input type="text" id="invoiceNumber" placeholder="Digite o número da NF" />
+                  </div>
+                  {selectedLoading.product === "Pluma" && (
+                    <div className="space-y-2">
+                      <Label>Fardos</Label>
+                      <Input type="number" id="bales" placeholder="Quantidade de fardos" />
+                    </div>
+                  )}
+                  {(selectedLoading.product === "Caroço" || selectedLoading.product === "Briquete") && (
+                    <div className="space-y-2">
+                      <Label>Peso (kg)</Label>
+                      <Input type="number" id="weight" placeholder="Peso em quilogramas" />
+                    </div>
+                  )}
+                  
+                  <Button onClick={handleCompleteLoading} className="w-full bg-success hover:bg-success/90">
+                    ✅ Confirmar Saída - Finalizar e Remover
+                  </Button>
+                  <p className="text-xs text-muted-foreground text-center">
+                    Caminhão saiu. Será removido da lista após confirmar.
+                  </p>
                 </div>
               )}
-              {(selectedLoading.product === "Caroço" || selectedLoading.product === "Briquete") && (
-                <div className="space-y-2">
-                  <Label>Peso (kg)</Label>
-                  <Input type="number" id="weight" placeholder="Peso em quilogramas" />
-                </div>
-              )}
-              
-              {/* Dois botões: Marcar como Carregado (rápido) ou Concluir Completamente */}
-              <div className="space-y-2">
-                <Button 
-                  onClick={handleMarkAsLoaded} 
-                  className="w-full bg-orange-500 hover:bg-orange-600"
-                  variant="outline"
-                >
-                  📦 Carregado (aguardando saída)
-                </Button>
-                <p className="text-xs text-muted-foreground text-center">
-                  Caminhão carregado mas ainda não saiu. Salva os dados preenchidos acima.
-                </p>
-              </div>
-              
-              <Button onClick={handleCompleteLoading} className="w-full bg-success hover:bg-success/90">
-                ✅ Saiu - Finalizar e Remover
-              </Button>
-              <p className="text-xs text-muted-foreground text-center">
-                Caminhão saiu. Preencha hora de saída acima para remover da lista.
-              </p>
-            </div>
+            </>
           )}
         </DialogContent>
       </Dialog>
