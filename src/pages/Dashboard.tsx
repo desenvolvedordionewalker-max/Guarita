@@ -383,15 +383,16 @@ const Dashboard = () => {
     (!l.status && l.entry_date && !l.exit_date)
   );
   
-  // CONCLUÍDOS: status 'concluido' (com ou sem exit_date) OU (não tem status E saiu hoje)
-  // Mostra todos concluídos que saíram hoje
+  // CONCLUÍDOS: Todos que saíram hoje (independente de status)
+  // Por enquanto, até executar o SQL para criar coluna status
   const loadingsConcluidos = loadingRecords.filter(l => {
-    // Se tem status concluido E (exit_date é hoje OU não tem exit_date ainda mas foi marcado como concluído hoje)
-    if (l.status === 'concluido') {
-      return l.exit_date === today || !l.exit_date;
-    }
-    // Fallback para registros antigos sem status
-    return !l.status && l.exit_date === today;
+    // Se tem exit_date de hoje = concluído
+    if (l.exit_date === today) return true;
+    
+    // Se tem status concluido mas sem exit_date ainda
+    if (l.status === 'concluido') return true;
+    
+    return false;
   });
 
   // Apenas veículos (separado dos carregamentos)

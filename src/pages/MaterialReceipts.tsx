@@ -41,10 +41,6 @@ const MaterialReceipts = () => {
     const quantity = parseFloat(formData.get("quantity") as string);
     const unitType = formData.get("unit_type") as MaterialReceipt['unit_type'];
     
-    const rawDate = formData.get("date") as string;
-    console.log('Data do formulário:', rawDate);
-    console.log('Data normalizada:', normalizeLocalDate(rawDate));
-    
     const recordData: Omit<MaterialReceipt, 'id' | 'created_at' | 'updated_at'> = {
       date: normalizeLocalDate(formData.get("date") as string),
       entry_time: formData.get("time") as string,
