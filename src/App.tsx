@@ -8,6 +8,7 @@ import Dashboard from "./pages/Dashboard";
 import DashboardPortaria from "./pages/DashboardPortaria";
 import Vehicles from "./pages/Vehicles";
 import CottonPull from "./pages/CottonPull";
+import CottonPullHistory from "./pages/CottonPullHistory";
 import Loading from "./pages/Loading";
 import Rain from "./pages/Rain";
 import Equipment from "./pages/Equipment";
@@ -30,6 +31,7 @@ const App = () => (
           <Route path="/dashboard-tv" element={<DashboardPortaria />} />
           <Route path="/vehicles" element={<Vehicles />} />
           <Route path="/cotton-pull" element={<CottonPull />} />
+          <Route path="/cotton-pull/history" element={<CottonPullHistory />} />
           <Route path="/loading" element={<Loading />} />
           <Route path="/rain" element={<Rain />} />
           <Route path="/equipment" element={<Equipment />} />

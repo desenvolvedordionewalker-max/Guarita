@@ -59,8 +59,6 @@ const CottonPull = () => {
     }
   }, [searchParams, records, setSearchParams, updateRecord, toast]);
 
-  const totalRolls = records.reduce((sum, record) => sum + record.rolls, 0);
-
   const handleEditRecord = (record: CottonPullRecord) => {
     setEditingRecord(record);
     setEditModalOpen(true);
@@ -104,9 +102,20 @@ const CottonPull = () => {
     }
   };
   
+  // Data de hoje no formato YYYY-MM-DD
+  const today = new Date().toISOString().split('T')[0];
+  
   // Separar registros por status de exit_time
   const pendingExits = records.filter(record => !record.exit_time);
   const completed = records.filter(record => record.exit_time);
+  
+  // Registros a serem exibidos: todos os pendentes + finalizados de hoje
+  const recordsToShow = records.filter(record => 
+    !record.exit_time || record.date === today
+  );
+  
+  // Totalizadores baseados nos registros visíveis
+  const totalRollsToday = recordsToShow.reduce((sum, record) => sum + record.rolls, 0);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -280,7 +289,7 @@ const CottonPull = () => {
           <Card>
             <CardContent className="pt-6">
               <div className="text-center">
-                <p className="text-3xl font-bold text-secondary">{totalRolls}</p>
+                <p className="text-3xl font-bold text-secondary">{totalRollsToday}</p>
                 <p className="text-sm text-muted-foreground">Total de Rolos Hoje</p>
               </div>
             </CardContent>
@@ -288,7 +297,7 @@ const CottonPull = () => {
           <Card>
             <CardContent className="pt-6">
               <div className="text-center">
-                <p className="text-3xl font-bold text-secondary">{records.length}</p>
+                <p className="text-3xl font-bold text-secondary">{recordsToShow.length}</p>
                 <p className="text-sm text-muted-foreground">Carregamentos</p>
               </div>
             </CardContent>
@@ -297,7 +306,7 @@ const CottonPull = () => {
             <CardContent className="pt-6">
               <div className="text-center">
                 <p className="text-3xl font-bold text-secondary">
-                  {new Set(records.map(r => r.producer)).size}
+                  {new Set(recordsToShow.map(r => r.producer)).size}
                 </p>
                 <p className="text-sm text-muted-foreground">Produtoras</p>
               </div>
@@ -440,11 +449,23 @@ const CottonPull = () => {
           <div className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Registros de Hoje</CardTitle>
-                <CardDescription>{records.length} puxes realizados - Total: {totalRolls} rolos</CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Registros de Hoje</CardTitle>
+                    <CardDescription>{recordsToShow.length} puxes realizados - Total: {totalRollsToday} rolos</CardDescription>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => navigate("/cotton-pull/history")}
+                    className="flex items-center gap-2"
+                  >
+                    <Package className="w-4 h-4" />
+                    Histórico de Carregamento
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
-                {records.length === 0 ? (
+                {recordsToShow.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <Package className="w-12 h-12 mx-auto mb-4" />
                     <p>Nenhum registro de algodão encontrado</p>
@@ -466,7 +487,7 @@ const CottonPull = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {records.map((record) => {
+                        {recordsToShow.map((record) => {
                           const permanencia = record.exit_time ? (() => {
                             try {
                               const entryTime = new Date(`1970-01-01T${record.entry_time}`);
