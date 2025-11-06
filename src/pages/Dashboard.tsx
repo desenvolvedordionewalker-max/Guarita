@@ -275,10 +275,11 @@ const Dashboard = () => {
   const todayMaterials = materialRecords.filter(m => m.date === today);
 
   // Estatísticas da nova tabela de carregamentos
-  const todayLoadings = loadingRecords; // Temporariamente mostrando todos
+  const todayLoadings = loadingRecords; // Todos os loadings para fila e carregando
   const loadingsFila = todayLoadings.filter(l => !l.entry_date);
   const loadingsCarregando = todayLoadings.filter(l => l.entry_date && !l.exit_date);
-  const loadingsConcluidos = todayLoadings.filter(l => l.exit_date);
+  // Concluídos: apenas os que saíram HOJE
+  const loadingsConcluidos = todayLoadings.filter(l => l.exit_date === today);
 
   // Apenas veículos (separado dos carregamentos)
   const veiculosFila = todayVehicles.filter(v => !v.exit_time && v.purpose?.toLowerCase().includes('fila'));

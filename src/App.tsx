@@ -10,6 +10,7 @@ import Vehicles from "./pages/Vehicles";
 import CottonPull from "./pages/CottonPull";
 import CottonPullHistory from "./pages/CottonPullHistory";
 import Loading from "./pages/Loading";
+import LoadingHistory from "./pages/LoadingHistory";
 import Rain from "./pages/Rain";
 import Equipment from "./pages/Equipment";
 import Reports from "./pages/Reports";
@@ -33,6 +34,7 @@ const App = () => (
           <Route path="/cotton-pull" element={<CottonPull />} />
           <Route path="/cotton-pull/history" element={<CottonPullHistory />} />
           <Route path="/loading" element={<Loading />} />
+          <Route path="/loading/history" element={<LoadingHistory />} />
           <Route path="/rain" element={<Rain />} />
           <Route path="/equipment" element={<Equipment />} />
           <Route path="/reports" element={<Reports />} />

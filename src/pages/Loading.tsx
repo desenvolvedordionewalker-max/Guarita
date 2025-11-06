@@ -246,9 +246,14 @@ const Loading = () => {
               <div><h1 className="text-xl font-bold">Carregamento</h1><p className="text-sm text-muted-foreground">Gestão de embarques</p></div>
             </div>
           </div>
-          <Button onClick={() => setShowForm(!showForm)} className="bg-accent hover:bg-accent/90">
-            <Plus className="w-4 h-4 mr-2" />{showForm ? 'Ocultar' : 'Novo'}
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => navigate("/loading/history")}>
+              Histórico
+            </Button>
+            <Button onClick={() => setShowForm(!showForm)} className="bg-accent hover:bg-accent/90">
+              <Plus className="w-4 h-4 mr-2" />{showForm ? 'Ocultar' : 'Novo'}
+            </Button>
+          </div>
         </div>
       </header>
 
