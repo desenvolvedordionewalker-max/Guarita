@@ -160,6 +160,7 @@ const Vehicles = () => {
       plate: plate,
       driver: driver,
       vehicle_type: vehicleType,
+      company: (formData.get("company") as string) || undefined,
       purpose: (formData.get("purpose") as string) || undefined,
       producer_name: producerName || undefined,
       observations: (formData.get("observations") as string) || undefined,
@@ -279,6 +280,10 @@ const Vehicles = () => {
                   <datalist id="drivers-list">
                     {savedDrivers.map((driver) => <option key={driver} value={driver} />)}
                   </datalist>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="company">Empresa/Local</Label>
+                  <Input name="company" placeholder="De onde vem? (ex: Fribon, RDM, etc.)" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="vehicleType">Tipo de Veículo</Label>

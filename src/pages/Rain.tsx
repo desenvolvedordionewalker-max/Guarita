@@ -21,18 +21,34 @@ const Rain = () => {
   const today = new Date().toISOString().split('T')[0];
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
+  
+  // Calcular início e fim da semana atual (segunda a domingo)
+  const now = new Date();
+  const dayOfWeek = now.getDay(); // 0 = domingo, 1 = segunda, etc
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1)); // Ajusta para segunda-feira
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6); // Domingo
+  
+  const mondayStr = monday.toISOString().split('T')[0];
+  const sundayStr = sunday.toISOString().split('T')[0];
+
+  // Totalizadores
+  const todayTotal = records
+    .filter(r => r.date === today && r.millimeters !== null)
+    .reduce((sum, r) => sum + (r.millimeters || 0), 0);
+  
+  const weekTotal = records
+    .filter(r => r.date >= mondayStr && r.date <= sundayStr && r.millimeters !== null)
+    .reduce((sum, r) => sum + (r.millimeters || 0), 0);
 
   const monthTotal = records
-    .filter(r => new Date(r.date).getMonth() === currentMonth && new Date(r.date).getFullYear() === currentYear)
-    .reduce((sum, r) => sum + r.millimeters, 0);
+    .filter(r => new Date(r.date).getMonth() === currentMonth && new Date(r.date).getFullYear() === currentYear && r.millimeters !== null)
+    .reduce((sum, r) => sum + (r.millimeters || 0), 0);
 
   const yearTotal = records
-    .filter(r => new Date(r.date).getFullYear() === currentYear)
-    .reduce((sum, r) => sum + r.millimeters, 0);
-
-  const todayTotal = records
-    .filter(r => r.date === today)
-    .reduce((sum, r) => sum + r.millimeters, 0);
+    .filter(r => new Date(r.date).getFullYear() === currentYear && r.millimeters !== null)
+    .reduce((sum, r) => sum + (r.millimeters || 0), 0);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -158,7 +174,7 @@ const Rain = () => {
 
       <main className="container mx-auto px-4 py-8">
         {/* Stats */}
-        <div className="grid sm:grid-cols-3 gap-4 mb-6">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <Card className="border-info/20">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
@@ -166,7 +182,21 @@ const Rain = () => {
                   <p className="text-3xl font-bold text-info">{todayTotal.toFixed(1)}</p>
                   <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
                     <Droplets className="w-3 h-3" />
-                    Chuva de Hoje (mm)
+                    Hoje (mm)
+                  </p>
+                </div>
+                <CloudRain className="w-8 h-8 text-info/30" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-info/20">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-3xl font-bold text-info">{weekTotal.toFixed(1)}</p>
+                  <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                    <Calendar className="w-3 h-3" />
+                    Semana (mm)
                   </p>
                 </div>
                 <CloudRain className="w-8 h-8 text-info/30" />
@@ -180,7 +210,7 @@ const Rain = () => {
                   <p className="text-3xl font-bold text-info">{monthTotal.toFixed(1)}</p>
                   <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
                     <Calendar className="w-3 h-3" />
-                    Acumulado do Mês (mm)
+                    Mês (mm)
                   </p>
                 </div>
                 <CloudRain className="w-8 h-8 text-info/30" />
@@ -194,7 +224,7 @@ const Rain = () => {
                   <p className="text-3xl font-bold text-info">{yearTotal.toFixed(1)}</p>
                   <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
                     <Calendar className="w-3 h-3" />
-                    Acumulado do Ano (mm)
+                    Ano (mm)
                   </p>
                 </div>
                 <CloudRain className="w-8 h-8 text-info/30" />

@@ -181,6 +181,7 @@ const Loading = () => {
     if (!selectedLoading) return;
     const exitDate = (document.getElementById("exitDate") as HTMLInputElement)?.value;
     const exitTime = (document.getElementById("exitTime") as HTMLInputElement)?.value;
+    const invoiceNumber = (document.getElementById("invoiceNumber") as HTMLInputElement)?.value;
     const bales = Number((document.getElementById("bales") as HTMLInputElement)?.value || 0);
     const weight = Number((document.getElementById("weight") as HTMLInputElement)?.value || 0);
     if (!exitDate || !exitTime) {
@@ -192,12 +193,22 @@ const Loading = () => {
       await updateRecord(selectedLoading.id, {
         exit_date: exitDate,
         exit_time: exitTime,
+        invoice_number: invoiceNumber || null,
         bales,
         weight
       });
       setIsDialogOpen(false);
+      toast({
+        title: "Carregamento finalizado!",
+        description: `Placa ${selectedLoading.plate} - Nota Fiscal: ${invoiceNumber || 'N/A'}`,
+      });
     } catch (error) {
-      console.error('Erro ao concluir carregamento:', error);
+      console.error('Erro ao finalizar carregamento:', error);
+      toast({
+        title: "Erro ao finalizar carregamento",
+        description: "Verifique os dados e tente novamente.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -705,16 +716,20 @@ const Loading = () => {
                 <Label>Hora de Saída</Label>
                 <Input type="time" id="exitTime" />
               </div>
+              <div className="space-y-2">
+                <Label>Número da Nota Fiscal</Label>
+                <Input type="text" id="invoiceNumber" placeholder="Digite o número da NF" />
+              </div>
               {selectedLoading.product === "Pluma" && (
                 <div className="space-y-2">
                   <Label>Fardos</Label>
-                  <Input type="number" id="bales" />
+                  <Input type="number" id="bales" placeholder="Quantidade de fardos" />
                 </div>
               )}
               {(selectedLoading.product === "Caroço" || selectedLoading.product === "Briquete") && (
                 <div className="space-y-2">
                   <Label>Peso (kg)</Label>
-                  <Input type="number" id="weight" />
+                  <Input type="number" id="weight" placeholder="Peso em quilogramas" />
                 </div>
               )}
               <Button onClick={handleCompleteLoading} className="w-full bg-success hover:bg-success/90">

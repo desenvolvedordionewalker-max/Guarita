@@ -15,6 +15,7 @@ export interface Vehicle {
   plate: string
   driver: string
   vehicle_type: string
+  company?: string // Empresa/Local de origem
   purpose?: string
   producer_id?: string
   producer_name?: string

@@ -70,7 +70,7 @@ const CottonPull = () => {
     
     const formData = new FormData(e.currentTarget);
     const updates = {
-      producer: formData.get("farm") as string,
+      producer: "Bom Futuro", // Produtor sempre será Bom Futuro
       farm: formData.get("farm") as string,
       talhao: formData.get("talhao") as string || "",
       plate: formData.get("plate") as string,
@@ -148,12 +148,12 @@ const CottonPull = () => {
       return;
     }
     
-    // Note: Campo talhao não existe no banco ainda, então não incluindo
     const recordData = {
       date,
       entry_time: entryTime,
-      producer: farm, // Usar fazenda como produtor
+      producer: "Bom Futuro", // Produtor sempre será Bom Futuro
       farm,
+      talhao: (formData.get("talhao") as string) || "",
       plate: plate.toUpperCase(),
       driver,
       rolls,
@@ -314,86 +314,84 @@ const CottonPull = () => {
           </Card>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-6">
-          {/* Form */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Plus className="w-5 h-5" />
-                Registrar Puxe
-              </CardTitle>
-              <CardDescription>Entrada de algodão da lavoura</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="date">Data</Label>
-                    <Input type="date" name="date" required defaultValue={new Date().toISOString().split('T')[0]} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="entryTime">Hora da Entrada</Label>
-                    <Input type="time" name="entryTime" required />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="farm">Fazenda</Label>
-                  <Select name="farm" required>
-                    <SelectTrigger><SelectValue placeholder="Selecione a fazenda" /></SelectTrigger>
-                    <SelectContent>
-                      {farms.map((farm) => (
-                        <SelectItem key={farm} value={farm}>{farm}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="talhao">Talhão</Label>
-                  <Input name="talhao" placeholder="Digite o talhão" />
-                </div>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="plate">Placa do Caminhão</Label>
-                    <Input 
-                      name="plate" 
-                      placeholder="ABC-1234" 
-                      required 
-                      list="plates-list"
-                      style={{ textTransform: 'uppercase' }}
-                    />
-                    <datalist id="plates-list">
-                      {savedPlates.map((plate) => <option key={plate} value={plate} />)}
-                    </datalist>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="driver">Nome do Motorista</Label>
-                    <Input 
-                      name="driver" 
-                      placeholder="Nome completo" 
-                      required 
-                      list="drivers-list"
-                    />
-                    <datalist id="drivers-list">
-                      {savedDrivers.map((driver) => <option key={driver} value={driver} />)}
-                    </datalist>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="rolls">Quantidade de Rolos</Label>
-                  <Input type="number" name="rolls" placeholder="0" required min="1" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="observations">Observações</Label>
-                  <Textarea name="observations" placeholder="Informações adicionais (opcional)" />
-                </div>
+        {/* Form */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Plus className="w-5 h-5" />
+              Registrar Puxe
+            </CardTitle>
+            <CardDescription>Entrada de algodão da lavoura</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="date">Data</Label>
+                <Input type="date" name="date" required defaultValue={new Date().toISOString().split('T')[0]} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="entryTime">Hora da Entrada</Label>
+                <Input type="time" name="entryTime" required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="farm">Fazenda</Label>
+                <Select name="farm" required>
+                  <SelectTrigger><SelectValue placeholder="Selecione a fazenda" /></SelectTrigger>
+                  <SelectContent>
+                    {farms.map((farm) => (
+                      <SelectItem key={farm} value={farm}>{farm}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="talhao">Talhão</Label>
+                <Input name="talhao" placeholder="Digite o talhão" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="plate">Placa do Caminhão</Label>
+                <Input 
+                  name="plate" 
+                  placeholder="ABC-1234" 
+                  required 
+                  list="plates-list"
+                  style={{ textTransform: 'uppercase' }}
+                />
+                <datalist id="plates-list">
+                  {savedPlates.map((plate) => <option key={plate} value={plate} />)}
+                </datalist>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="driver">Nome do Motorista</Label>
+                <Input 
+                  name="driver" 
+                  placeholder="Nome completo" 
+                  required 
+                  list="drivers-list"
+                />
+                <datalist id="drivers-list">
+                  {savedDrivers.map((driver) => <option key={driver} value={driver} />)}
+                </datalist>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="rolls">Quantidade de Rolos</Label>
+                <Input type="number" name="rolls" placeholder="0" required min="1" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="observations">Observações</Label>
+                <Textarea name="observations" placeholder="Informações adicionais (opcional)" />
+              </div>
+              <div className="md:col-span-2 lg:col-span-4">
                 <Button type="submit" className="w-full bg-secondary hover:bg-secondary/90">
                   <Plus className="w-4 h-4 mr-2" />
                   Registrar Puxe
                 </Button>
-              </form>
-            </CardContent>
-          </Card>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
 
+        <div className="grid lg:grid-cols-1 gap-6">
           {/* Pending Exits */}
           {pendingExits.length > 0 && (
             <Card>
