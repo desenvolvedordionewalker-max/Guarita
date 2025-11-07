@@ -475,8 +475,41 @@ const Reports = () => {
     const filaBriquete = filaCarregamento.filter(l => l.product === 'Briquete');
     const filaOutros = filaCarregamento.filter(l => !['Pluma', 'Caroço', 'Fibrilha', 'Briquete'].includes(l.product));
     
+    // Total de carretas na fila
+    const totalCarretas = filaCarregamento.length;
+    
+    // Agrupar por transportadora
+    const groupedByCarrier = filaCarregamento.reduce((acc, item) => {
+      const carrier = item.carrier || 'Sem Transportadora';
+      if (!acc[carrier]) {
+        acc[carrier] = { count: 0, truckTypes: new Set(), siders: 0 };
+      }
+      acc[carrier].count++;
+      acc[carrier].truckTypes.add(item.truck_type);
+      if (item.is_sider) acc[carrier].siders++;
+      return acc;
+    }, {} as Record<string, { count: number, truckTypes: Set<string>, siders: number }>);
+    
     let message = `🏢 IBA Santa Luzia - Controle Guarita
 🕒 Fila de Carregamento - ${today} - ${time}\n\n`;
+    
+    message += `📊 TOTAL: ${totalCarretas} carreta${totalCarretas !== 1 ? 's' : ''} aguardando\n\n`;
+    
+    // Resumo por transportadora
+    if (Object.keys(groupedByCarrier).length > 0) {
+      message += `🚛 POR TRANSPORTADORA:\n`;
+      Object.entries(groupedByCarrier)
+        .sort((a, b) => b[1].count - a[1].count)
+        .forEach(([carrier, data]) => {
+          const truckTypesList = Array.from(data.truckTypes).join(', ');
+          const siderInfo = data.siders > 0 ? ` (${data.siders} Sider)` : '';
+          message += `  ${data.count}x - ${carrier}\n`;
+          message += `       ${truckTypesList}${siderInfo}\n`;
+        });
+      message += '\n';
+    }
+    
+    message += `📦 POR PRODUTO:\n\n`;
 
     if (filaPluma.length > 0) {
       message += `▪️ Pluma – ${filaPluma.length} carreta${filaPluma.length > 1 ? 's' : ''} aguardando:\n`;
