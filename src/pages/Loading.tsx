@@ -1188,23 +1188,35 @@ const Loading = () => {
                   <Button 
                     type="button" 
                     variant="destructive"
-                    onClick={async () => {
-                      if (confirm('Deseja voltar este carregamento para "Carregando"? A data e hora de saída serão apagadas.')) {
-                        await updateRecord(selectedLoading.id, {
-                          exit_date: null,
-                          exit_time: null,
-                          status: 'carregando'
-                        });
-                        setIsDialogOpen(false);
-                        setIsEditMode(false);
-                        toast({
-                          title: "Voltado para Carregando",
-                          description: `${selectedLoading.plate} está novamente em carregamento.`
-                        });
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      if (confirm('⚠️ ATENÇÃO: Deseja voltar este carregamento para "CARREGADO"?\n\n✅ A data e hora de SAÍDA serão APAGADAS\n✅ O caminhão voltará para a seção "Carregando" com status CARREGADO\n✅ Ele ficará aguardando para dar saída novamente')) {
+                        try {
+                          await updateRecord(selectedLoading.id, {
+                            exit_date: null,
+                            exit_time: null,
+                            status: 'carregado'
+                          });
+                          setIsDialogOpen(false);
+                          setIsEditMode(false);
+                          setSelectedLoading(null);
+                          toast({
+                            title: "✅ Voltado para CARREGADO",
+                            description: `${selectedLoading.plate} está novamente na seção "Carregando" aguardando saída.`,
+                            duration: 5000
+                          });
+                        } catch (error) {
+                          console.error('Erro ao voltar para carregado:', error);
+                          toast({
+                            title: "❌ Erro",
+                            description: "Não foi possível voltar o carregamento. Tente novamente.",
+                            variant: "destructive"
+                          });
+                        }
                       }
                     }}
                   >
-                    🔄 Voltar para Carregando
+                    🔄 Voltar para CARREGADO
                   </Button>
                 )}
                 <Button 
