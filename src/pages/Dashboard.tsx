@@ -212,6 +212,7 @@ const Dashboard = () => {
     
     const updateData: Partial<LoadingRecord> = {
       status: 'carregado',
+      loaded_at: new Date().toISOString(), // Grava o timestamp do carregamento
       invoice_number: invoiceNumber || selectedLoading.invoice_number || null,
       destination: destination || selectedLoading.destination,
       client: client || selectedLoading.client || "",
@@ -398,20 +399,37 @@ const Dashboard = () => {
     return !l.status && l.entry_date && !l.exit_date;
   });
   
-  // CONCLUÍDOS: APENAS os carregados/concluídos HOJE (entry_date = hoje)
-  // 1. Status 'carregado' de HOJE → Aguardando Nota
-  // 2. Status 'concluido' de HOJE → Já saiu
-  // NÃO mostra carregados de dias anteriores
+  // CONCLUÍDOS: Itens que foram marcados como 'carregado' ou 'concluido' hoje.
+  // A data de referência é a nova coluna `loaded_at`.
   const loadingsConcluidos = loadingRecords.filter(l => {
-    // IMPORTANTE: Só mostra se foi carregado HOJE
-    if (l.entry_date !== today) return false;
+    // Se não tem o timestamp de carregamento, não pode aparecer aqui.
+    if (!l.loaded_at) return false;
+
+    // Normaliza a data de 'loaded_at' para comparar com 'today'
+    const loadedDate = normalizeLocalDate(new Date(l.loaded_at)).toISOString().split('T')[0];
     
-    // Carregados HOJE com status 'carregado' (aguardando nota)
-    if (l.status === 'carregado') return true;
-    // Concluídos HOJE (já saíram)
-    if (l.status === 'concluido') return true;
+    // Mostra se foi carregado HOJE, independente do status ser 'carregado' ou 'concluido'
+    if (loadedDate === today) {
+      return l.status === 'carregado' || l.status === 'concluido';
+    }
+    
     return false;
   });
+  
+  // Debug: Log para verificar dados
+  console.log('=== DEBUG CONCLUÍDOS ===');
+  console.log('Today:', today);
+  console.log('Total loadingRecords:', loadingRecords.length);
+  console.log('Concluídos filtrados:', loadingsConcluidos.length);
+  console.log('Registros com entry_date=today:', loadingRecords.filter(l => l.entry_date === today).length);
+  console.log('Status carregado hoje:', loadingRecords.filter(l => l.entry_date === today && l.status === 'carregado').length);
+  console.log('Status concluido hoje:', loadingRecords.filter(l => l.entry_date === today && l.status === 'concluido').length);
+  console.log('Sample records:', loadingRecords.slice(0, 3).map(r => ({ 
+    plate: r.plate, 
+    entry_date: r.entry_date, 
+    exit_date: r.exit_date, 
+    status: r.status 
+  })));
 
   // Apenas veículos (separado dos carregamentos)
   const veiculosFila = todayVehicles.filter(v => !v.exit_time && v.purpose?.toLowerCase().includes('fila'));
@@ -1497,6 +1515,7 @@ const Dashboard = () => {
                         
                         const updateData: Partial<LoadingRecord> = {
                           status: 'carregado',
+                          loaded_at: new Date().toISOString(), // Grava o timestamp do carregamento
                           weight: weight ? parseFloat(weight) : selectedLoading.weight,
                           bales: bales ? parseInt(bales) : selectedLoading.bales,
                         };

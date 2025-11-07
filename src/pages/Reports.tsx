@@ -301,7 +301,7 @@ const Reports = () => {
     );
   }
 
-  const generateDailySummary = (sendToWhatsAppFlag = false) => {
+  const generateDailySummary = (sendToWhatsAppFlag = false, showInModal = false) => {
     const today = new Date().toLocaleDateString('pt-BR');
     const todayDate = new Date().toISOString().split('T')[0];
     
@@ -453,7 +453,13 @@ const Reports = () => {
       message += `\n✅ Fila vazia no momento`;
     }
 
-    if (sendToWhatsAppFlag) {
+    if (showInModal) {
+      setMessageModal({ 
+        open: true, 
+        title: '📊 Resumo Diário', 
+        content: message 
+      });
+    } else if (sendToWhatsAppFlag) {
       sendToWhatsApp(message);
     } else {
       navigator.clipboard.writeText(message);
@@ -464,7 +470,7 @@ const Reports = () => {
     }
   };
 
-  const generateQueueStatus = (sendToWhatsAppFlag = false) => {
+  const generateQueueStatus = (sendToWhatsAppFlag = false, showInModal = false) => {
     const today = new Date().toLocaleDateString('pt-BR');
     const time = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     
@@ -585,7 +591,13 @@ const Reports = () => {
       message += '✅ Não há carretas aguardando na fila no momento.\n\n';
     }
 
-    if (sendToWhatsAppFlag) {
+    if (showInModal) {
+      setMessageModal({ 
+        open: true, 
+        title: '📋 Status da Fila', 
+        content: message 
+      });
+    } else if (sendToWhatsAppFlag) {
       sendToWhatsApp(message);
     } else {
       navigator.clipboard.writeText(message);
@@ -602,7 +614,7 @@ const Reports = () => {
     window.open(whatsappUrl, '_blank');
   };
 
-  const generateCottonPullSummary = (sendToWhatsAppFlag = false) => {
+  const generateCottonPullSummary = (sendToWhatsAppFlag = false, showInModal = false) => {
     const today = new Date().toLocaleDateString('pt-BR');
     const todayDate = new Date().toISOString().split('T')[0];
     
@@ -737,7 +749,13 @@ const Reports = () => {
       message += `  � Viagens: ${vehicle.trips}\n`;
     });
 
-    if (sendToWhatsAppFlag) {
+    if (showInModal) {
+      setMessageModal({ 
+        open: true, 
+        title: '🌾 Puxe de Rolos', 
+        content: message 
+      });
+    } else if (sendToWhatsAppFlag) {
       sendToWhatsApp(message);
     } else {
       // Copiar para área de transferência
@@ -1275,23 +1293,7 @@ const Reports = () => {
               <div className="space-y-2">
                 <Button 
                   className="w-full h-auto py-4 flex-col items-start bg-primary hover:bg-primary/90"
-                  onClick={() => {
-                    const today = new Date().toLocaleDateString('pt-BR');
-                    const todayDate = new Date().toISOString().split('T')[0];
-                    const carregamentosConcluidos = loadingRecords.filter(l => l.entry_date === todayDate);
-                    
-                    // Gerar mensagem completa sem enviar
-                    let message = `📅 Resumo Diário - ${today}\n\n`;
-                    message += `Total de Carregamentos: ${carregamentosConcluidos.length}\n`;
-                    message += `Pluma: ${carregamentosConcluidos.filter(l => l.product === 'Pluma').length}\n`;
-                    message += `Caroço: ${carregamentosConcluidos.filter(l => l.product === 'Caroço').length}\n`;
-                    
-                    setMessageModal({ 
-                      open: true, 
-                      title: '📊 Resumo Diário', 
-                      content: message 
-                    });
-                  }}
+                  onClick={() => generateDailySummary(false, true)}
                 >
                   <span className="font-semibold mb-1">📊 Resumo Diário</span>
                   <span className="text-xs opacity-90">Visualizar e copiar</span>
@@ -1308,23 +1310,7 @@ const Reports = () => {
               <div className="space-y-2">
                 <Button 
                   className="w-full h-auto py-4 flex-col items-start bg-accent hover:bg-accent/90"
-                  onClick={() => {
-                    const today = new Date().toLocaleDateString('pt-BR');
-                    const time = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                    const todayDate = new Date().toISOString().split('T')[0];
-                    const filaCarregamento = loadingRecords.filter(l => !l.entry_date);
-                    
-                    // Gerar mensagem da fila sem enviar
-                    let message = `🏢 IBA Santa Luzia - Controle Guarita\n`;
-                    message += `🕒 Fila de Carregamento - ${today} - ${time}\n\n`;
-                    message += `📊 TOTAL: ${filaCarregamento.length} carreta${filaCarregamento.length !== 1 ? 's' : ''} aguardando\n`;
-                    
-                    setMessageModal({ 
-                      open: true, 
-                      title: '🚛 Status da Fila', 
-                      content: message 
-                    });
-                  }}
+                  onClick={() => generateQueueStatus(false, true)}
                 >
                   <span className="font-semibold mb-1">🚛 Status da Fila</span>
                   <span className="text-xs opacity-90">Visualizar e copiar</span>
@@ -1341,22 +1327,7 @@ const Reports = () => {
               <div className="space-y-2">
                 <Button 
                   className="w-full h-auto py-4 flex-col items-start bg-orange-600 hover:bg-orange-700"
-                  onClick={() => {
-                    const today = new Date().toLocaleDateString('pt-BR');
-                    const todayDate = new Date().toISOString().split('T')[0];
-                    const todayRecords = cottonRecords.filter(r => r.date === todayDate);
-                    
-                    // Gerar mensagem do puxe de rolos sem enviar
-                    let message = `🌾 Puxe de Rolos - ${today}\n\n`;
-                    message += `Total de Rolos: ${todayRecords.reduce((sum, r) => sum + r.rolls, 0)}\n`;
-                    message += `Viagens: ${todayRecords.length}\n`;
-                    
-                    setMessageModal({ 
-                      open: true, 
-                      title: '🌾 Puxe de Rolos', 
-                      content: message 
-                    });
-                  }}
+                  onClick={() => generateCottonPullSummary(false, true)}
                 >
                   <span className="font-semibold mb-1">🌾 Puxe de Rolos</span>
                   <span className="text-xs opacity-90">Visualizar e copiar</span>

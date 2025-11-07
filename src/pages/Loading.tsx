@@ -338,15 +338,28 @@ const Loading = () => {
   });
   
   const completedLoadings = loadings.filter(l => {
-    // IMPORTANTE: Só mostra se foi carregado HOJE
-    if (l.entry_date !== today) return false;
+    // Se não tem o timestamp de carregamento, não pode aparecer aqui.
+    if (!l.loaded_at) return false;
+
+    // Normaliza a data de 'loaded_at' para comparar com 'today'
+    const loadedDate = normalizeLocalDate(new Date(l.loaded_at)).toISOString().split('T')[0];
     
-    // Status 'carregado' de HOJE → Aguardando Nota
-    if (l.status === 'carregado') return true;
-    // Status 'concluido' de HOJE → Já saiu
-    if (l.status === 'concluido') return true;
+    // Mostra se foi carregado HOJE, independente do status ser 'carregado' ou 'concluido'
+    if (loadedDate === today) {
+      return l.status === 'carregado' || l.status === 'concluido';
+    }
+    
     return false;
   });
+  
+  // Debug: Log para verificar dados
+  console.log('=== DEBUG CONCLUÍDOS (Loading.tsx) ===');
+  console.log('Today:', today);
+  console.log('Total loadings:', loadings.length);
+  console.log('Concluídos filtrados:', completedLoadings.length);
+  console.log('Registros com entry_date=today:', loadings.filter(l => l.entry_date === today).length);
+  console.log('Status carregado hoje:', loadings.filter(l => l.entry_date === today && l.status === 'carregado').length);
+  console.log('Status concluido hoje:', loadings.filter(l => l.entry_date === today && l.status === 'concluido').length);
 
   const getProductColor = (product: string) => {
     switch (product) {
