@@ -36,7 +36,7 @@
 
 ### 3️⃣ Configurar Limpeza Automática Diária
 
-Após habilitar o pg_cron, execute este comando no **SQL Editor**:
+Após habilitar o pg_cron, **copie e cole** este comando no **SQL Editor** (sem as aspas):
 
 ```sql
 SELECT cron.schedule(
@@ -45,6 +45,8 @@ SELECT cron.schedule(
   $$SELECT archive_completed_loadings();$$
 );
 ```
+
+⚠️ **IMPORTANTE**: Copie APENAS o código SQL acima (de SELECT até o ponto e vírgula). Não copie as crases (```) do markdown!
 
 **O que isso faz:**
 - Agenda a função `archive_completed_loadings()` para rodar todo dia às 00:00
