@@ -373,34 +373,34 @@ const Dashboard = () => {
   // Usar campo status quando disponível, senão fallback para lógica antiga
   const todayLoadings = loadingRecords.filter(l => l.date === today);
   
-  // FILA: status 'fila' OU (não tem status E não tem entry_date)
-  const loadingsFila = todayLoadings.filter(l => 
-    l.status === 'fila' || (!l.status && !l.entry_date)
-  );
+  // FILA: TODOS os registros com status 'fila' (independente da data)
+  // Ordenar por data+hora de marcação (crescente - primeiro que chegou primeiro)
+  const loadingsFila = loadingRecords
+    .filter(l => l.status === 'fila' || (!l.status && !l.entry_date))
+    .sort((a, b) => {
+      const dateTimeA = `${a.date} ${a.time}`;
+      const dateTimeB = `${b.date} ${b.time}`;
+      return dateTimeA.localeCompare(dateTimeB);
+    });
   
-  // CARREGANDO: status 'carregando' OU 'carregado' OU (não tem status E tem entry_date mas não exit_date)
-  // Mostra TODOS (independente do dia) que ainda não saíram
+  // CARREGANDO: Mostra TODOS (independente do dia) que ainda não saíram completamente
+  // Inclui: 'carregando', 'carregado' (com badge de alerta) e registros antigos sem status que iniciaram mas não finalizaram
   const loadingsCarregando = loadingRecords.filter(l => {
-    // Se já saiu (tem exit_date), não mostra aqui
+    // Se já saiu completamente (tem exit_date), não mostra aqui
     if (l.exit_date) return false;
     
-    // Se tem status carregando ou carregado
+    // Se tem status carregando ou carregado - SEMPRE MOSTRA até registrar saída
     if (l.status === 'carregando' || l.status === 'carregado') return true;
     
-    // Fallback: tem entry_date mas não tem exit_date
+    // Fallback para registros antigos: tem entry_date mas não tem exit_date
     return !l.status && l.entry_date && !l.exit_date;
   });
   
-  // CONCLUÍDOS: Todos que saíram hoje (independente de status)
-  // Por enquanto, até executar o SQL para criar coluna status
+  // CONCLUÍDOS: Apenas os que iniciaram HOJE e saíram HOJE
+  // (não mostra os que foram carregados em dias anteriores e saíram hoje)
   const loadingsConcluidos = loadingRecords.filter(l => {
-    // Se tem exit_date de hoje = concluído
-    if (l.exit_date === today) return true;
-    
-    // Se tem status concluido mas sem exit_date ainda
-    if (l.status === 'concluido') return true;
-    
-    return false;
+    // Deve ter exit_date de HOJE E entry_date também de HOJE
+    return l.exit_date === today && l.entry_date === today;
   });
 
   // Apenas veículos (separado dos carregamentos)
@@ -892,7 +892,6 @@ const Dashboard = () => {
                   <div className="space-y-2 max-h-96 overflow-y-auto">
                     {loadingsFila
                       .filter(l => filtroFila === "Todos" || l.product === filtroFila)
-                      .sort((a, b) => new Date(a.created_at!).getTime() - new Date(b.created_at!).getTime())
                       .map((loading, idx) => (
                         <Card 
                           key={loading.id} 
@@ -903,6 +902,10 @@ const Dashboard = () => {
                             <div className="flex justify-between items-start mb-1">
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-1">
+                                  {/* Número da posição na fila */}
+                                  <span className="px-2 py-0.5 rounded bg-yellow-600 text-white text-xs font-bold">
+                                    {idx + 1}º
+                                  </span>
                                   <span className={`px-2 py-0.5 rounded text-xs font-bold ${
                                     loading.product === 'Pluma' ? 'bg-yellow-100 text-yellow-800' :
                                     loading.product === 'Caroço' ? 'bg-red-100 text-red-800' :
@@ -912,12 +915,6 @@ const Dashboard = () => {
                                   }`}>
                                     {loading.product}
                                   </span>
-                                  {idx === 0 && (
-                                    <div className="flex items-center gap-1">
-                                      <Crown className="w-3 h-3 text-yellow-500" />
-                                      <span className="text-xs font-bold text-yellow-600">1º</span>
-                                    </div>
-                                  )}
                                   {loading.is_sider && (
                                     <span className="px-1 py-0.5 rounded bg-blue-100 text-blue-800 text-xs">SIDER</span>
                                   )}
@@ -932,6 +929,10 @@ const Dashboard = () => {
                                 <p className="text-xs text-muted-foreground truncate">{loading.driver}</p>
                                 <p className="text-xs font-medium text-purple-600 truncate">{loading.carrier}</p>
                                 <p className="text-xs font-medium text-blue-600 truncate">{loading.destination}</p>
+                                {/* Data e hora de marcação */}
+                                <p className="text-xs text-gray-500 mt-1">
+                                  📅 {loading.date} às {loading.time}
+                                </p>
                               </div>
                             </div>
                           </CardContent>
@@ -1075,9 +1076,9 @@ const Dashboard = () => {
                             <div className="text-xs text-muted-foreground">
                               <p className="truncate">{loading.driver}</p>
                               <p className="truncate font-medium text-purple-600">{loading.carrier}</p>
-                              {loading.entry_time && (
-                                <p className="text-orange-600 font-medium">
-                                  Iniciado: {loading.entry_time}
+                              {loading.entry_date && loading.entry_time && (
+                                <p className="text-orange-600 font-medium mt-1">
+                                  🚛 Entrada: {loading.entry_date} às {loading.entry_time}
                                 </p>
                               )}
                             </div>

@@ -49,6 +49,8 @@ RETURNS void
 LANGUAGE plpgsql
 AS $$
 BEGIN
+  -- Arquiva todos os registros que já saíram (têm exit_date preenchido)
+  -- Independente de quando iniciaram o carregamento
   INSERT INTO loading_history (
     original_id, date, time_value, entry_date, entry_time, exit_date, exit_time,
     product, harvest_year, truck_type, plate, driver, carrier,
@@ -61,13 +63,14 @@ BEGIN
     destination, client, invoice_number, bales, weight, is_sider,
     status::text, observations, created_by, created_at, now(), updated_at
   FROM loading_records
-  WHERE status = 'concluido'
-    AND exit_date IS NOT NULL
+  WHERE exit_date IS NOT NULL
+    AND exit_date < CURRENT_DATE  -- Apenas os que saíram ANTES de hoje
   ON CONFLICT DO NOTHING;
   
+  -- Remove apenas os que foram arquivados (saíram antes de hoje)
   DELETE FROM loading_records
-  WHERE status = 'concluido'
-    AND exit_date IS NOT NULL;
+  WHERE exit_date IS NOT NULL
+    AND exit_date < CURRENT_DATE;
     
   RAISE NOTICE 'Registros concluídos arquivados com sucesso';
 END;
