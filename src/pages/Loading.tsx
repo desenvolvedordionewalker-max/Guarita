@@ -331,17 +331,20 @@ const Loading = () => {
   const loadingInProgress = loadings.filter(l => {
     // Não mostra se já tem saída
     if (l.exit_date) return false;
-    // Mostra se está CARREGANDO (não 'carregado')
-    if (l.status === 'carregando') return true;
+    // Mostra se está carregando OU carregado (até registrar saída)
+    if (l.status === 'carregando' || l.status === 'carregado') return true;
     // Fallback para registros sem status mas com entrada
     return !l.status && l.entry_date && !l.exit_date;
   });
   
   const completedLoadings = loadings.filter(l => {
-    // Status 'carregado' carregados HOJE → Aguardando Nota
-    if (l.entry_date === today && l.status === 'carregado') return true;
-    // Status 'concluido' carregados HOJE → Já saiu
-    if (l.entry_date === today && l.status === 'concluido') return true;
+    // IMPORTANTE: Só mostra se foi carregado HOJE
+    if (l.entry_date !== today) return false;
+    
+    // Status 'carregado' de HOJE → Aguardando Nota
+    if (l.status === 'carregado') return true;
+    // Status 'concluido' de HOJE → Já saiu
+    if (l.status === 'concluido') return true;
     return false;
   });
 

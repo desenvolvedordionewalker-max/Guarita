@@ -301,10 +301,11 @@ const Reports = () => {
     const today = new Date().toLocaleDateString('pt-BR');
     const todayDate = new Date().toISOString().split('T')[0];
     
-    // Carregamentos concluídos do dia
-    const carregamentosConcluidos = loadingRecords.filter(l => l.exit_date === todayDate);
+    // Carregamentos do dia (entry_date = hoje)
+    // Inclui: status 'carregando', 'carregado' (aguardando nota) E 'concluido' (já saiu)
+    const carregamentosConcluidos = loadingRecords.filter(l => l.entry_date === todayDate);
     
-    // Agrupar carregamentos concluídos por produto
+    // Agrupar carregamentos por produto
     const plumaCarregamentos = carregamentosConcluidos.filter(l => l.product === 'Pluma');
     const carocoCarregamentos = carregamentosConcluidos.filter(l => l.product === 'Caroço');
     const fibrilhaCarregamentos = carregamentosConcluidos.filter(l => l.product === 'Fibrilha');

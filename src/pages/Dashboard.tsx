@@ -385,27 +385,31 @@ const Dashboard = () => {
       return dateTimeA.localeCompare(dateTimeB);
     });
   
-  // CARREGANDO: Mostra os que estão em processo (status 'carregando')
-  // NÃO mostra os já marcados como 'carregado' (esses vão para Concluídos)
+  // CARREGANDO: Mostra os que ainda não saíram (status 'carregando' OU 'carregado')
+  // Ambos ficam aqui até registrar SAIR
   const loadingsCarregando = loadingRecords.filter(l => {
     // Se já saiu completamente (tem exit_date), não mostra aqui
     if (l.exit_date) return false;
     
-    // Se tem status CARREGANDO (não carregado) - MOSTRA
-    if (l.status === 'carregando') return true;
+    // Se tem status carregando OU carregado - MOSTRA até registrar saída
+    if (l.status === 'carregando' || l.status === 'carregado') return true;
     
     // Fallback para registros antigos: tem entry_date mas não tem exit_date e não tem status
     return !l.status && l.entry_date && !l.exit_date;
   });
   
-  // CONCLUÍDOS: 
-  // 1. Status 'carregado' carregados HOJE → Aguardando Nota
-  // 2. Status 'concluido' carregados HOJE → Já saiu
+  // CONCLUÍDOS: APENAS os carregados/concluídos HOJE (entry_date = hoje)
+  // 1. Status 'carregado' de HOJE → Aguardando Nota
+  // 2. Status 'concluido' de HOJE → Já saiu
+  // NÃO mostra carregados de dias anteriores
   const loadingsConcluidos = loadingRecords.filter(l => {
+    // IMPORTANTE: Só mostra se foi carregado HOJE
+    if (l.entry_date !== today) return false;
+    
     // Carregados HOJE com status 'carregado' (aguardando nota)
-    if (l.entry_date === today && l.status === 'carregado') return true;
+    if (l.status === 'carregado') return true;
     // Concluídos HOJE (já saíram)
-    if (l.entry_date === today && l.status === 'concluido') return true;
+    if (l.status === 'concluido') return true;
     return false;
   });
 
