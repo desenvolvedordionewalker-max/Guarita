@@ -318,17 +318,18 @@ const Loading = () => {
     l.status === 'fila' || (!l.status && !l.entry_date)
   );
   
-  const loadingInProgress = loadings.filter(l => 
-    l.status === 'carregando' || 
-    l.status === 'carregado' || 
-    (!l.status && l.entry_date && !l.exit_date)
-  );
+  const loadingInProgress = loadings.filter(l => {
+    // Não mostra se já tem saída
+    if (l.exit_date) return false;
+    // Mostra se está carregando ou carregado (SEMPRE MOSTRA até registrar saída)
+    if (l.status === 'carregando' || l.status === 'carregado') return true;
+    // Fallback para registros sem status mas com entrada
+    return !l.status && l.entry_date && !l.exit_date;
+  });
   
   const completedLoadings = loadings.filter(l => {
-    // Mostra todos que têm exit_date OU status concluido
-    if (l.exit_date) return true;
-    if (l.status === 'concluido') return true;
-    return false;
+    // Mostra apenas os que saíram HOJE (serão arquivados à meia-noite)
+    return l.exit_date === today;
   });
 
   const getProductColor = (product: string) => {
