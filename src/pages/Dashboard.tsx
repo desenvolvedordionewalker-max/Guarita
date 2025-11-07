@@ -55,9 +55,10 @@ const Dashboard = () => {
   
   const [selectedLoading, setSelectedLoading] = useState<LoadingRecord | null>(null);
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
-  const [modalAction, setModalAction] = useState<'escolher' | 'carregado' | 'saiu'>('escolher');
+  const [modalAction, setModalAction] = useState<'escolher' | 'carregado' | 'saiu' | 'iniciar'>('escolher');
   const [filtroCarregando, setFiltroCarregando] = useState<string>("Todos");
   const [filtroFila, setFiltroFila] = useState<string>("Todos");
+  const [isFilaItem, setIsFilaItem] = useState(false);
   const { theme, toggleTheme } = useTheme();
 
   const handleRegisterVehicleExit = async (id: string) => {
@@ -95,7 +96,17 @@ const Dashboard = () => {
 
   const handleLoadingCardClick = (loading: LoadingRecord) => {
     setSelectedLoading(loading);
-    setModalAction('escolher'); // Reset para escolher ação
+    
+    // Verificar se é um item da fila (status 'fila' ou sem entry_date)
+    const isFromQueue = loading.status === 'fila' || (!loading.status && !loading.entry_date);
+    setIsFilaItem(isFromQueue);
+    
+    if (isFromQueue) {
+      setModalAction('iniciar'); // Modal para registrar entrada
+    } else {
+      setModalAction('escolher'); // Modal normal (carregado/saiu)
+    }
+    
     setIsManageModalOpen(true);
   };
 
