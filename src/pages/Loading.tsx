@@ -331,18 +331,18 @@ const Loading = () => {
   const loadingInProgress = loadings.filter(l => {
     // Não mostra se já tem saída
     if (l.exit_date) return false;
-    // Não mostra se foi carregado HOJE (aparece em Concluídos)
-    if (l.entry_date === today) return false;
-    // Mostra se está carregando ou carregado (DIAS ANTERIORES apenas)
-    if (l.status === 'carregando' || l.status === 'carregado') return true;
+    // Mostra se está CARREGANDO (não 'carregado')
+    if (l.status === 'carregando') return true;
     // Fallback para registros sem status mas com entrada
     return !l.status && l.entry_date && !l.exit_date;
   });
   
   const completedLoadings = loadings.filter(l => {
-    // Mostra TODOS os que foram carregados HOJE (entry_date = hoje)
-    // Inclui: status 'carregado' (aguardando nota) E status 'concluido' (já saiu)
-    return l.entry_date === today;
+    // Status 'carregado' carregados HOJE → Aguardando Nota
+    if (l.entry_date === today && l.status === 'carregado') return true;
+    // Status 'concluido' carregados HOJE → Já saiu
+    if (l.entry_date === today && l.status === 'concluido') return true;
+    return false;
   });
 
   const getProductColor = (product: string) => {

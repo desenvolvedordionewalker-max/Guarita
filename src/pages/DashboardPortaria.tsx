@@ -148,19 +148,20 @@ export default function DashboardPortariaTV() {
     l.status === 'fila' || (!l.status && !l.entry_date)
   );
   
-  // CARREGANDO: status 'carregando' ou 'carregado', sem exit_date
-  // EXCETO os que foram carregados HOJE (esses aparecem em Concluídos)
+  // CARREGANDO: status 'carregando' (NÃO inclui 'carregado')
   const carregando = todayLoadings.filter(l => {
     if (l.exit_date) return false;
-    if (l.entry_date === todayStr) return false; // Carregados hoje aparecem em Concluídos
-    if (l.status === 'carregando' || l.status === 'carregado') return true;
+    if (l.status === 'carregando') return true;
     return !l.status && l.entry_date && !l.exit_date;
   });
   
-  // CONCLUÍDOS: TODOS que foram carregados HOJE (entry_date = hoje)
-  // Inclui: status 'carregado' (aguardando nota) E status 'concluido' (já saiu)
+  // CONCLUÍDOS:
+  // 1. Status 'carregado' carregados HOJE → Aguardando Nota
+  // 2. Status 'concluido' carregados HOJE → Já saiu
   const concluidos = todayLoadings.filter(l => {
-    return l.entry_date === todayStr;
+    if (l.entry_date === todayStr && l.status === 'carregado') return true;
+    if (l.entry_date === todayStr && l.status === 'concluido') return true;
+    return false;
   });
 
   // Estatísticas de carregamento por produto
