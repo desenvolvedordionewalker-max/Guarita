@@ -59,7 +59,7 @@ BEGIN
     id, date, "time"::text, entry_date, entry_time::text, exit_date, exit_time::text,
     product, harvest_year, truck_type, plate, driver, carrier,
     destination, client, invoice_number, bales, weight, is_sider,
-    status, observations, created_by, created_at, now(), updated_at
+    status::text, observations, created_by, created_at, now(), updated_at
   FROM loading_records
   WHERE status = 'concluido'
     AND exit_date IS NOT NULL
@@ -153,7 +153,7 @@ SELECT
   bales,
   weight,
   is_sider,
-  status,
+  status::text as status,
   'active' as source,
   created_at,
   updated_at
