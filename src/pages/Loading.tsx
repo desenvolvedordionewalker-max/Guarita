@@ -13,6 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useLoadingRecords } from "@/hooks/use-supabase";
 import { LoadingRecord } from "@/lib/supabase";
 import { getTodayLocalDate, normalizeLocalDate } from "@/lib/date-utils";
+import { calculateLoadingTime } from "@/lib/time-utils";
 
 const Loading = () => {
   const navigate = useNavigate();
@@ -338,7 +339,8 @@ const Loading = () => {
   
   const completedLoadings = loadings.filter(l => {
     // Mostra apenas os que saíram HOJE (serão arquivados à meia-noite)
-    return l.exit_date === today;
+    // IMPORTANTE: Ao editar a data de saída, o registro deve sair da lista se não for mais hoje
+    return l.exit_date === today && l.status === 'concluido';
   });
 
   const getProductColor = (product: string) => {
@@ -718,17 +720,12 @@ const Loading = () => {
                         })
                         .slice(0, 10)
                         .map((loading) => {
-                          const entryTime = loading.entry_time;
-                          const exitTime = loading.exit_time;
-                          const permanencia = entryTime && exitTime ? 
-                            (() => {
-                              const [entryH, entryM] = entryTime.split(':').map(Number);
-                              const [exitH, exitM] = exitTime.split(':').map(Number);
-                              const totalMinutes = (exitH * 60 + exitM) - (entryH * 60 + entryM);
-                              const hours = Math.floor(totalMinutes / 60);
-                              const minutes = totalMinutes % 60;
-                              return `${hours}h ${minutes}min`;
-                            })() : '-';
+                          const permanencia = calculateLoadingTime(
+                            loading.entry_date,
+                            loading.entry_time,
+                            loading.exit_date,
+                            loading.exit_time
+                          );
                           
                           return (
                             <tr key={loading.id} className="border-b hover:bg-green-50 transition-colors">

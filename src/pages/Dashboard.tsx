@@ -34,6 +34,7 @@ import QueueDisplay from "@/components/QueueDisplay";
 import { useTheme } from "@/lib/theme";
 import { useToast } from "@/hooks/use-toast";
 import logo from "@/assets/BF_logo.png";
+import { calculateLoadingTime } from "@/lib/time-utils";
 
 // Função helper para converter texto para Title Case
 const toTitleCase = (str: string): string => {
@@ -399,9 +400,10 @@ const Dashboard = () => {
   
   // CONCLUÍDOS: Apenas os que iniciaram HOJE e saíram HOJE
   // (não mostra os que foram carregados em dias anteriores e saíram hoje)
+  // IMPORTANTE: Ao editar a data de saída, o registro deve sair da lista se não for mais hoje
   const loadingsConcluidos = loadingRecords.filter(l => {
-    // Deve ter exit_date de HOJE E entry_date também de HOJE
-    return l.exit_date === today && l.entry_date === today;
+    // Deve ter exit_date de HOJE E entry_date também de HOJE E status concluido
+    return l.exit_date === today && l.entry_date === today && l.status === 'concluido';
   });
 
   // Apenas veículos (separado dos carregamentos)
@@ -1138,17 +1140,12 @@ const Dashboard = () => {
                           .sort((a, b) => new Date(b.exit_time!).getTime() - new Date(a.exit_time!).getTime())
                           .slice(0, 10)
                           .map((loading) => {
-                            const entryTime = loading.entry_time;
-                            const exitTime = loading.exit_time;
-                            const permanencia = entryTime && exitTime ? 
-                              (() => {
-                                const [entryH, entryM] = entryTime.split(':').map(Number);
-                                const [exitH, exitM] = exitTime.split(':').map(Number);
-                                const totalMinutes = (exitH * 60 + exitM) - (entryH * 60 + entryM);
-                                const hours = Math.floor(totalMinutes / 60);
-                                const minutes = totalMinutes % 60;
-                                return `${hours}h ${minutes}min`;
-                              })() : '-';
+                            const permanencia = calculateLoadingTime(
+                              loading.entry_date,
+                              loading.entry_time,
+                              loading.exit_date,
+                              loading.exit_time
+                            );
                             
                             return (
                               <tr key={loading.id} className="border-b hover:bg-green-50 transition-colors">

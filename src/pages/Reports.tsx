@@ -9,6 +9,7 @@ import { ArrowLeft, BarChart3, Download, Share2, Loader2, Filter, FileSpreadshee
 import { useToast } from "@/hooks/use-toast";
 import { useVehicles, useCottonPull, useRainRecords, useEquipment, useLoadingRecords } from "@/hooks/use-supabase";
 import { useMaterialReceipts } from "@/hooks/use-material-receipts";
+import { calculateLoadingTime } from "@/lib/time-utils";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
@@ -635,12 +636,25 @@ const Reports = () => {
       }
       
       // Calcular tempo de permanência (se houver entrada e saída)
-      if (record.entry_time && record.exit_time) {
-        const [entryH, entryM] = record.entry_time.split(':').map(Number);
-        const [exitH, exitM] = record.exit_time.split(':').map(Number);
-        const timeInMinutes = (exitH * 60 + exitM) - (entryH * 60 + entryM);
-        if (timeInMinutes > 0) {
-          acc[key].totalTime += timeInMinutes;
+      if (record.entry_date && record.entry_time && record.exit_date && record.exit_time) {
+        // Usar função que considera mudança de data
+        const timeStr = calculateLoadingTime(
+          record.entry_date,
+          record.entry_time,
+          record.exit_date,
+          record.exit_time
+        );
+        
+        // Extrair minutos do resultado (formato "Xh Ymin")
+        if (timeStr !== '-' && timeStr !== 'Erro') {
+          const hoursMatch = timeStr.match(/(\d+)h/);
+          const minutesMatch = timeStr.match(/(\d+)min/);
+          const hours = hoursMatch ? parseInt(hoursMatch[1]) : 0;
+          const minutes = minutesMatch ? parseInt(minutesMatch[1]) : 0;
+          const timeInMinutes = hours * 60 + minutes;
+          if (timeInMinutes > 0) {
+            acc[key].totalTime += timeInMinutes;
+          }
         }
       }
       
