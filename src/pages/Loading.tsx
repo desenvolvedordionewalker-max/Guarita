@@ -783,7 +783,7 @@ const Loading = () => {
                       <th className="p-2 text-left border">Motorista</th>
                       <th className="p-2 text-left border">Transportadora</th>
                       <th className="p-2 text-left border">Destino</th>
-                      <th className="p-2 text-left border">Data</th>
+                      <th className="p-2 text-left border">Marcação</th>
                       <th className="p-2 text-left border">Entrada</th>
                       <th className="p-2 text-left border">Saída</th>
                       <th className="p-2 text-center border">Ações</th>
@@ -793,8 +793,27 @@ const Loading = () => {
                     {loadings
                       .sort((a, b) => new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime())
                       .map((loading) => {
-                        const status = loading.exit_date ? 'Concluído' : loading.entry_date ? 'Carregando' : 'Na Fila';
-                        const statusColor = status === 'Concluído' ? 'text-green-600' : status === 'Carregando' ? 'text-orange-600' : 'text-yellow-600';
+                        // Usar o campo status da tabela
+                        let status = 'Na Fila';
+                        let statusColor = 'text-yellow-600';
+                        
+                        if (loading.status === 'fila') {
+                          status = 'Na Fila';
+                          statusColor = 'text-yellow-600';
+                        } else if (loading.status === 'carregando') {
+                          status = 'Carregando';
+                          statusColor = 'text-orange-600';
+                        } else if (loading.status === 'carregado') {
+                          status = 'Carregado';
+                          statusColor = 'text-amber-600';
+                        } else if (loading.status === 'concluido' || loading.exit_date) {
+                          status = 'Concluído';
+                          statusColor = 'text-green-600';
+                        } else if (loading.entry_date) {
+                          // Fallback para registros sem status
+                          status = 'Carregando';
+                          statusColor = 'text-orange-600';
+                        }
                         
                         return (
                           <tr key={loading.id} className="hover:bg-muted/30 transition-colors">
@@ -816,7 +835,7 @@ const Loading = () => {
                             <td className="p-2 border truncate max-w-32">{loading.driver}</td>
                             <td className="p-2 border truncate max-w-32">{loading.carrier}</td>
                             <td className="p-2 border truncate max-w-32">{loading.destination}</td>
-                            <td className="p-2 border">{loading.date}</td>
+                            <td className="p-2 border">{loading.date} {loading.time}</td>
                             <td className="p-2 border">{loading.entry_date ? `${loading.entry_date} ${loading.entry_time}` : '-'}</td>
                             <td className="p-2 border">{loading.exit_date ? `${loading.exit_date} ${loading.exit_time}` : '-'}</td>
                             <td className="p-2 border">
