@@ -47,6 +47,12 @@ const Loading = () => {
   const [newProduct, setNewProduct] = useState("");
   const [showForm, setShowForm] = useState(false);
 
+  // Filtros para o Resumo Geral
+  const [filterDate, setFilterDate] = useState<string>("");
+  const [filterProduct, setFilterProduct] = useState<string>("Todos");
+  const [filterCarrier, setFilterCarrier] = useState<string>("Todos");
+  const [filterStatus, setFilterStatus] = useState<string>("Todos");
+
   // Salvar tipos de caminhão no localStorage sempre que mudar
   useEffect(() => {
     localStorage.setItem('guarita_truck_types', JSON.stringify(truckTypes));
@@ -768,6 +774,84 @@ const Loading = () => {
             <CardDescription>Todos os registros com opções de edição e exclusão</CardDescription>
           </CardHeader>
           <CardContent>
+            {/* Filtros */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 p-4 bg-muted/30 rounded-lg">
+              <div className="space-y-2">
+                <Label htmlFor="filterDate">Data</Label>
+                <Input
+                  id="filterDate"
+                  type="date"
+                  value={filterDate}
+                  onChange={(e) => setFilterDate(e.target.value)}
+                  placeholder="Filtrar por data"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="filterProduct">Produto</Label>
+                <select
+                  id="filterProduct"
+                  value={filterProduct}
+                  onChange={(e) => setFilterProduct(e.target.value)}
+                  className="w-full p-2 border rounded-md bg-background"
+                >
+                  <option value="Todos">Todos</option>
+                  <option value="Pluma">Pluma</option>
+                  <option value="Caroço">Caroço</option>
+                  <option value="Fibrilha">Fibrilha</option>
+                  <option value="Briquete">Briquete</option>
+                  <option value="Reciclados">Reciclados</option>
+                  <option value="Cavaco">Cavaco</option>
+                  <option value="Outros">Outros</option>
+                </select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="filterCarrier">Transportadora</Label>
+                <select
+                  id="filterCarrier"
+                  value={filterCarrier}
+                  onChange={(e) => setFilterCarrier(e.target.value)}
+                  className="w-full p-2 border rounded-md bg-background"
+                >
+                  <option value="Todos">Todos</option>
+                  {carriers.map(carrier => (
+                    <option key={carrier} value={carrier}>{carrier}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="filterStatus">Status</Label>
+                <select
+                  id="filterStatus"
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className="w-full p-2 border rounded-md bg-background"
+                >
+                  <option value="Todos">Todos</option>
+                  <option value="Na Fila">Na Fila</option>
+                  <option value="Carregando">Carregando</option>
+                  <option value="Carregado">Carregado</option>
+                  <option value="Concluído">Concluído</option>
+                </select>
+              </div>
+              
+              <div className="flex items-end">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setFilterDate("");
+                    setFilterProduct("Todos");
+                    setFilterCarrier("Todos");
+                    setFilterStatus("Todos");
+                  }}
+                  className="w-full"
+                >
+                  Limpar Filtros
+                </Button>
+              </div>
+            </div>
             {loading ? (
               <div className="text-center py-8">
                 <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
@@ -791,6 +875,31 @@ const Loading = () => {
                   </thead>
                   <tbody>
                     {loadings
+                      .filter((loading) => {
+                        // Calcular status para filtragem
+                        let status = 'Na Fila';
+                        if (loading.status === 'fila') {
+                          status = 'Na Fila';
+                        } else if (loading.status === 'carregando') {
+                          status = 'Carregando';
+                        } else if (loading.status === 'carregado') {
+                          status = 'Carregado';
+                        } else if (loading.status === 'concluido' || loading.exit_date) {
+                          status = 'Concluído';
+                        } else if (loading.entry_date) {
+                          status = 'Carregando';
+                        }
+                        
+                        // Aplicar filtros
+                        const matchDate = !filterDate || loading.date === filterDate || 
+                                         loading.entry_date === filterDate || 
+                                         loading.exit_date === filterDate;
+                        const matchProduct = filterProduct === "Todos" || loading.product === filterProduct;
+                        const matchCarrier = filterCarrier === "Todos" || loading.carrier === filterCarrier;
+                        const matchStatus = filterStatus === "Todos" || status === filterStatus;
+                        
+                        return matchDate && matchProduct && matchCarrier && matchStatus;
+                      })
                       .sort((a, b) => new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime())
                       .map((loading) => {
                         // Usar o campo status da tabela
