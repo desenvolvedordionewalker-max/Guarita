@@ -744,8 +744,16 @@ const Loading = () => {
                                   {loading.product}
                                 </span>
                               </td>
-                              <td className="p-2 border border-gray-200">{entryTime || '-'}</td>
-                              <td className="p-2 border border-gray-200 text-green-600 font-medium">{exitTime || '-'}</td>
+                              <td className="p-2 border border-gray-200">
+                                {loading.entry_date && loading.entry_time 
+                                  ? `${loading.entry_date} ${loading.entry_time}` 
+                                  : '-'}
+                              </td>
+                              <td className="p-2 border border-gray-200 text-green-600 font-medium">
+                                {loading.exit_date && loading.exit_time 
+                                  ? `${loading.exit_date} ${loading.exit_time}` 
+                                  : '-'}
+                              </td>
                               <td className="p-2 border border-gray-200 text-center font-medium text-green-600">{permanencia}</td>
                               <td className="p-2 border border-gray-200 text-center">
                                 {loading.weight ? `${loading.weight}kg` : loading.bales ? `${loading.bales} fardos` : '-'}
@@ -1179,6 +1187,29 @@ const Loading = () => {
                 <Button type="submit" className="flex-1">
                   Salvar Alterações
                 </Button>
+                {selectedLoading.exit_date && (
+                  <Button 
+                    type="button" 
+                    variant="destructive"
+                    onClick={async () => {
+                      if (confirm('Deseja voltar este carregamento para "Carregando"? A data e hora de saída serão apagadas.')) {
+                        await updateRecord(selectedLoading.id, {
+                          exit_date: null,
+                          exit_time: null,
+                          status: 'carregando'
+                        });
+                        setIsDialogOpen(false);
+                        setIsEditMode(false);
+                        toast({
+                          title: "Voltado para Carregando",
+                          description: `${selectedLoading.plate} está novamente em carregamento.`
+                        });
+                      }
+                    }}
+                  >
+                    🔄 Voltar para Carregando
+                  </Button>
+                )}
                 <Button 
                   type="button" 
                   variant="outline" 

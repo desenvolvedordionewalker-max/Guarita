@@ -1127,8 +1127,8 @@ const Dashboard = () => {
                           <th className="p-2 font-semibold text-left">Placa</th>
                           <th className="p-2 font-semibold text-left">Motorista</th>
                           <th className="p-2 font-semibold text-left">Produto</th>
-                          <th className="p-2 font-semibold text-left">H.Entrada</th>
-                          <th className="p-2 font-semibold text-left">H.Saída</th>
+                          <th className="p-2 font-semibold text-left">Entrada</th>
+                          <th className="p-2 font-semibold text-left">Saída</th>
                           <th className="p-2 font-semibold text-center">Permanência</th>
                           <th className="p-2 font-semibold text-center">Peso/Fardos</th>
                         </tr>
@@ -1164,8 +1164,16 @@ const Dashboard = () => {
                                     {loading.product}
                                   </span>
                                 </td>
-                                <td className="p-2 border border-gray-200">{entryTime || '-'}</td>
-                                <td className="p-2 border border-gray-200 text-green-600 font-medium">{exitTime || '-'}</td>
+                                <td className="p-2 border border-gray-200">
+                                  {loading.entry_date && loading.entry_time 
+                                    ? `${loading.entry_date} ${loading.entry_time}` 
+                                    : '-'}
+                                </td>
+                                <td className="p-2 border border-gray-200 text-green-600 font-medium">
+                                  {loading.exit_date && loading.exit_time 
+                                    ? `${loading.exit_date} ${loading.exit_time}` 
+                                    : '-'}
+                                </td>
                                 <td className="p-2 border border-gray-200 text-center font-medium text-green-600">{permanencia}</td>
                                 <td className="p-2 border border-gray-200 text-center">
                                   {loading.weight ? `${loading.weight}kg` : loading.bales ? `${loading.bales} fardos` : '-'}
