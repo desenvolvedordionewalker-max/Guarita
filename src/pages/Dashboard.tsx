@@ -35,6 +35,7 @@ import { useTheme } from "@/lib/theme";
 import { useToast } from "@/hooks/use-toast";
 import logo from "@/assets/BF_logo.png";
 import { calculateLoadingTime } from "@/lib/time-utils";
+import { normalizeLocalDate } from "@/lib/date-utils";
 
 // Função helper para converter texto para Title Case
 const toTitleCase = (str: string): string => {
