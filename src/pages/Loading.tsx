@@ -20,6 +20,8 @@ const Loading = () => {
   const { toast } = useToast();
   const { records: loadings, addRecord, updateRecord, deleteRecord, loading } = useLoadingRecords();
   
+  const today = getTodayLocalDate();
+  
   const [truckTypes, setTruckTypes] = useState<string[]>(() => {
     const saved = localStorage.getItem('guarita_truck_types');
     return saved ? JSON.parse(saved) : ["Rodotrem", "Bitrem", "Toco", "LS Simples", "LS Trucada", "Vanderleia"];
