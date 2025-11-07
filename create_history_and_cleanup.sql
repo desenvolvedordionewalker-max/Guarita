@@ -1,12 +1,18 @@
 -- Sistema de Histórico e Limpeza Automática
 -- Execute este script no Supabase SQL Editor
 
+-- 0. Remover objetos antigos se existirem (para recriar com tipos corretos)
+DROP VIEW IF EXISTS all_loadings CASCADE;
+DROP FUNCTION IF EXISTS get_loading_history CASCADE;
+DROP FUNCTION IF EXISTS archive_completed_loadings CASCADE;
+DROP TABLE IF EXISTS loading_history CASCADE;
+
 -- 1. Criar tabela de histórico para preservar todos os carregamentos
-CREATE TABLE IF NOT EXISTS loading_history (
+CREATE TABLE loading_history (
   id uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
   original_id uuid NOT NULL, -- ID original do loading_records
   date date NOT NULL,
-  "time" text NOT NULL, -- Escapado porque 'time' é palavra reservada
+  time_value text NOT NULL, -- Renomeado para evitar palavra reservada, armazena como texto
   entry_date date,
   entry_time text,
   exit_date date,
@@ -48,13 +54,13 @@ AS $$
 BEGIN
   -- Insere registros concluídos no histórico
   INSERT INTO loading_history (
-    original_id, date, "time", entry_date, entry_time, exit_date, exit_time,
+    original_id, date, time_value, entry_date, entry_time, exit_date, exit_time,
     product, harvest_year, truck_type, plate, driver, carrier,
     destination, client, invoice_number, bales, weight, is_sider,
     status, observations, created_by, created_at, completed_at, updated_at
   )
   SELECT 
-    id, date, "time", entry_date, entry_time, exit_date, exit_time,
+    id, date, "time"::text, entry_date, entry_time, exit_date, exit_time,
     product, harvest_year, truck_type, plate, driver, carrier,
     destination, client, invoice_number, bales, weight, is_sider,
     status, observations, created_by, created_at, now(), updated_at
@@ -105,7 +111,7 @@ CREATE OR REPLACE FUNCTION get_loading_history(
 RETURNS TABLE (
   id uuid,
   date date,
-  "time" text,
+  time_value text,
   entry_date date,
   entry_time text,
   exit_date date,
@@ -130,7 +136,7 @@ AS $$
 BEGIN
   RETURN QUERY
   SELECT 
-    h.id, h.date, h."time", h.entry_date, h.entry_time, h.exit_date, h.exit_time,
+    h.id, h.date, h.time_value, h.entry_date, h.entry_time, h.exit_date, h.exit_time,
     h.product, h.harvest_year, h.truck_type, h.plate, h.driver, h.carrier,
     h.destination, h.client, h.invoice_number, h.bales, h.weight, h.is_sider,
     h.status, h.completed_at
@@ -139,7 +145,7 @@ BEGIN
     (start_date IS NULL OR h.date >= start_date)
     AND (end_date IS NULL OR h.date <= end_date)
     AND (plate_filter IS NULL OR h.plate ILIKE '%' || plate_filter || '%')
-  ORDER BY h.completed_at DESC, h.date DESC, h."time" DESC;
+  ORDER BY h.completed_at DESC, h.date DESC, h.time_value DESC;
 END;
 $$;
 
@@ -172,7 +178,7 @@ CREATE OR REPLACE VIEW all_loadings AS
 SELECT 
   id,
   date,
-  "time",
+  "time"::text as time_value,
   entry_date,
   entry_time,
   exit_date,
@@ -198,7 +204,7 @@ UNION ALL
 SELECT 
   original_id as id,
   date,
-  "time",
+  time_value,
   entry_date,
   entry_time,
   exit_date,
@@ -220,6 +226,6 @@ SELECT
   created_at,
   updated_at
 FROM loading_history
-ORDER BY date DESC, "time" DESC;
+ORDER BY date DESC, time_value DESC;
 
 COMMENT ON VIEW all_loadings IS 'View que une registros ativos e histórico para consultas completas';
