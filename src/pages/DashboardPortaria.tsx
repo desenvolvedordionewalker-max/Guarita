@@ -140,12 +140,25 @@ export default function DashboardPortariaTV() {
   const thisYearStartStr = thisYearStart.toISOString().split('T')[0];
   const thisYearEndStr = thisYearEnd.toISOString().split('T')[0];
 
-  // Primeiro filtramos os carregamentos do dia
-  const todayLoadings = loadingRecords; // Todos para fila e carregando
-  const fila = todayLoadings.filter(l => !l.entry_date);
-  const carregando = todayLoadings.filter(l => l.entry_date && !l.exit_date);
-  // Concluídos: apenas os que saíram HOJE
-  const concluidos = todayLoadings.filter(l => l.exit_date === todayStr);
+  // Filtros de carregamento (mesma lógica do Dashboard principal)
+  const todayLoadings = loadingRecords;
+  
+  // FILA: status = 'fila' OU registros antigos sem status e sem entry_date
+  const fila = todayLoadings.filter(l => 
+    l.status === 'fila' || (!l.status && !l.entry_date)
+  );
+  
+  // CARREGANDO: status 'carregando' ou 'carregado', sem exit_date
+  const carregando = todayLoadings.filter(l => {
+    if (l.exit_date) return false;
+    if (l.status === 'carregando' || l.status === 'carregado') return true;
+    return !l.status && l.entry_date && !l.exit_date;
+  });
+  
+  // CONCLUÍDOS: Carregados HOJE (entry_date = hoje) e já saíram (exit_date preenchido)
+  const concluidos = todayLoadings.filter(l => {
+    return l.entry_date === todayStr && l.exit_date && l.status === 'concluido';
+  });
 
   // Estatísticas de carregamento por produto
   const produtosFixos = ["PLUMA", "CAROÇO", "FIBRILHA", "BRIQUETE"];
