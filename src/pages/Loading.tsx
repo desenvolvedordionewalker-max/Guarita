@@ -52,6 +52,7 @@ const Loading = () => {
   const [filterProduct, setFilterProduct] = useState<string>("Todos");
   const [filterCarrier, setFilterCarrier] = useState<string>("Todos");
   const [filterStatus, setFilterStatus] = useState<string>("Todos");
+  const [filterSearch, setFilterSearch] = useState<string>(""); // Busca geral em todas colunas
 
   // Salvar tipos de caminhão no localStorage sempre que mudar
   useEffect(() => {
@@ -775,23 +776,38 @@ const Loading = () => {
           </CardHeader>
           <CardContent>
             {/* Filtros */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 p-4 bg-muted/30 rounded-lg">
-              <div className="space-y-2">
-                <Label htmlFor="filterDate">Data</Label>
+            <div className="space-y-4 mb-4">
+              {/* Busca Geral */}
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <Label htmlFor="filterSearch" className="text-blue-900 font-semibold">🔍 Busca Geral</Label>
                 <Input
-                  id="filterDate"
-                  type="date"
-                  value={filterDate}
-                  onChange={(e) => setFilterDate(e.target.value)}
-                  placeholder="Filtrar por data"
+                  id="filterSearch"
+                  type="text"
+                  value={filterSearch}
+                  onChange={(e) => setFilterSearch(e.target.value)}
+                  placeholder="Buscar em todas as colunas (placa, motorista, produto, transportadora, destino, cliente, NF...)"
+                  className="mt-2"
                 />
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="filterProduct">Produto</Label>
-                <select
-                  id="filterProduct"
-                  value={filterProduct}
+              {/* Filtros Específicos */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-muted/30 rounded-lg">
+                <div className="space-y-2">
+                  <Label htmlFor="filterDate">Data</Label>
+                  <Input
+                    id="filterDate"
+                    type="date"
+                    value={filterDate}
+                    onChange={(e) => setFilterDate(e.target.value)}
+                    placeholder="Filtrar por data"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="filterProduct">Produto</Label>
+                  <select
+                    id="filterProduct"
+                    value={filterProduct}
                   onChange={(e) => setFilterProduct(e.target.value)}
                   className="w-full p-2 border rounded-md bg-background"
                 >
@@ -845,12 +861,14 @@ const Loading = () => {
                     setFilterProduct("Todos");
                     setFilterCarrier("Todos");
                     setFilterStatus("Todos");
+                    setFilterSearch("");
                   }}
                   className="w-full"
                 >
                   Limpar Filtros
                 </Button>
               </div>
+            </div>
             </div>
             {loading ? (
               <div className="text-center py-8">
@@ -890,7 +908,31 @@ const Loading = () => {
                           status = 'Carregando';
                         }
                         
-                        // Aplicar filtros
+                        // Busca Geral (procura em TODAS as colunas)
+                        if (filterSearch) {
+                          const searchLower = filterSearch.toLowerCase();
+                          const matchSearch = 
+                            loading.plate?.toLowerCase().includes(searchLower) ||
+                            loading.driver?.toLowerCase().includes(searchLower) ||
+                            loading.product?.toLowerCase().includes(searchLower) ||
+                            loading.carrier?.toLowerCase().includes(searchLower) ||
+                            loading.destination?.toLowerCase().includes(searchLower) ||
+                            loading.client?.toLowerCase().includes(searchLower) ||
+                            loading.invoice_number?.toLowerCase().includes(searchLower) ||
+                            loading.truck_type?.toLowerCase().includes(searchLower) ||
+                            loading.harvest_year?.toLowerCase().includes(searchLower) ||
+                            status.toLowerCase().includes(searchLower) ||
+                            loading.date?.includes(searchLower) ||
+                            loading.entry_date?.includes(searchLower) ||
+                            loading.exit_date?.includes(searchLower) ||
+                            loading.time?.includes(searchLower) ||
+                            loading.entry_time?.includes(searchLower) ||
+                            loading.exit_time?.includes(searchLower);
+                          
+                          if (!matchSearch) return false;
+                        }
+                        
+                        // Aplicar filtros específicos
                         const matchDate = !filterDate || loading.date === filterDate || 
                                          loading.entry_date === filterDate || 
                                          loading.exit_date === filterDate;
@@ -952,7 +994,7 @@ const Loading = () => {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => handleEditClick(loading, {} as React.MouseEvent)}
+                                  onClick={(e) => handleEditClick(loading, e)}
                                   className="h-7 w-7 p-0 hover:bg-blue-50 hover:text-blue-600"
                                 >
                                   <Edit2 className="w-3 h-3" />
@@ -960,7 +1002,7 @@ const Loading = () => {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => handleDeleteClick(loading, {} as React.MouseEvent)}
+                                  onClick={(e) => handleDeleteClick(loading, e)}
                                   className="h-7 w-7 p-0 hover:bg-red-50 hover:text-red-600"
                                 >
                                   <Trash2 className="w-3 h-3" />

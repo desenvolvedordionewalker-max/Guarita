@@ -360,6 +360,7 @@ const Dashboard = () => {
   // Calcular estatísticas reais
   const today = new Date().toISOString().split('T')[0];
   const todayVehicles = vehicles.filter(v => v.date === today);
+  const allVehicles = vehicles; // TODOS os veículos (histórico completo)
   const todayCarregamentos = todayVehicles.filter(v => v.type === 'Carregamento');
   const todayRolls = cottonRecords
     .filter(r => r.date === today)
@@ -1199,11 +1200,11 @@ const Dashboard = () => {
                 Movimentação Geral de Veículos
               </CardTitle>
               <CardDescription>
-                Todos os Veículos que Entraram Hoje
+                Histórico Completo de Todos os Veículos
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {!loadingVehicles && todayVehicles.length > 0 ? (
+              {!loadingVehicles && allVehicles.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">
                     <thead>
@@ -1221,7 +1222,10 @@ const Dashboard = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {todayVehicles.slice(0, 10).map((vehicle) => {
+                      {allVehicles
+                        .sort((a, b) => new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime())
+                        .slice(0, 20)
+                        .map((vehicle) => {
                         const isExternalExit = vehicle.type === "Saída Externa";
                         return (
                           <tr key={vehicle.id} className={`border-b hover:bg-gray-50 ${isExternalExit ? 'bg-orange-50' : ''}`}>
@@ -1287,10 +1291,10 @@ const Dashboard = () => {
                       })}
                     </tbody>
                   </table>
-                  {todayVehicles.length > 10 && (
+                  {allVehicles.length > 20 && (
                     <div className="mt-4 text-center">
                       <Button variant="outline" onClick={() => navigate('/vehicles')} className="text-sm">
-                        Ver Todos os {todayVehicles.length} Veículos
+                        Ver Todos os {allVehicles.length} Veículos
                       </Button>
                     </div>
                   )}
