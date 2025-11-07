@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ArrowLeft, BarChart3, Download, Share2, Loader2, Filter, FileSpreadsheet, FileText, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useVehicles, useCottonPull, useRainRecords, useEquipment, useLoadingRecords } from "@/hooks/use-supabase";
@@ -45,6 +46,9 @@ const Reports = () => {
   const [driverFilter, setDriverFilter] = useState("");
   const [periodFilter, setPeriodFilter] = useState("day"); // day, month, year
   const [isExpanded, setIsExpanded] = useState(true); // Estado para expandir/recolher movimentação geral
+  
+  // Estado para modal de visualização de mensagem
+  const [messageModal, setMessageModal] = useState({ open: false, title: '', content: '' });
 
   // Calcular estatísticas reais
   const currentMonth = new Date().getMonth();
@@ -478,93 +482,74 @@ const Reports = () => {
     // Total de carretas na fila
     const totalCarretas = filaCarregamento.length;
     
-    // Agrupar por transportadora
-    const groupedByCarrier = filaCarregamento.reduce((acc, item) => {
-      const carrier = item.carrier || 'Sem Transportadora';
-      if (!acc[carrier]) {
-        acc[carrier] = { count: 0, truckTypes: new Set(), siders: 0 };
-      }
-      acc[carrier].count++;
-      acc[carrier].truckTypes.add(item.truck_type);
-      if (item.is_sider) acc[carrier].siders++;
-      return acc;
-    }, {} as Record<string, { count: number, truckTypes: Set<string>, siders: number }>);
-    
     let message = `🏢 IBA Santa Luzia - Controle Guarita
 🕒 Fila de Carregamento - ${today} - ${time}\n\n`;
     
     message += `📊 TOTAL: ${totalCarretas} carreta${totalCarretas !== 1 ? 's' : ''} aguardando\n\n`;
-    
-    // Resumo por transportadora
-    if (Object.keys(groupedByCarrier).length > 0) {
-      message += `🚛 POR TRANSPORTADORA:\n`;
-      Object.entries(groupedByCarrier)
-        .sort((a, b) => b[1].count - a[1].count)
-        .forEach(([carrier, data]) => {
-          const truckTypesList = Array.from(data.truckTypes).join(', ');
-          const siderInfo = data.siders > 0 ? ` (${data.siders} Sider)` : '';
-          message += `  ${data.count}x - ${carrier}\n`;
-          message += `       ${truckTypesList}${siderInfo}\n`;
+
+    // Função auxiliar para agrupar e formatar por produto
+    const formatProductQueue = (items: typeof filaCarregamento, productName: string, icon: string) => {
+      if (items.length === 0) return '';
+      
+      let result = `${icon} ${productName} - ${items.length} Carreta${items.length > 1 ? 's' : ''}\n`;
+      
+      // Agrupar por transportadora
+      const byCarrier = items.reduce((acc, item) => {
+        const carrier = item.carrier || 'Sem Transportadora';
+        if (!acc[carrier]) {
+          acc[carrier] = [];
+        }
+        acc[carrier].push(item);
+        return acc;
+      }, {} as Record<string, typeof items>);
+      
+      // Para cada transportadora
+      Object.entries(byCarrier)
+        .sort((a, b) => b[1].length - a[1].length)
+        .forEach(([carrier, carrierItems]) => {
+          result += `*${carrierItems.length} - ${carrier}*\n`;
+          
+          // Agrupar por tipo de caminhão
+          const byTruckType = carrierItems.reduce((acc, item) => {
+            const key = `${item.truck_type}|${item.is_sider ? 'Sider' : 'Normal'}`;
+            if (!acc[key]) {
+              acc[key] = { truck_type: item.truck_type, is_sider: item.is_sider, count: 0, siderCount: 0 };
+            }
+            acc[key].count++;
+            if (item.is_sider) acc[key].siderCount++;
+            return acc;
+          }, {} as Record<string, { truck_type: string, is_sider: boolean, count: number, siderCount: number }>);
+          
+          Object.values(byTruckType).forEach(group => {
+            const siderInfo = group.siderCount > 0 ? ` (${group.siderCount} Sider)` : '';
+            result += `   >> ${group.count} ${group.truck_type}${siderInfo}\n`;
+          });
         });
-      message += '\n';
-    }
-    
-    message += `📦 POR PRODUTO:\n\n`;
+      
+      result += '\n';
+      return result;
+    };
 
     if (filaPluma.length > 0) {
-      message += `▪️ Pluma – ${filaPluma.length} carreta${filaPluma.length > 1 ? 's' : ''} aguardando:\n`;
-      // Agrupar por tipo de caminhão e sider
-      const groupedPluma = filaPluma.reduce((acc, item) => {
-        const key = `${item.truck_type}|${item.is_sider ? 'Sider' : ''}`;
-        if (!acc[key]) {
-          acc[key] = { truck_type: item.truck_type, is_sider: item.is_sider, count: 0, carriers: new Set() };
-        }
-        acc[key].count++;
-        acc[key].carriers.add(item.carrier);
-        return acc;
-      }, {} as Record<string, { truck_type: string, is_sider: boolean, count: number, carriers: Set<string> }>);
-      
-      Object.values(groupedPluma).forEach(group => {
-        const siderText = group.is_sider ? ' (Sider)' : '';
-        message += `  • ${group.count}x ${group.truck_type}${siderText}\n`;
-      });
-      message += '\n';
+      message += formatProductQueue(filaPluma, 'Pluma', '▪️');
     }
 
     if (filaCaroco.length > 0) {
-      message += `🌰 Caroço – ${filaCaroco.length} carreta${filaCaroco.length > 1 ? 's' : ''} aguardando:\n`;
-      // Agrupar por tipo de caminhão e sider
-      const groupedCaroco = filaCaroco.reduce((acc, item) => {
-        const key = `${item.truck_type}|${item.is_sider ? 'Sider' : ''}`;
-        if (!acc[key]) {
-          acc[key] = { truck_type: item.truck_type, is_sider: item.is_sider, count: 0 };
-        }
-        acc[key].count++;
-        return acc;
-      }, {} as Record<string, { truck_type: string, is_sider: boolean, count: number }>);
-      
-      Object.values(groupedCaroco).forEach(group => {
-        const siderText = group.is_sider ? ' (Sider)' : '';
-        message += `  • ${group.count}x ${group.truck_type}${siderText}\n`;
-      });
-      message += '\n';
+      message += formatProductQueue(filaCaroco, 'Caroço', '🌰');
     }
 
     if (filaFibrilha.length > 0) {
-      message += `▪️ Fibrilha – ${filaFibrilha.length} carreta${filaFibrilha.length > 1 ? 's' : ''} aguardando:\n`;
-      // Agrupar por tipo de caminhão e sider
-      const groupedFibrilha = filaFibrilha.reduce((acc, item) => {
-        const key = `${item.truck_type}|${item.is_sider ? 'Sider' : ''}`;
-        if (!acc[key]) {
-          acc[key] = { truck_type: item.truck_type, is_sider: item.is_sider, count: 0 };
-        }
-        acc[key].count++;
-        return acc;
-      }, {} as Record<string, { truck_type: string, is_sider: boolean, count: number }>);
-      
-      Object.values(groupedFibrilha).forEach(group => {
-        const siderText = group.is_sider ? ' (Sider)' : '';
-        message += `  • ${group.count}x ${group.truck_type}${siderText}\n`;
+      message += formatProductQueue(filaFibrilha, 'Fibrilha', '▪️');
+    }
+
+    if (filaBriquete.length > 0) {
+      message += formatProductQueue(filaBriquete, 'Briquete', '▪️');
+    }
+
+    if (filaOutros.length > 0) {
+      message += `📦 Outros Produtos – ${filaOutros.length} carreta${filaOutros.length > 1 ? 's' : ''} aguardando:\n`;
+      filaOutros.slice(0, 5).forEach(item => {
+        message += `🚚 ${item.product} | ${item.plate} | ${item.carrier}\n`;
       });
       message += '\n';
     }
@@ -1290,10 +1275,26 @@ const Reports = () => {
               <div className="space-y-2">
                 <Button 
                   className="w-full h-auto py-4 flex-col items-start bg-primary hover:bg-primary/90"
-                  onClick={() => generateDailySummary(false)}
+                  onClick={() => {
+                    const today = new Date().toLocaleDateString('pt-BR');
+                    const todayDate = new Date().toISOString().split('T')[0];
+                    const carregamentosConcluidos = loadingRecords.filter(l => l.entry_date === todayDate);
+                    
+                    // Gerar mensagem completa sem enviar
+                    let message = `📅 Resumo Diário - ${today}\n\n`;
+                    message += `Total de Carregamentos: ${carregamentosConcluidos.length}\n`;
+                    message += `Pluma: ${carregamentosConcluidos.filter(l => l.product === 'Pluma').length}\n`;
+                    message += `Caroço: ${carregamentosConcluidos.filter(l => l.product === 'Caroço').length}\n`;
+                    
+                    setMessageModal({ 
+                      open: true, 
+                      title: '📊 Resumo Diário', 
+                      content: message 
+                    });
+                  }}
                 >
                   <span className="font-semibold mb-1">📊 Resumo Diário</span>
-                  <span className="text-xs opacity-90">Copiar mensagem completa</span>
+                  <span className="text-xs opacity-90">Visualizar e copiar</span>
                 </Button>
                 <Button 
                   className="w-full h-auto py-3 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white"
@@ -1307,10 +1308,26 @@ const Reports = () => {
               <div className="space-y-2">
                 <Button 
                   className="w-full h-auto py-4 flex-col items-start bg-accent hover:bg-accent/90"
-                  onClick={() => generateQueueStatus(false)}
+                  onClick={() => {
+                    const today = new Date().toLocaleDateString('pt-BR');
+                    const time = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                    const todayDate = new Date().toISOString().split('T')[0];
+                    const filaCarregamento = loadingRecords.filter(l => !l.entry_date);
+                    
+                    // Gerar mensagem da fila sem enviar
+                    let message = `🏢 IBA Santa Luzia - Controle Guarita\n`;
+                    message += `🕒 Fila de Carregamento - ${today} - ${time}\n\n`;
+                    message += `📊 TOTAL: ${filaCarregamento.length} carreta${filaCarregamento.length !== 1 ? 's' : ''} aguardando\n`;
+                    
+                    setMessageModal({ 
+                      open: true, 
+                      title: '🚛 Status da Fila', 
+                      content: message 
+                    });
+                  }}
                 >
                   <span className="font-semibold mb-1">🚛 Status da Fila</span>
-                  <span className="text-xs opacity-90">Copiar status atual</span>
+                  <span className="text-xs opacity-90">Visualizar e copiar</span>
                 </Button>
                 <Button 
                   className="w-full h-auto py-3 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white"
@@ -1324,10 +1341,25 @@ const Reports = () => {
               <div className="space-y-2">
                 <Button 
                   className="w-full h-auto py-4 flex-col items-start bg-orange-600 hover:bg-orange-700"
-                  onClick={() => generateCottonPullSummary(false)}
+                  onClick={() => {
+                    const today = new Date().toLocaleDateString('pt-BR');
+                    const todayDate = new Date().toISOString().split('T')[0];
+                    const todayRecords = cottonRecords.filter(r => r.date === todayDate);
+                    
+                    // Gerar mensagem do puxe de rolos sem enviar
+                    let message = `🌾 Puxe de Rolos - ${today}\n\n`;
+                    message += `Total de Rolos: ${todayRecords.reduce((sum, r) => sum + r.rolls, 0)}\n`;
+                    message += `Viagens: ${todayRecords.length}\n`;
+                    
+                    setMessageModal({ 
+                      open: true, 
+                      title: '🌾 Puxe de Rolos', 
+                      content: message 
+                    });
+                  }}
                 >
                   <span className="font-semibold mb-1">🌾 Puxe de Rolos</span>
-                  <span className="text-xs opacity-90">Relatório detalhado</span>
+                  <span className="text-xs opacity-90">Visualizar e copiar</span>
                 </Button>
                 <Button 
                   className="w-full h-auto py-3 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white"
@@ -1341,6 +1373,43 @@ const Reports = () => {
           </CardContent>
         </Card>
       </main>
+      
+      {/* Modal para visualizar e copiar mensagem */}
+      <Dialog open={messageModal.open} onOpenChange={(open) => setMessageModal({ ...messageModal, open })}>
+        <DialogContent className="max-w-2xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>{messageModal.title}</DialogTitle>
+            <DialogDescription>
+              Visualize a mensagem abaixo e clique em "Copiar" para copiar para a área de transferência
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4">
+            <pre className="bg-gray-50 p-4 rounded-lg overflow-auto max-h-[50vh] text-sm whitespace-pre-wrap font-mono">
+              {messageModal.content}
+            </pre>
+          </div>
+          <div className="flex gap-2 justify-end mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setMessageModal({ ...messageModal, open: false })}
+            >
+              Fechar
+            </Button>
+            <Button
+              onClick={() => {
+                navigator.clipboard.writeText(messageModal.content);
+                toast({
+                  title: "Copiado!",
+                  description: "Mensagem copiada para a área de transferência.",
+                });
+                setMessageModal({ ...messageModal, open: false });
+              }}
+            >
+              📋 Copiar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
