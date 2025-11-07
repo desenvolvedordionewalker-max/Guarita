@@ -57,8 +57,7 @@ const Dashboard = () => {
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
   const [modalAction, setModalAction] = useState<'escolher' | 'carregado' | 'saiu' | 'iniciar'>('escolher');
   const [filtroCarregando, setFiltroCarregando] = useState<string>("Todos");
-  const [filtroFila, setFiltroFila] = useState<string>("Todos");
-  const [isFilaItem, setIsFilaItem] = useState(false);
+  const [filtroFila, setFFiltroFila] = useState<string>("Todos");
   const { theme, toggleTheme } = useTheme();
 
   const handleRegisterVehicleExit = async (id: string) => {
@@ -83,7 +82,7 @@ const Dashboard = () => {
     }
   };
 
-  const calculatePermanenceTime = (entryTime?: string, exitTime?: string) => {
+  const calculatePermanenceTime = (entryTime: string, exitTime?: string) => {
     if (!entryTime || !exitTime) return "-";
     const [entryH, entryM] = entryTime.split(':').map(Number);
     const [exitH, exitM] = exitTime.split(':').map(Number);
@@ -99,7 +98,6 @@ const Dashboard = () => {
     
     // Verificar se é um item da fila (status 'fila' ou sem entry_date)
     const isFromQueue = loading.status === 'fila' || (!loading.status && !loading.entry_date);
-    setIsFilaItem(isFromQueue);
     
     if (isFromQueue) {
       setModalAction('iniciar'); // Modal para registrar entrada
@@ -131,13 +129,23 @@ const Dashboard = () => {
     try {
       await updateRecord(selectedLoading.id, {
         entry_date: entryDate,
-        entry_time: entryTime
+        entry_time: entryTime,
+        status: 'carregando' // Set status to 'carregando'
       });
       
       setIsManageModalOpen(false);
       setSelectedLoading(null);
+      toast({
+        title: "Carregamento iniciado!",
+        description: `Placa ${selectedLoading.plate} entrou para carregamento.`,
+      });
     } catch (error) {
       console.error('Erro ao iniciar carregamento:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível iniciar o carregamento.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -876,7 +884,7 @@ const Dashboard = () => {
                 {/* Filtros por produto */}
                 <div className="flex flex-wrap gap-1 mt-2">
                   <button
-                    onClick={() => setFiltroFila("Todos")}
+                    onClick={() => setFFiltroFila("Todos")}
                     className={`px-2 py-1 rounded text-xs transition-colors ${
                       filtroFila === "Todos"
                         ? "bg-yellow-600 text-white"
@@ -886,7 +894,7 @@ const Dashboard = () => {
                     Todos
                   </button>
                   <button
-                    onClick={() => setFiltroFila("Pluma")}
+                    onClick={() => setFFiltroFila("Pluma")}
                     className={`px-2 py-1 rounded text-xs transition-colors ${
                       filtroFila === "Pluma"
                         ? "bg-yellow-600 text-white"
@@ -896,7 +904,7 @@ const Dashboard = () => {
                     Pluma
                   </button>
                   <button
-                    onClick={() => setFiltroFila("Caroço")}
+                    onClick={() => setFFiltroFila("Caroço")}
                     className={`px-2 py-1 rounded text-xs transition-colors ${
                       filtroFila === "Caroço"
                         ? "bg-yellow-600 text-white"
@@ -906,7 +914,7 @@ const Dashboard = () => {
                     Caroço
                   </button>
                   <button
-                    onClick={() => setFiltroFila("Fibrilha")}
+                    onClick={() => setFFiltroFila("Fibrilha")}
                     className={`px-2 py-1 rounded text-xs transition-colors ${
                       filtroFila === "Fibrilha"
                         ? "bg-yellow-600 text-white"
@@ -916,7 +924,7 @@ const Dashboard = () => {
                     Fibrilha
                   </button>
                   <button
-                    onClick={() => setFiltroFila("Briquete")}
+                    onClick={() => setFFiltroFila("Briquete")}
                     className={`px-2 py-1 rounded text-xs transition-colors ${
                       filtroFila === "Briquete"
                         ? "bg-yellow-600 text-white"
@@ -1371,7 +1379,7 @@ const Dashboard = () => {
             <DialogTitle>Gerenciar Carregamento</DialogTitle>
             <DialogDescription>
               {selectedLoading && !selectedLoading.entry_date 
-                ? "Registre a data e hora de entrada para mover para \"Carregando\""
+                ? "Registre a data e hora de entrada para mover para 'Carregando'"
                 : "Finalize o carregamento com data, hora e nota fiscal"
               }
             </DialogDescription>
@@ -1464,7 +1472,7 @@ const Dashboard = () => {
                       className="h-24 flex flex-col gap-2 bg-green-600 hover:bg-green-700 text-white"
                     >
                       <CheckCircle className="w-8 h-8" />
-                      <span className="font-bold">SAIU</span>
+                      <span className="font-bold">SAIR</span>
                       <span className="text-xs font-normal">Finalizar NF</span>
                     </Button>
                   </div>
