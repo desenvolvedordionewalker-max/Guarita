@@ -10,6 +10,26 @@
 
 ## 🚀 Passo a Passo de Instalação
 
+### 0️⃣ Corrigir Status de Registros Antigos (EXECUTAR PRIMEIRO!)
+
+**IMPORTANTE**: Execute este script ANTES de tudo para corrigir registros que não têm status definido.
+
+1. Acesse seu **Supabase Dashboard**
+2. Vá em **SQL Editor**
+3. Abra o arquivo: **`fix_old_statuses.sql`**
+4. **Copie TODO o conteúdo** do arquivo
+5. **Cole** no SQL Editor do Supabase
+6. Clique em **Run** ou pressione **Ctrl+Enter**
+7. Aguarde a mensagem de sucesso
+
+**O que isso faz:**
+- ✅ Marca como `'concluido'` todos registros que têm `exit_date` preenchido
+- ✅ Marca como `'carregando'` todos registros que têm `entry_date` mas não `exit_date`
+- ✅ Marca como `'fila'` todos registros que não têm datas preenchidas
+- ✅ Exibe relatório de quantos registros foram atualizados
+
+---
+
 ### 1️⃣ Criar Tabela de Histórico e Funções
 
 1. Acesse seu **Supabase Dashboard**
