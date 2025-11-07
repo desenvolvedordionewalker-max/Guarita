@@ -56,7 +56,7 @@ BEGIN
     status, observations, created_by, created_at, completed_at, updated_at
   )
   SELECT 
-    id, date, "time"::text, entry_date, entry_time, exit_date, exit_time,
+    id, date, "time"::text, entry_date, entry_time::text, exit_date, exit_time::text,
     product, harvest_year, truck_type, plate, driver, carrier,
     destination, client, invoice_number, bales, weight, is_sider,
     status, observations, created_by, created_at, now(), updated_at
@@ -138,9 +138,9 @@ SELECT
   date,
   "time"::text as time_value,
   entry_date,
-  entry_time,
+  entry_time::text as entry_time,
   exit_date,
-  exit_time,
+  exit_time::text as exit_time,
   product,
   harvest_year,
   truck_type,
