@@ -1219,7 +1219,8 @@ const Loading = () => {
                           await updateRecord(selectedLoading.id, {
                             exit_date: null,
                             exit_time: null,
-                            status: 'carregado'
+                            status: 'carregado',
+                            loaded_at: new Date().toISOString(), // ATUALIZA o timestamp de carregamento
                           });
                           
                           // Fecha modal imediatamente

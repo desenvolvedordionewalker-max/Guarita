@@ -746,7 +746,27 @@ const Reports = () => {
     vehiclesArray.forEach((vehicle) => {
       message += `\n🚛 ${vehicle.plate} | ${vehicle.driver}\n`;
       message += `  📦 Rolos: ${vehicle.rolls.toLocaleString('pt-BR')}\n`;
-      message += `  � Viagens: ${vehicle.trips}\n`;
+      message += `  Viagens: ${vehicle.trips}\n`;
+      
+      // Adiciona os talhões e fazendas
+      const talhoes = Array.from(vehicle.talhoesUnicos);
+      if (talhoes.length > 0) {
+        // Agrupa por fazenda (assumindo formato "FAZENDA - TALHAO")
+        const fazendas: Record<string, string[]> = {};
+        talhoes.forEach(t => {
+          const parts = t.split('-').map(p => p.trim());
+          const fazenda = parts.length > 1 ? parts[0] : 'Fazenda não especificada';
+          const talhao = parts.length > 1 ? parts.slice(1).join('-').trim() : t;
+          if (!fazendas[fazenda]) {
+            fazendas[fazenda] = [];
+          }
+          fazendas[fazenda].push(talhao);
+        });
+
+        Object.entries(fazendas).forEach(([fazenda, talhoesDaFazenda]) => {
+          message += `  📍 ${fazenda}: ${talhoesDaFazenda.join(', ')}\n`;
+        });
+      }
     });
 
     if (showInModal) {
@@ -767,7 +787,7 @@ const Reports = () => {
       }).catch(() => {
         toast({
           title: "Erro ao copiar",
-          description: "Não foi possível copiar para área de transferência.",
+          description: "Não foi possível copiar para a área de transferência.",
           variant: "destructive"
         });
       });
