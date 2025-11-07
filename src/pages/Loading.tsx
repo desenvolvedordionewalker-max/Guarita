@@ -331,17 +331,18 @@ const Loading = () => {
   const loadingInProgress = loadings.filter(l => {
     // Não mostra se já tem saída
     if (l.exit_date) return false;
-    // Mostra se está carregando ou carregado (SEMPRE MOSTRA até registrar saída)
+    // Não mostra se foi carregado HOJE (aparece em Concluídos)
+    if (l.entry_date === today) return false;
+    // Mostra se está carregando ou carregado (DIAS ANTERIORES apenas)
     if (l.status === 'carregando' || l.status === 'carregado') return true;
     // Fallback para registros sem status mas com entrada
     return !l.status && l.entry_date && !l.exit_date;
   });
   
   const completedLoadings = loadings.filter(l => {
-    // Mostra apenas os que foram CARREGADOS HOJE (entry_date) e já saíram (exit_date preenchido)
-    // REGRA: Concluído aparece no dia que foi CARREGADO, não no dia que saiu
-    // Exemplo: Carregado 06/11, Saiu 07/11 → Aparece em Concluídos do dia 06/11
-    return l.entry_date === today && l.exit_date && l.status === 'concluido';
+    // Mostra TODOS os que foram carregados HOJE (entry_date = hoje)
+    // Inclui: status 'carregado' (aguardando nota) E status 'concluido' (já saiu)
+    return l.entry_date === today;
   });
 
   const getProductColor = (product: string) => {
@@ -747,10 +748,16 @@ const Loading = () => {
                                   ? `${loading.entry_date} ${loading.entry_time}` 
                                   : '-'}
                               </td>
-                              <td className="p-2 border border-gray-200 text-green-600 font-medium">
-                                {loading.exit_date && loading.exit_time 
-                                  ? `${loading.exit_date} ${loading.exit_time}` 
-                                  : '-'}
+                              <td className="p-2 border border-gray-200">
+                                {loading.exit_date && loading.exit_time ? (
+                                  <span className="text-green-600 font-medium">
+                                    {`${loading.exit_date} ${loading.exit_time}`}
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-800 rounded text-xs font-medium">
+                                    📋 Aguardando Nota
+                                  </span>
+                                )}
                               </td>
                               <td className="p-2 border border-gray-200 text-center font-medium text-green-600">{permanencia}</td>
                               <td className="p-2 border border-gray-200 text-center">

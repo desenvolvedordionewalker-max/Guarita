@@ -386,24 +386,25 @@ const Dashboard = () => {
     });
   
   // CARREGANDO: Mostra TODOS (independente do dia) que ainda não saíram completamente
-  // Inclui: 'carregando', 'carregado' (com badge de alerta) e registros antigos sem status que iniciaram mas não finalizaram
+  // EXCETO os que foram carregados HOJE (esses aparecem em Concluídos mesmo sem sair)
   const loadingsCarregando = loadingRecords.filter(l => {
     // Se já saiu completamente (tem exit_date), não mostra aqui
     if (l.exit_date) return false;
     
-    // Se tem status carregando ou carregado - SEMPRE MOSTRA até registrar saída
+    // Se foi carregado HOJE, não mostra aqui (aparece em Concluídos)
+    if (l.entry_date === today) return false;
+    
+    // Se tem status carregando ou carregado - MOSTRA (só dias anteriores)
     if (l.status === 'carregando' || l.status === 'carregado') return true;
     
     // Fallback para registros antigos: tem entry_date mas não tem exit_date
     return !l.status && l.entry_date && !l.exit_date;
   });
   
-  // CONCLUÍDOS: Apenas os que foram CARREGADOS HOJE (entry_date = hoje) e já saíram (exit_date preenchido)
-  // REGRA: Concluído aparece no dia que foi CARREGADO, não no dia que saiu
-  // Exemplo: Carregado 06/11, Saiu 07/11 → Aparece em Concluídos do dia 06/11
+  // CONCLUÍDOS: TODOS que foram carregados HOJE (entry_date = hoje)
+  // Inclui: status 'carregado' (aguardando nota) E status 'concluido' (já saiu)
   const loadingsConcluidos = loadingRecords.filter(l => {
-    // Deve ter sido carregado HOJE (entry_date) E já ter saído (exit_date preenchido) E status concluido
-    return l.entry_date === today && l.exit_date && l.status === 'concluido';
+    return l.entry_date === today;
   });
 
   // Apenas veículos (separado dos carregamentos)
@@ -1166,10 +1167,16 @@ const Dashboard = () => {
                                     ? `${loading.entry_date} ${loading.entry_time}` 
                                     : '-'}
                                 </td>
-                                <td className="p-2 border border-gray-200 text-green-600 font-medium">
-                                  {loading.exit_date && loading.exit_time 
-                                    ? `${loading.exit_date} ${loading.exit_time}` 
-                                    : '-'}
+                                <td className="p-2 border border-gray-200">
+                                  {loading.exit_date && loading.exit_time ? (
+                                    <span className="text-green-600 font-medium">
+                                      {`${loading.exit_date} ${loading.exit_time}`}
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-800 rounded text-xs font-medium">
+                                      📋 Aguardando Nota
+                                    </span>
+                                  )}
                                 </td>
                                 <td className="p-2 border border-gray-200 text-center font-medium text-green-600">{permanencia}</td>
                                 <td className="p-2 border border-gray-200 text-center">
