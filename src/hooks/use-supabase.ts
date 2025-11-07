@@ -652,10 +652,11 @@ export const useLoadingRecords = () => {
 
   const updateRecord = async (id: string, updates: Partial<LoadingRecord>) => {
     try {
-      // Remove campos undefined, null ou vazios
+      // Remove apenas campos undefined ou strings vazias
+      // IMPORTANTE: Mantém null explícito para limpar campos no banco
       const cleanUpdates = Object.fromEntries(
         Object.entries(updates).filter(([_, value]) => 
-          value !== undefined && value !== null && value !== ""
+          value !== undefined && value !== ""
         )
       )
       
