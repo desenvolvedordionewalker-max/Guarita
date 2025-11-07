@@ -14,12 +14,18 @@
 
 1. Acesse seu **Supabase Dashboard**
 2. Vá em **SQL Editor**
-3. Cole e execute o script: `create_history_and_cleanup.sql`
-4. Aguarde a mensagem de sucesso
+3. Abra o arquivo: **`setup_history_CLEAN.sql`**
+4. **Copie TODO o conteúdo** do arquivo
+5. **Cole** no SQL Editor do Supabase
+6. Clique em **Run** ou pressione **Ctrl+Enter**
+7. Aguarde a mensagem de sucesso
+
+⚠️ **IMPORTANTE**: Use o arquivo `setup_history_CLEAN.sql` (versão limpa, sem comentários problemáticos)
 
 **O que isso cria:**
 - ✅ Tabela `loading_history` (armazena todos os registros permanentemente)
 - ✅ Função `archive_completed_loadings()` (move concluídos para histórico)
+- ✅ Função `get_loading_history()` (consulta histórico com filtros)
 - ✅ View `all_loadings` (consulta unificada de ativos + histórico)
 - ✅ Políticas de segurança RLS
 
@@ -36,8 +42,14 @@
 
 ### 3️⃣ Configurar Limpeza Automática Diária
 
-Após habilitar o pg_cron, **copie e cole** este comando no **SQL Editor** (sem as aspas):
+Após habilitar o pg_cron:
 
+1. Abra o arquivo: **`schedule_cleanup.sql`**
+2. **Copie o conteúdo** (apenas o comando SELECT)
+3. **Cole** no SQL Editor do Supabase
+4. Clique em **Run**
+
+O arquivo contém:
 ```sql
 SELECT cron.schedule(
   'cleanup-completed-loadings',
@@ -45,8 +57,6 @@ SELECT cron.schedule(
   $$SELECT archive_completed_loadings();$$
 );
 ```
-
-⚠️ **IMPORTANTE**: Copie APENAS o código SQL acima (de SELECT até o ponto e vírgula). Não copie as crases (```) do markdown!
 
 **O que isso faz:**
 - Agenda a função `archive_completed_loadings()` para rodar todo dia às 00:00
