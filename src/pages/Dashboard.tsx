@@ -398,12 +398,12 @@ const Dashboard = () => {
     return !l.status && l.entry_date && !l.exit_date;
   });
   
-  // CONCLUÍDOS: Apenas os que iniciaram HOJE e saíram HOJE
-  // (não mostra os que foram carregados em dias anteriores e saíram hoje)
-  // IMPORTANTE: Ao editar a data de saída, o registro deve sair da lista se não for mais hoje
+  // CONCLUÍDOS: Apenas os que foram CARREGADOS HOJE (entry_date = hoje) e já saíram (exit_date preenchido)
+  // REGRA: Concluído aparece no dia que foi CARREGADO, não no dia que saiu
+  // Exemplo: Carregado 06/11, Saiu 07/11 → Aparece em Concluídos do dia 06/11
   const loadingsConcluidos = loadingRecords.filter(l => {
-    // Deve ter exit_date de HOJE E entry_date também de HOJE E status concluido
-    return l.exit_date === today && l.entry_date === today && l.status === 'concluido';
+    // Deve ter sido carregado HOJE (entry_date) E já ter saído (exit_date preenchido) E status concluido
+    return l.entry_date === today && l.exit_date && l.status === 'concluido';
   });
 
   // Apenas veículos (separado dos carregamentos)

@@ -338,9 +338,10 @@ const Loading = () => {
   });
   
   const completedLoadings = loadings.filter(l => {
-    // Mostra apenas os que saíram HOJE (serão arquivados à meia-noite)
-    // IMPORTANTE: Ao editar a data de saída, o registro deve sair da lista se não for mais hoje
-    return l.exit_date === today && l.status === 'concluido';
+    // Mostra apenas os que foram CARREGADOS HOJE (entry_date) e já saíram (exit_date preenchido)
+    // REGRA: Concluído aparece no dia que foi CARREGADO, não no dia que saiu
+    // Exemplo: Carregado 06/11, Saiu 07/11 → Aparece em Concluídos do dia 06/11
+    return l.entry_date === today && l.exit_date && l.status === 'concluido';
   });
 
   const getProductColor = (product: string) => {
@@ -1197,14 +1198,20 @@ const Loading = () => {
                             exit_time: null,
                             status: 'carregado'
                           });
+                          
+                          // Fecha modal imediatamente
                           setIsDialogOpen(false);
                           setIsEditMode(false);
                           setSelectedLoading(null);
+                          
                           toast({
                             title: "✅ Voltado para CARREGADO",
                             description: `${selectedLoading.plate} está novamente na seção "Carregando" aguardando saída.`,
                             duration: 5000
                           });
+                          
+                          // Força reload da página para atualizar os cards
+                          window.location.reload();
                         } catch (error) {
                           console.error('Erro ao voltar para carregado:', error);
                           toast({
