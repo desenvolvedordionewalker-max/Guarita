@@ -1157,21 +1157,10 @@ const Loading = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-2">
-                  <Label>Destino</Label>
-                  <Select name="destination" defaultValue={selectedLoading.destination} required>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {destinations.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Destino (opcional - texto livre)</Label>
-                  <Input name="destination_custom" defaultValue={selectedLoading.destination || ""} placeholder="Digite destino customizado" />
+                  <Label>Destino (opcional - pode ser preenchido depois na saída)</Label>
+                  <Input name="destination" defaultValue={selectedLoading.destination || ""} placeholder="Digite o destino ou deixe em branco para preencher depois" />
                 </div>
               </div>
 

@@ -1391,7 +1391,7 @@ const Dashboard = () => {
                     >
                       Cancelar
                     </Button>
-                    <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+                    <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white">
                       Iniciar Carregamento
                     </Button>
                   </DialogFooter>
@@ -1405,7 +1405,7 @@ const Dashboard = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <Button
                       onClick={() => setModalAction('carregado')}
-                      className="h-24 flex flex-col gap-2 bg-orange-500 hover:bg-orange-600"
+                      className="h-24 flex flex-col gap-2 bg-orange-500 hover:bg-orange-600 text-white"
                     >
                       <Package className="w-8 h-8" />
                       <span className="font-bold">CARREGADO</span>
@@ -1413,7 +1413,7 @@ const Dashboard = () => {
                     </Button>
                     <Button
                       onClick={() => setModalAction('saiu')}
-                      className="h-24 flex flex-col gap-2 bg-green-600 hover:bg-green-700"
+                      className="h-24 flex flex-col gap-2 bg-green-600 hover:bg-green-700 text-white"
                     >
                       <CheckCircle className="w-8 h-8" />
                       <span className="font-bold">SAIU</span>
@@ -1490,7 +1490,7 @@ const Dashboard = () => {
                           description: `Placa ${selectedLoading.plate} - Aguardando hora de saída.`,
                         });
                       }}
-                      className="bg-orange-500 hover:bg-orange-600"
+                      className="bg-orange-500 hover:bg-orange-600 text-white"
                     >
                       ✅ Confirmar - Carregado (fica visível na lista)
                     </Button>
@@ -1589,7 +1589,7 @@ const Dashboard = () => {
                     >
                       Voltar
                     </Button>
-                    <Button type="submit" className="bg-green-600 hover:bg-green-700">
+                    <Button type="submit" className="bg-green-600 hover:bg-green-700 text-white">
                       ✅ Saiu - Finalizar
                     </Button>
                   </DialogFooter>
