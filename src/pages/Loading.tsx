@@ -281,6 +281,7 @@ const Loading = () => {
     try {
       await updateRecord(selectedLoading.id, {
         status: 'carregado', // Marca como carregado mas não concluído
+        loaded_at: new Date().toISOString(), // Grava o timestamp do carregamento
         // Salva apenas a quantidade
         bales: bales || selectedLoading.bales,
         weight: weight || selectedLoading.weight,

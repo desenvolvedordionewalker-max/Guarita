@@ -406,8 +406,8 @@ const Dashboard = () => {
     // Se não tem o timestamp de carregamento, não pode aparecer aqui.
     if (!l.loaded_at) return false;
 
-    // Normaliza a data de 'loaded_at' para comparar com 'today'
-    const loadedDate = normalizeLocalDate(new Date(l.loaded_at)).toISOString().split('T')[0];
+    // Converte loaded_at para data local (YYYY-MM-DD)
+    const loadedDate = new Date(l.loaded_at).toLocaleDateString('sv-SE'); // sv-SE retorna YYYY-MM-DD
     
     // Mostra se foi carregado HOJE, independente do status ser 'carregado' ou 'concluido'
     if (loadedDate === today) {

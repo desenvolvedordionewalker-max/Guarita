@@ -109,6 +109,7 @@ export interface LoadingRecord {
   invoice_number?: string
   acompanhante?: boolean
   status?: 'fila' | 'carregando' | 'carregado' | 'concluido' // Novo campo para status do carregamento
+  loaded_at?: string // Timestamp de quando foi carregado
   created_by?: string
   created_at?: string
   updated_at?: string
