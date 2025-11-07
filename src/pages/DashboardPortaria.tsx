@@ -155,12 +155,20 @@ export default function DashboardPortariaTV() {
     return !l.status && l.entry_date && !l.exit_date;
   });
   
-  // CONCLUÍDOS: APENAS carregados/concluídos HOJE (entry_date = hoje)
-  // NÃO mostra carregados de dias anteriores
+  // CONCLUÍDOS: Itens que foram marcados como 'carregado' ou 'concluido' HOJE
+  // Usa loaded_at para determinar se foi carregado hoje (mesma lógica do Dashboard principal)
   const concluidos = todayLoadings.filter(l => {
-    if (l.entry_date !== todayStr) return false;
-    if (l.status === 'carregado') return true;
-    if (l.status === 'concluido') return true;
+    // Se não tem o timestamp de carregamento, não pode aparecer aqui
+    if (!l.loaded_at) return false;
+
+    // Converte loaded_at para data local (YYYY-MM-DD)
+    const loadedDate = new Date(l.loaded_at).toLocaleDateString('sv-SE');
+    
+    // Mostra se foi carregado HOJE, independente do status ser 'carregado' ou 'concluido'
+    if (loadedDate === todayStr) {
+      return l.status === 'carregado' || l.status === 'concluido';
+    }
+    
     return false;
   });
 
