@@ -298,87 +298,87 @@ export const useRainRecords = () => {
         .from('rain_records')
         .select('*')
         .order('date', { ascending: false })
-        .order('time', { ascending: false })
+        // Primary table name
+        const primary = 'gestao_tempo_cargas';
+        let res = await supabase.from(primary).select('*').order('created_at', { ascending: false });
 
-      if (error) throw error
-      setRecords(data || [])
-    } catch (error) {
-      console.error('Erro ao buscar registros de chuva:', error)
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar os registros de chuva.",
-        variant: "destructive"
-      })
-    } finally {
-      setLoading(false)
-    }
-  }, [toast])
+        let rows = res.data;
+        let err = res.error;
 
-  const addRecord = async (recordData: Omit<RainRecord, 'id' | 'created_at' | 'updated_at'>) => {
-    try {
-      const { data, error } = await supabase
-        .from('rain_records')
-        .insert([recordData])
-        .select()
-        .single()
+        // If resource not found (404) or similar, try alternate table names
+        if (err) {
+          const msg = String(err.message || err).toLowerCase();
+          console.warn(`gestao_tempo_cargas primary query error: ${msg}`);
 
-      if (error) throw error
-      
-      setRecords(prev => [data, ...prev])
-      toast({
-        title: "Medição registrada!",
-        description: `${recordData.millimeters} mm registrados em ${recordData.date}.`,
-      })
-      
-      return data
-    } catch (error) {
-      console.error('Erro ao adicionar registro:', error)
-      toast({
-        title: "Erro",
-        description: "Não foi possível adicionar o registro.",
-        variant: "destructive"
-      })
-      throw error
-    }
-  }
+          const alternates = [
+            'gestao_cargas',
+            'gestao_tempo_carga',
+            'gestao_carga',
+            'gestao_tempo_viagens',
+            'gestao_cargas_tempo',
+            'gestao_tempo_cargas_view',
+            'gestao_cargas_view'
+          ];
 
-  const updateRecord = async (id: string, updates: Partial<RainRecord>) => {
-    try {
-      const { data, error } = await supabase
-        .from('rain_records')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single()
+          for (const tbl of alternates) {
+            try {
+              const r = await supabase.from(tbl).select('*').order('created_at', { ascending: false });
+              if (!r.error && r.data && r.data.length > 0) {
+                rows = r.data;
+                err = null;
+                console.info(`gestao_tempo_cargas: using alternate table '${tbl}'`);
+                break;
+              }
+            } catch (e) {
+              // continue trying alternates
+            }
+          }
+        }
 
-      if (error) throw error
-      
-      setRecords(prev => prev.map(r => r.id === id ? data : r))
-      toast({
-        title: "Registro atualizado!",
-        description: "Medição de chuva atualizada com sucesso.",
-      })
-      
-      return data
-    } catch (error) {
-      console.error('Erro ao atualizar registro de chuva:', error)
-      toast({
-        title: "Erro",
-        description: "Não foi possível atualizar o registro.",
-        variant: "destructive"
-      })
-      throw error
-    }
-  }
+        // If still no rows and error, try views commonly present in this project
+        if ((err || !rows || rows.length === 0)) {
+          try {
+            // Try view_relatorio_puxe which aggregates puxe_viagens and contains tempo fields
+            const rView = await supabase.from('view_relatorio_puxe').select('placa, motorista, data, tempo_unidade_min, tempo_lavoura_min, hora_chegada').order('data', { ascending: false }).limit(200);
+            if (!rView.error && rView.data && rView.data.length > 0) {
+              // Map view_relatorio_puxe fields to expected carga format
+              rows = (rView.data || []).map((v: any) => ({
+                placa: v.placa,
+                motorista: v.motorista,
+                date: v.data || (v.hora_chegada ? String(v.hora_chegada).substring(0,10) : null),
+                tempo_algodoeira: v.tempo_unidade_min,
+                tempo_lavoura: v.tempo_lavoura_min,
+                origem: 'view_relatorio_puxe'
+              }));
+              err = null;
+              console.info('gestao_tempo_cargas: using view_relatorio_puxe as source');
+            } else {
+              // Try raw puxe_viagens table
+              const rPuxe = await supabase.from('puxe_viagens').select('placa, motorista, data, tempo_unidade_min, tempo_lavoura_min, hora_chegada').order('data', { ascending: false }).limit(200);
+              if (!rPuxe.error && rPuxe.data && rPuxe.data.length > 0) {
+                rows = (rPuxe.data || []).map((v: any) => ({
+                  placa: v.placa,
+                  motorista: v.motorista,
+                  date: v.data || (v.hora_chegada ? String(v.hora_chegada).substring(0,10) : null),
+                  tempo_algodoeira: v.tempo_unidade_min,
+                  tempo_lavoura: v.tempo_lavoura_min,
+                  origem: 'puxe_viagens'
+                }));
+                err = null;
+                console.info('gestao_tempo_cargas: using puxe_viagens as source');
+              }
+            }
+          } catch (e) {
+            // ignore, will handle below
+          }
+        }
 
-  const deleteRecord = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('rain_records')
-        .delete()
-        .eq('id', id)
+        if (err) {
+          setError(err.message || String(err));
+          throw err;
+        }
 
-      if (error) throw error
+        setCargas(rows || []);
       
       setRecords(prev => prev.filter(r => r.id !== id))
       toast({
