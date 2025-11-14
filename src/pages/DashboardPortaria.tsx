@@ -17,8 +17,8 @@ function DashboardPortariaTV() {
   const { records: loadingRecords, loading: loadingLoadings, refetch: refetchLoadings } = useLoadingRecords();
   const { records: materialRecords, loading: loadingMaterials, refetch: refetchMaterials } = useMaterialReceipts();
   const { records: equipmentRecords, loading: loadingEquipment, refetch: refetchEquipment } = useEquipment();
-  const { data: gestaoTempo, loading: loadingGestaoTempo, refetch: refetchGestaoTempo } = useGestaoTempo();
-  const { cargas, loading: loadingCargas, refetch: refetchCargas } = useGestaoTempoCargas();
+  const { data: gestaoTempo, loading: loadingGestaoTempo, error: errorGestaoTempo, refetch: refetchGestaoTempo } = useGestaoTempo();
+  const { cargas, loading: loadingCargas, error: errorCargas, refetch: refetchCargas } = useGestaoTempoCargas();
   const { isRaining, toggleRainAlert } = useRainAlert();
   
   // Estado para modo claro/escuro — para TV forçamos sempre o modo escuro
@@ -621,12 +621,18 @@ function DashboardPortariaTV() {
           </div>
           
           <div className="relative z-10 flex items-center gap-2 sm:gap-3">
-            {/* Indicador de Chuva dentro de um único card: ícone + 'chuva' abaixo, valores H/M ao lado */}
+            {/* Indicador de Chuva: ícone clicável + 'chuva' abaixo, valores H/M ao lado */}
             <div className="flex items-center gap-3 px-3 py-2 rounded-xl" style={{ background: isDarkMode ? '#101B17' : '#ECF4F1', border: `1px solid ${isDarkMode ? '#1E2A33' : '#B4D1C2'}` }}>
-              <div className="flex flex-col items-center">
+              <button
+                type="button"
+                onClick={() => toggleRainAlert()}
+                aria-pressed={isRaining}
+                title={isRaining ? 'Desativar alerta de chuva' : 'Ativar alerta de chuva'}
+                className="flex flex-col items-center p-1 rounded-md hover:brightness-110 focus:outline-none"
+              >
                 <Droplet size={16} className={`text-blue-400 ${isRaining ? 'animate-pulse' : ''}`} />
                 <div className="text-[0.72rem] text-blue-300 mt-1">chuva</div>
-              </div>
+              </button>
 
               <div className={`flex flex-col text-[clamp(0.65rem,0.85vw,0.85rem)] font-normal ${isDarkMode ? 'text-muted-foreground' : 'text-gray-600'}`}>
                 <div>H - {Math.round(chuvaHoje)} mm</div>
@@ -652,6 +658,21 @@ function DashboardPortariaTV() {
             </div>
           </div>
         </header>
+
+        {/* Erro: Gestão de Tempo */}
+        {(errorGestaoTempo || errorCargas) && (
+          <div className="bg-red-600 text-white px-[clamp(0.5rem,2vw,3rem)] py-2 flex items-center justify-between">
+            <div className="text-sm">Erro ao carregar Gestão de Tempo: <span className="font-semibold">{errorGestaoTempo || errorCargas}</span></div>
+            <div>
+              <button
+                onClick={() => { refetchGestaoTempo?.(); refetchCargas?.(); }}
+                className="bg-white text-red-600 px-3 py-1 rounded-md font-medium"
+              >
+                Recarregar
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* BANNER MATERIAIS RECEBIDOS (verde) */}
         <div className="bg-gradient-to-r from-emerald-600 to-emerald-400 text-white px-[clamp(0.5rem,2vw,3rem)] py-1">

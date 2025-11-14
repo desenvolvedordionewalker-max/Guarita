@@ -867,21 +867,27 @@ export const usePuxeViagens = () => {
 export const useGestaoTempo = () => {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
   const fetchGestao = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const { data: rows, error } = await supabase
         .from('gestao_tempo')
         .select('*')
         .order('placa', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        setError(error.message || String(error));
+        throw error;
+      }
       setData(rows || []);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao buscar gestao_tempo:', err);
-      toast({ title: 'Erro', description: 'Não foi possível carregar gestão de tempo.', variant: 'destructive' });
+      setError(err?.message || String(err));
+      toast({ title: 'Erro', description: `Não foi possível carregar gestão de tempo. ${err?.message || ''}`, variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -891,27 +897,33 @@ export const useGestaoTempo = () => {
     fetchGestao();
   }, [fetchGestao]);
 
-  return { data, loading, refetch: fetchGestao };
+  return { data, loading, error, refetch: fetchGestao };
 };
 
 export const useGestaoTempoCargas = () => {
   const [cargas, setCargas] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
   const fetchCargas = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const { data: rows, error } = await supabase
         .from('gestao_tempo_cargas')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        setError(error.message || String(error));
+        throw error;
+      }
       setCargas(rows || []);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao buscar gestao_tempo_cargas:', err);
-      toast({ title: 'Erro', description: 'Não foi possível carregar cargas de gestão de tempo.', variant: 'destructive' });
+      setError(err?.message || String(err));
+      toast({ title: 'Erro', description: `Não foi possível carregar cargas de gestão de tempo. ${err?.message || ''}`, variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -921,5 +933,5 @@ export const useGestaoTempoCargas = () => {
     fetchCargas();
   }, [fetchCargas]);
 
-  return { cargas, loading, refetch: fetchCargas };
+  return { cargas, loading, error, refetch: fetchCargas };
 };
