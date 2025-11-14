@@ -862,3 +862,18 @@ export const usePuxeViagens = () => {
     refetch: fetchViagens
   }
 }
+
+// Fallback hooks for Gestão de Tempo (utilizadas pelo painel TV)
+export const useGestaoTempo = () => {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const refetch = async () => { /* noop fallback */ };
+  return { data, loading, refetch };
+};
+
+export const useGestaoTempoCargas = () => {
+  const [cargas, setCargas] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const refetch = async () => { /* noop fallback */ };
+  return { cargas, loading, refetch };
+};
