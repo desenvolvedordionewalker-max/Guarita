@@ -17,6 +17,7 @@ import Reports from "./pages/Reports";
 import RelatorioGestaoPuxe from "./pages/RelatorioGestaoPuxe";
 import MaterialReceipts from "./pages/MaterialReceipts";
 import NotFound from "./pages/NotFound";
+import PainelGuaritaNovo from "./pages/PainelGuaritaNovo";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +32,7 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/dashboard-tv" element={<DashboardPortaria />} />
+          <Route path="/painel-guarita" element={<PainelGuaritaNovo />} />
           <Route path="/vehicles" element={<Vehicles />} />
           <Route path="/cotton-pull" element={<CottonPull />} />
           <Route path="/cotton-pull/history" element={<CottonPullHistory />} />
