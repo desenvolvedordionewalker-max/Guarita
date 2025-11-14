@@ -874,15 +874,27 @@ export const useGestaoTempo = () => {
     setLoading(true);
     setError(null);
     try {
-      const { data: rows, error } = await supabase
-        .from('gestao_tempo')
-        .select('*')
-        .order('placa', { ascending: true });
+      // Try with order by placa first (preferred)
+      let res = await supabase.from('gestao_tempo').select('*').order('placa', { ascending: true });
+      let rows = res.data;
+      let err = res.error;
 
-      if (error) {
-        setError(error.message || String(error));
-        throw error;
+      // If ordering by placa failed (bad column / 400), retry without order
+      if (err) {
+        const msg = String(err.message || err);
+        console.warn('gestao_tempo primary query error:', msg);
+        if (msg.toLowerCase().includes('column') || msg.toLowerCase().includes('invalid')) {
+          const res2 = await supabase.from('gestao_tempo').select('*');
+          rows = res2.data;
+          err = res2.error;
+        }
       }
+
+      if (err) {
+        setError(err.message || String(err));
+        throw err;
+      }
+
       setData(rows || []);
     } catch (err: any) {
       console.error('Erro ao buscar gestao_tempo:', err);
@@ -910,15 +922,48 @@ export const useGestaoTempoCargas = () => {
     setLoading(true);
     setError(null);
     try {
-      const { data: rows, error } = await supabase
-        .from('gestao_tempo_cargas')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // Primary table name
+      const primary = 'gestao_tempo_cargas';
+      let res = await supabase.from(primary).select('*').order('created_at', { ascending: false });
 
-      if (error) {
-        setError(error.message || String(error));
-        throw error;
+      let rows = res.data;
+      let err = res.error;
+
+      // If resource not found (404) or similar, try alternate table names
+      if (err) {
+        const msg = String(err.message || err).toLowerCase();
+        console.warn(`gestao_tempo_cargas primary query error: ${msg}`);
+
+        const alternates = [
+          'gestao_cargas',
+          'gestao_tempo_carga',
+          'gestao_carga',
+          'gestao_tempo_viagens',
+          'gestao_cargas_tempo',
+          'gestao_tempo_cargas_view',
+          'gestao_cargas_view'
+        ];
+
+        for (const tbl of alternates) {
+          try {
+            const r = await supabase.from(tbl).select('*').order('created_at', { ascending: false });
+            if (!r.error && r.data) {
+              rows = r.data;
+              err = null;
+              console.info(`gestao_tempo_cargas: using alternate table '${tbl}'`);
+              break;
+            }
+          } catch (e) {
+            // continue trying alternates
+          }
+        }
       }
+
+      if (err) {
+        setError(err.message || String(err));
+        throw err;
+      }
+
       setCargas(rows || []);
     } catch (err: any) {
       console.error('Erro ao buscar gestao_tempo_cargas:', err);
