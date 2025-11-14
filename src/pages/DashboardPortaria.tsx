@@ -21,29 +21,23 @@ function DashboardPortariaTV() {
   const { cargas, loading: loadingCargas, refetch: refetchCargas } = useGestaoTempoCargas();
   const { isRaining, toggleRainAlert } = useRainAlert();
   
-  // Estado para modo claro/escuro com persistência e respeito ao tema do sistema
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    try {
-      const saved = localStorage.getItem('tv-mode-theme');
-      if (saved) return saved === 'dark';
-      if (typeof window !== 'undefined' && window.matchMedia) {
-        return window.matchMedia('(prefers-color-scheme: dark)').matches;
-      }
-    } catch (e) {
-      // fallback
-    }
-    return true; // default dark
-  });
+  // Estado para modo claro/escuro — para TV forçamos sempre o modo escuro
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(true);
   
   // Debug: Log do estado de chuva
   useEffect(() => {
     console.log('🌧️ Estado da chuva no Modo TV:', isRaining);
   }, [isRaining]);
   
-  // Salvar preferência de tema
+  // Forçar tema escuro ao montar o modo TV e salvar no localStorage
   useEffect(() => {
-    localStorage.setItem('tv-mode-theme', isDarkMode ? 'dark' : 'light');
-  }, [isDarkMode]);
+    try {
+      setIsDarkMode(true);
+      localStorage.setItem('tv-mode-theme', 'dark');
+    } catch (e) {
+      // ignore
+    }
+  }, []);
 
   // Se o usuário não definiu preferência, acompanhar mudanças do sistema
   useEffect(() => {
