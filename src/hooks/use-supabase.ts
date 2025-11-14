@@ -866,14 +866,60 @@ export const usePuxeViagens = () => {
 // Fallback hooks for Gestão de Tempo (utilizadas pelo painel TV)
 export const useGestaoTempo = () => {
   const [data, setData] = useState<any[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
-  const refetch = async () => { /* noop fallback */ };
-  return { data, loading, refetch };
+  const [loading, setLoading] = useState<boolean>(true);
+  const { toast } = useToast();
+
+  const fetchGestao = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data: rows, error } = await supabase
+        .from('gestao_tempo')
+        .select('*')
+        .order('placa', { ascending: true });
+
+      if (error) throw error;
+      setData(rows || []);
+    } catch (err) {
+      console.error('Erro ao buscar gestao_tempo:', err);
+      toast({ title: 'Erro', description: 'Não foi possível carregar gestão de tempo.', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    fetchGestao();
+  }, [fetchGestao]);
+
+  return { data, loading, refetch: fetchGestao };
 };
 
 export const useGestaoTempoCargas = () => {
   const [cargas, setCargas] = useState<any[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
-  const refetch = async () => { /* noop fallback */ };
-  return { cargas, loading, refetch };
+  const [loading, setLoading] = useState<boolean>(true);
+  const { toast } = useToast();
+
+  const fetchCargas = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data: rows, error } = await supabase
+        .from('gestao_tempo_cargas')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setCargas(rows || []);
+    } catch (err) {
+      console.error('Erro ao buscar gestao_tempo_cargas:', err);
+      toast({ title: 'Erro', description: 'Não foi possível carregar cargas de gestão de tempo.', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    fetchCargas();
+  }, [fetchCargas]);
+
+  return { cargas, loading, refetch: fetchCargas };
 };
