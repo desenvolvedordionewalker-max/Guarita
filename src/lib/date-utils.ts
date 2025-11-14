@@ -39,6 +39,20 @@ export function toLocalDateString(date: Date): string {
 }
 
 /**
+ * Converte uma string ISO (ex.: 2023-07-19T12:34:56Z) para YYYY-MM-DD
+ * Retorna string vazia se entrada inválida
+ */
+export function convertIsoToLocalDateString(iso?: string | null): string {
+  if (!iso) return '';
+  try {
+    // Pega os 10 primeiros caracteres YYYY-MM-DD, que já representam a data
+    return String(iso).substring(0, 10);
+  } catch (e) {
+    return '';
+  }
+}
+
+/**
  * Formata uma string de data YYYY-MM-DD para exibição DD/MM/YYYY
  * SEM fazer conversão de timezone - usa a data exatamente como está no banco
  */
