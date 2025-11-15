@@ -776,6 +776,8 @@ export const usePuxeViagens = () => {
       if (error) throw error
       
       setViagens(prev => [data, ...prev])
+      // notify listeners that puxe_viagens changed so other hooks can refetch
+      try { if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('puxe_viagens:changed')) } catch(e) {}
       toast({
         title: "Viagem registrada!",
         description: "Entrada registrada com sucesso.",
@@ -805,6 +807,8 @@ export const usePuxeViagens = () => {
       if (error) throw error
       
       setViagens(prev => prev.map(v => v.id === id ? data : v))
+      // notify listeners that puxe_viagens changed so other hooks can refetch
+      try { if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('puxe_viagens:changed')) } catch(e) {}
       toast({
         title: "Viagem atualizada!",
         description: "Dados atualizados com sucesso.",
@@ -832,6 +836,8 @@ export const usePuxeViagens = () => {
       if (error) throw error
       
       setViagens(prev => prev.filter(v => v.id !== id))
+      // notify listeners that puxe_viagens changed so other hooks can refetch
+      try { if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('puxe_viagens:changed')) } catch(e) {}
       toast({
         title: "Viagem excluída!",
         description: "Registro removido com sucesso.",
@@ -1139,6 +1145,44 @@ export const useGestaoTempoCargas = () => {
               setLoading(false);
               return;
             }
+            // If server-side filters returned nothing, fetch recent puxe_viagens
+            // and locally filter by converted local date (hora_chegada or created_at).
+            try {
+              const rRecent = await supabase
+                .from('puxe_viagens')
+                .select('placa,motorista,data,rolos,tempo_unidade_min,tempo_lavoura_min,hora_chegada,created_at')
+                .order('hora_chegada', { ascending: false })
+                .limit(1000);
+
+              if (!rRecent.error && rRecent.data && rRecent.data.length > 0) {
+                const toLocalIso = (val: any) => {
+                  if (!val) return null;
+                  if (typeof val === 'string') {
+                    const s = val.trim();
+                    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+                    if (/^\d{4}-\d{2}-\d{2}T/.test(s)) return s.substring(0, 10);
+                  }
+                  const d = new Date(val);
+                  if (isNaN(d.getTime())) return null;
+                  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                };
+
+                const localFiltered = (rRecent.data || []).filter((v: any) => {
+                  const h = toLocalIso(v.hora_chegada);
+                  const c = toLocalIso(v.created_at);
+                  return h === todayIso || c === todayIso;
+                });
+
+                if (localFiltered.length > 0) {
+                  const aggregated = aggregateRows(localFiltered);
+                  setCargas(aggregated);
+                  setLoading(false);
+                  return;
+                }
+              }
+            } catch (e) {
+              // ignore and fallback below
+            }
           } catch (e) {
             // ignore and fallback below
           }
@@ -1200,6 +1244,21 @@ export const useGestaoTempoCargas = () => {
 
   useEffect(() => {
     fetchCargas();
+  }, [fetchCargas]);
+
+  // Re-fetch when other parts of the app mutate `puxe_viagens` (add/update/delete)
+  useEffect(() => {
+    const handler = () => { fetchCargas(); };
+    try {
+      if (typeof window !== 'undefined') window.addEventListener('puxe_viagens:changed', handler as EventListener);
+    } catch (e) {
+      // ignore
+    }
+    return () => {
+      try {
+        if (typeof window !== 'undefined') window.removeEventListener('puxe_viagens:changed', handler as EventListener);
+      } catch (e) {}
+    };
   }, [fetchCargas]);
 
   return { cargas, loading, error, refetch: fetchCargas };
