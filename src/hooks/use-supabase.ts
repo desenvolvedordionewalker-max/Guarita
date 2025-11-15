@@ -1085,48 +1085,77 @@ export const useGestaoTempoCargas = () => {
 
           // 1) Try view_relatorio_puxe (if available)
           try {
-            const rView = await supabase
+            // Try preferred columns first; if the view schema is different, retry with select('*') and map dynamically
+            let rView = await supabase
               .from('view_relatorio_puxe')
               .select('placa,motorista,data,rolos,tempo_unidade_min,tempo_lavoura_min,hora_chegada')
               .limit(1000);
 
+            if (rView.error) {
+              // fallback to selecting all columns and map fields dynamically
+              try {
+                rView = await supabase.from('view_relatorio_puxe').select('*').limit(1000);
+              } catch (e) {
+                rView = { data: null, error: e as any } as any;
+              }
+            }
+
             if (!rView.error && rView.data && rView.data.length > 0) {
-              // filter by today using local date extraction
               const rowsToday = (rView.data || []).filter((v:any) => {
-                const d = v.data ?? v.hora_chegada;
+                const d = v.data ?? v.hora_chegada ?? v.created_at ?? v.createdAt ?? null;
                 if (!d) return false;
-                const ds = (typeof d === 'string' ? d.substring(0,10) : null) || null;
+                const s = typeof d === 'string' ? d : (new Date(d).toISOString() || '').substring(0,10);
+                const ds = s.substring(0,10);
                 return ds === todayIso;
-              });
+              }).map((v:any) => ({
+                placa: v.placa || v.plate || v.plate_number || null,
+                motorista: v.motorista || v.driver || null,
+                date: (v.data || v.date) || (v.hora_chegada ? (typeof v.hora_chegada === 'string' ? v.hora_chegada.substring(0,10) : (new Date(v.hora_chegada).toISOString().substring(0,10))) : null),
+                tempo_unidade_min: v.tempo_unidade_min ?? v.tempo_unidade ?? v.tempo_algodoeira ?? v.tempo_algodoeira_min ?? null,
+                tempo_lavoura_min: v.tempo_lavoura_min ?? v.tempo_lavoura ?? null,
+                rolos: v.rolos ?? v.rolls ?? 0,
+                hora_chegada: v.hora_chegada
+              }));
+
               if (rowsToday.length > 0) {
-                const aggregated = aggregateRows(rowsToday);
+                const aggregated = aggregateRows(rowsToday as any[]);
                 setCargas(aggregated);
                 setLoading(false);
                 return;
               }
             }
           } catch (e) {
-            // continue
+            // continue to next source
           }
 
           // 2) Try puxe_viagens: first by data = today
           try {
-            const rByData = await supabase
+            // Try querying puxe_viagens; be tolerant to schema differences by falling back to select('*')
+            let rByData = await supabase
               .from('puxe_viagens')
               .select('placa,motorista,data,rolos,tempo_unidade_min,tempo_lavoura_min,hora_chegada')
               .eq('data', todayIso)
               .limit(1000);
+
+            if (rByData.error) {
+              try {
+                rByData = await supabase.from('puxe_viagens').select('*').eq('data', todayIso).limit(1000);
+              } catch (e) { rByData = { data: null, error: e as any } as any }
+            }
 
             let combinedRows: any[] = [];
             if (!rByData.error && rByData.data) combinedRows = combinedRows.concat(rByData.data as any[]);
 
             // then try by hora_chegada starting with today (avoid .or complexity)
             try {
-              const rByHora = await supabase
+              let rByHora = await supabase
                 .from('puxe_viagens')
                 .select('placa,motorista,data,rolos,tempo_unidade_min,tempo_lavoura_min,hora_chegada')
                 .ilike('hora_chegada', `${todayIso}%`)
                 .limit(1000);
+              if (rByHora.error) {
+                try { rByHora = await supabase.from('puxe_viagens').select('*').ilike('hora_chegada', `${todayIso}%`).limit(1000); } catch (e) { rByHora = { data: null, error: e as any } as any }
+              }
               if (!rByHora.error && rByHora.data) combinedRows = combinedRows.concat(rByHora.data as any[]);
             } catch (e) {
               // ignore
@@ -1148,11 +1177,11 @@ export const useGestaoTempoCargas = () => {
             // If server-side filters returned nothing, fetch recent puxe_viagens
             // and locally filter by converted local date (hora_chegada or created_at).
             try {
-              const rRecent = await supabase
-                .from('puxe_viagens')
-                .select('placa,motorista,data,rolos,tempo_unidade_min,tempo_lavoura_min,hora_chegada,created_at')
-                .order('hora_chegada', { ascending: false })
-                .limit(1000);
+              const rRecent = await (async () => {
+                try {
+                  return await supabase.from('puxe_viagens').select('*').order('hora_chegada', { ascending: false }).limit(1000);
+                } catch (e) { return { data: null, error: e as any } as any }
+              })();
 
               if (!rRecent.error && rRecent.data && rRecent.data.length > 0) {
                 const toLocalIso = (val: any) => {
@@ -1168,8 +1197,8 @@ export const useGestaoTempoCargas = () => {
                 };
 
                 const localFiltered = (rRecent.data || []).filter((v: any) => {
-                  const h = toLocalIso(v.hora_chegada);
-                  const c = toLocalIso(v.created_at);
+                  const h = toLocalIso(v.hora_chegada || v.hora_arrival || v.arrival_time);
+                  const c = toLocalIso(v.created_at || v.createdAt || v.created);
                   return h === todayIso || c === todayIso;
                 });
 
