@@ -1056,7 +1056,7 @@ export const useGestaoTempoCargas = () => {
             for (const v of rows) {
               const placa = (v.placa || v.plate || '').toString().trim().toUpperCase();
               if (!placa) continue;
-              if (!mapa.has(placa)) mapa.set(placa, { placa, motorista: v.motorista || v.driver || '', viagens: 0, rolos: 0, algodoeiraTimes: [], lavouraTimes: [] });
+              if (!mapa.has(placa)) mapa.set(placa, { placa, motorista: v.motorista || v.driver || '', viagens: 0, rolos: 0, algodoeiraTimes: [], lavouraTimes: [], horas: [] });
               const ex = mapa.get(placa);
               ex.viagens = (ex.viagens || 0) + 1;
               ex.rolos = (ex.rolos || 0) + (Number(v.rolos ?? v.rolls) || 0);
@@ -1064,13 +1064,39 @@ export const useGestaoTempoCargas = () => {
               const algodoeiraVal = v.tempo_unidade_min ?? v.tempo_algodoeira_min ?? v.tempo_algodoeira ?? v.tempo_unidade ?? v.tempo_unidade_minimo ?? null;
               const lavouraVal = v.tempo_lavoura_min ?? v.tempo_lavoura ?? v.tempo_lavoura_minimo ?? null;
 
-              if (algodoeiraVal != null && !isNaN(Number(algodoeiraVal))) ex.algodoeiraTimes.push(Number(algodoeiraVal));
-              if (lavouraVal != null && !isNaN(Number(lavouraVal))) ex.lavouraTimes.push(Number(lavouraVal));
+              if (algodoeiraVal != null && !isNaN(Number(algodoeiraVal))) {
+                const n = Number(algodoeiraVal);
+                if (n >= 0 && n < 24 * 60) ex.algodoeiraTimes.push(n);
+              }
+              if (lavouraVal != null && !isNaN(Number(lavouraVal))) {
+                const n = Number(lavouraVal);
+                if (n >= 0 && n < 24 * 60) ex.lavouraTimes.push(n);
+              }
+
+              // collect hora_chegada timestamps for inter-arrival computations
+              try {
+                const hc = v.hora_chegada || v.hora_arrival || v.arrival_time || v.created_at || v.createdAt || null;
+                if (hc) {
+                  const d = typeof hc === 'string' ? new Date(hc) : new Date(hc);
+                  if (!isNaN(d.getTime())) ex.horas.push(d.getTime());
+                }
+              } catch (e) {}
+            }
+
+            // compute lavoura times from consecutive hora_chegada timestamps when explicit values not provided
+            for (const it of mapa.values()) {
+              if ((!it.lavouraTimes || it.lavouraTimes.length === 0) && it.horas && it.horas.length > 1) {
+                const sorted = (it.horas || []).slice().sort((a:number,b:number)=>a-b);
+                for (let i = 0; i < sorted.length - 1; i++) {
+                  const deltaMin = Math.round((sorted[i+1] - sorted[i]) / 60000);
+                  if (deltaMin > 0 && deltaMin < 24 * 60) it.lavouraTimes.push(deltaMin);
+                }
+              }
             }
 
             return Array.from(mapa.values()).map((it: any) => {
-              const avgAlg = it.algodoeiraTimes.length ? Math.round(it.algodoeiraTimes.reduce((s:number,a:number)=>s+a,0)/it.algodoeiraTimes.length) : null;
-              const avgLav = it.lavouraTimes.length ? Math.round(it.lavouraTimes.reduce((s:number,a:number)=>s+a,0)/it.lavouraTimes.length) : null;
+              const avgAlg = it.algodoeiraTimes && it.algodoeiraTimes.length ? Math.round(it.algodoeiraTimes.reduce((s:number,a:number)=>s+a,0)/it.algodoeiraTimes.length) : null;
+              const avgLav = it.lavouraTimes && it.lavouraTimes.length ? Math.round(it.lavouraTimes.reduce((s:number,a:number)=>s+a,0)/it.lavouraTimes.length) : null;
               return {
                 placa: it.placa,
                 motorista: it.motorista,
@@ -1102,11 +1128,10 @@ export const useGestaoTempoCargas = () => {
 
             if (!rView.error && rView.data && rView.data.length > 0) {
               const rowsToday = (rView.data || []).filter((v:any) => {
-                const d = v.data ?? v.hora_chegada ?? v.created_at ?? v.createdAt ?? null;
-                if (!d) return false;
-                const s = typeof d === 'string' ? d : (new Date(d).toISOString() || '').substring(0,10);
-                const ds = s.substring(0,10);
-                return ds === todayIso;
+                // require hora_chegada to represent an actual arrival today
+                if (!v.hora_chegada) return false;
+                const s = (typeof v.hora_chegada === 'string') ? v.hora_chegada.substring(0,10) : (new Date(v.hora_chegada).toISOString().substring(0,10));
+                return s === todayIso;
               }).map((v:any) => ({
                 placa: v.placa || v.plate || v.plate_number || null,
                 motorista: v.motorista || v.driver || null,
@@ -1161,9 +1186,27 @@ export const useGestaoTempoCargas = () => {
               // ignore
             }
 
+            // Filter combinedRows to only include records with hora_chegada local-date === today
+            const toLocalIso = (val: any) => {
+              if (!val) return null;
+              if (typeof val === 'string') {
+                const s = val.trim();
+                if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+                if (/^\d{4}-\d{2}-\d{2}T/.test(s)) return s.substring(0, 10);
+              }
+              const d = new Date(val);
+              if (isNaN(d.getTime())) return null;
+              return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            };
+
+            const filteredForToday = (combinedRows || []).filter((r: any) => {
+              const hc = toLocalIso(r.hora_chegada || r.hora_arrival || r.arrival_time);
+              return hc === todayIso;
+            });
+
             // deduplicate by placa+hora_chegada (or by index)
             const uniqMap = new Map<string, any>();
-            for (const r of combinedRows) {
+            for (const r of filteredForToday) {
               const key = `${(r.placa||'').toString().trim().toUpperCase()}|${r.hora_chegada||r.data||''}`;
               if (!uniqMap.has(key)) uniqMap.set(key, r);
             }
@@ -1198,8 +1241,8 @@ export const useGestaoTempoCargas = () => {
 
                 const localFiltered = (rRecent.data || []).filter((v: any) => {
                   const h = toLocalIso(v.hora_chegada || v.hora_arrival || v.arrival_time);
-                  const c = toLocalIso(v.created_at || v.createdAt || v.created);
-                  return h === todayIso || c === todayIso;
+                  // prefer actual arrival time — require hora_chegada local date to equal today
+                  return h === todayIso;
                 });
 
                 if (localFiltered.length > 0) {
