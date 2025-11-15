@@ -19,7 +19,11 @@ SELECT id, placa, hora_chegada, hora_saida, tempo_unidade_min, created_at, updat
 FROM public.puxe_viagens
 WHERE (
   (hora_chegada IS NOT NULL AND hora_saida IS NOT NULL AND hora_saida < hora_chegada)
-  OR (NULLIF(tempo_unidade_min,'')::numeric IS NOT NULL AND (NULLIF(tempo_unidade_min,'')::numeric < 0))
+  OR (
+    tempo_unidade_min IS NOT NULL
+    AND (tempo_unidade_min::text ~ '^-?[0-9]+(\.[0-9]+)?$')
+    AND (tempo_unidade_min::numeric < 0)
+  )
 )
 ORDER BY placa, hora_chegada
 LIMIT 200;
@@ -37,7 +41,11 @@ SELECT *, now() AS backup_created_at
 FROM public.puxe_viagens pv
 WHERE (
   (pv.hora_chegada IS NOT NULL AND pv.hora_saida IS NOT NULL AND pv.hora_saida < pv.hora_chegada)
-  OR (NULLIF(pv.tempo_unidade_min,'')::numeric IS NOT NULL AND (NULLIF(pv.tempo_unidade_min,'')::numeric < 0))
+  OR (
+    pv.tempo_unidade_min IS NOT NULL
+    AND (pv.tempo_unidade_min::text ~ '^-?[0-9]+(\\.[0-9]+)?$')
+    AND (pv.tempo_unidade_min::numeric < 0)
+  )
 );
 
 SELECT count(*) AS rows_backed_up FROM public.puxe_viagens_bad_horasaida_backup_20251115;
