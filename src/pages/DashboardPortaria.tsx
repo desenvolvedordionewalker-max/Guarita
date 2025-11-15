@@ -425,7 +425,8 @@ function DashboardPortariaTV() {
   };
 
   // Ranking de placas - Acumulado do mês
-  const thisMonth = new Date().toISOString().substring(0, 7); // YYYY-MM
+  const dNow = new Date();
+  const thisMonth = `${dNow.getFullYear()}-${String(dNow.getMonth() + 1).padStart(2, '0')}`; // YYYY-MM (local)
   const monthRolls = cottonPullRecords?.filter(r => r.date && r.date.startsWith(thisMonth)) || [];
   
   const rankingMes = monthRolls.reduce((acc, r) => {

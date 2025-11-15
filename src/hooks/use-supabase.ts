@@ -137,6 +137,15 @@ export const useVehicles = () => {
   }
 }
 
+// Helper: get local date in YYYY-MM-DD (avoids UTC shift from toISOString)
+const getLocalIsoDate = () => {
+  const d = new Date()
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
 export const useCottonPull = () => {
   const [records, setRecords] = useState<CottonPull[]>([])
   const [loading, setLoading] = useState(true)
@@ -290,7 +299,6 @@ export const useRainRecords = () => {
   const [records, setRecords] = useState<RainRecord[]>([])
   const [loading, setLoading] = useState(true)
   const { toast } = useToast()
-
   const fetchRecords = useCallback(async () => {
     setLoading(true)
     try {
@@ -298,88 +306,78 @@ export const useRainRecords = () => {
         .from('rain_records')
         .select('*')
         .order('date', { ascending: false })
-        // Primary table name
-        const primary = 'gestao_tempo_cargas';
-        let res = await supabase.from(primary).select('*').order('created_at', { ascending: false });
 
-        let rows = res.data;
-        let err = res.error;
+      if (error) throw error
+      setRecords(data || [])
+    } catch (error) {
+      console.error('Erro ao buscar registros de chuva:', error)
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar os registros de chuva.",
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false)
+    }
+  }, [toast])
 
-        // If resource not found (404) or similar, try alternate table names
-        if (err) {
-          const msg = String(err.message || err).toLowerCase();
-          console.warn(`gestao_tempo_cargas primary query error: ${msg}`);
+  const addRecord = async (recordData: Omit<RainRecord, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('rain_records')
+        .insert([recordData])
+        .select()
+        .single()
 
-          const alternates = [
-            'gestao_cargas',
-            'gestao_tempo_carga',
-            'gestao_carga',
-            'gestao_tempo_viagens',
-            'gestao_cargas_tempo',
-            'gestao_tempo_cargas_view',
-            'gestao_cargas_view'
-          ];
+      if (error) throw error
+      setRecords(prev => [data, ...prev])
+      toast({
+        title: "Registro de chuva adicionado!",
+        description: `Registro para ${recordData.station || 'estação'} adicionado.`,
+      })
+      return data
+    } catch (error) {
+      console.error('Erro ao adicionar registro de chuva:', error)
+      toast({
+        title: "Erro",
+        description: "Não foi possível adicionar o registro de chuva.",
+        variant: "destructive"
+      })
+      throw error
+    }
+  }
 
-          for (const tbl of alternates) {
-            try {
-              const r = await supabase.from(tbl).select('*').order('created_at', { ascending: false });
-              if (!r.error && r.data && r.data.length > 0) {
-                rows = r.data;
-                err = null;
-                console.info(`gestao_tempo_cargas: using alternate table '${tbl}'`);
-                break;
-              }
-            } catch (e) {
-              // continue trying alternates
-            }
-          }
-        }
+  const updateRecord = async (id: string, updates: Partial<RainRecord>) => {
+    try {
+      const { data, error } = await supabase
+        .from('rain_records')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single()
 
-        // If still no rows and error, try views commonly present in this project
-        if ((err || !rows || rows.length === 0)) {
-          try {
-            // Try view_relatorio_puxe which aggregates puxe_viagens and contains tempo fields
-            const rView = await supabase.from('view_relatorio_puxe').select('placa, motorista, data, tempo_unidade_min, tempo_lavoura_min, hora_chegada').order('data', { ascending: false }).limit(200);
-            if (!rView.error && rView.data && rView.data.length > 0) {
-              // Map view_relatorio_puxe fields to expected carga format
-              rows = (rView.data || []).map((v: any) => ({
-                placa: v.placa,
-                motorista: v.motorista,
-                date: v.data || (v.hora_chegada ? String(v.hora_chegada).substring(0,10) : null),
-                tempo_algodoeira: v.tempo_unidade_min,
-                tempo_lavoura: v.tempo_lavoura_min,
-                origem: 'view_relatorio_puxe'
-              }));
-              err = null;
-              console.info('gestao_tempo_cargas: using view_relatorio_puxe as source');
-            } else {
-              // Try raw puxe_viagens table
-              const rPuxe = await supabase.from('puxe_viagens').select('placa, motorista, data, tempo_unidade_min, tempo_lavoura_min, hora_chegada').order('data', { ascending: false }).limit(200);
-              if (!rPuxe.error && rPuxe.data && rPuxe.data.length > 0) {
-                rows = (rPuxe.data || []).map((v: any) => ({
-                  placa: v.placa,
-                  motorista: v.motorista,
-                  date: v.data || (v.hora_chegada ? String(v.hora_chegada).substring(0,10) : null),
-                  tempo_algodoeira: v.tempo_unidade_min,
-                  tempo_lavoura: v.tempo_lavoura_min,
-                  origem: 'puxe_viagens'
-                }));
-                err = null;
-                console.info('gestao_tempo_cargas: using puxe_viagens as source');
-              }
-            }
-          } catch (e) {
-            // ignore, will handle below
-          }
-        }
+      if (error) throw error
+      setRecords(prev => prev.map(r => r.id === id ? data : r))
+      return data
+    } catch (error) {
+      console.error('Erro ao atualizar registro de chuva:', error)
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar o registro de chuva.",
+        variant: "destructive"
+      })
+      throw error
+    }
+  }
 
-        if (err) {
-          setError(err.message || String(err));
-          throw err;
-        }
+  const deleteRecord = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('rain_records')
+        .delete()
+        .eq('id', id)
 
-        setCargas(rows || []);
-      
+      if (error) throw error
       setRecords(prev => prev.filter(r => r.id !== id))
       toast({
         title: "Registro excluído!",
@@ -895,7 +893,29 @@ export const useGestaoTempo = () => {
         throw err;
       }
 
-      setData(rows || []);
+      // Normalize and keep only today's records when possible
+      try {
+        const toLocalIsoDate = (val: any) => {
+          if (!val) return null
+          const d = new Date(val)
+          if (isNaN(d.getTime())) return null
+          const yyyy = d.getFullYear()
+          const mm = String(d.getMonth() + 1).padStart(2, '0')
+          const dd = String(d.getDate()).padStart(2, '0')
+          return `${yyyy}-${mm}-${dd}`
+        }
+        const todayIso = getLocalIsoDate()
+        const filtered = (rows || []).filter((r: any) => {
+          const possible = r.data || r.date || r.hora_chegada || r.created_at || r.createdAt || r.created
+          const iso = toLocalIsoDate(possible)
+          return iso === todayIso
+        })
+        // Always use only today's rows (do not fallback to historical rows)
+        // The UI expects an empty list when there are no trips today.
+        setData(filtered)
+      } catch (e) {
+        setData(rows || [])
+      }
     } catch (err: any) {
       console.error('Erro ao buscar gestao_tempo:', err);
       setError(err?.message || String(err));
@@ -959,12 +979,216 @@ export const useGestaoTempoCargas = () => {
         }
       }
 
-      if (err) {
-        setError(err.message || String(err));
-        throw err;
+      // If still error or no rows, try project fallback views (view_relatorio_puxe / puxe_viagens)
+      if (err || !rows || (Array.isArray(rows) && rows.length === 0)) {
+        try {
+          const rView = await supabase
+            .from('view_relatorio_puxe')
+            .select('placa, motorista, data, tempo_unidade_min, tempo_lavoura_min, hora_chegada')
+            .order('data', { ascending: false })
+            .limit(200)
+
+          if (!rView.error && rView.data && rView.data.length > 0) {
+            rows = (rView.data || []).map((v: any) => {
+              const d = new Date(v.data || v.hora_chegada)
+              const dateLocal = !isNaN(d.getTime()) ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` : null
+              return {
+                placa: v.placa,
+                motorista: v.motorista,
+                date: dateLocal,
+                tempo_algodoeira: v.tempo_unidade_min,
+                tempo_lavoura: v.tempo_lavoura_min,
+                origem: 'view_relatorio_puxe'
+              }
+            });
+            err = null;
+            console.info('gestao_tempo_cargas: using view_relatorio_puxe as source');
+          } else {
+            const rPuxe = await supabase
+              .from('puxe_viagens')
+              .select('placa, motorista, data, tempo_unidade_min, tempo_lavoura_min, hora_chegada')
+              .order('data', { ascending: false })
+              .limit(200)
+
+            if (!rPuxe.error && rPuxe.data && rPuxe.data.length > 0) {
+              rows = (rPuxe.data || []).map((v: any) => {
+                const d = new Date(v.data || v.hora_chegada)
+                const dateLocal = !isNaN(d.getTime()) ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` : null
+                return {
+                  placa: v.placa,
+                  motorista: v.motorista,
+                  date: dateLocal,
+                  tempo_algodoeira: v.tempo_unidade_min,
+                  tempo_lavoura: v.tempo_lavoura_min,
+                  origem: 'puxe_viagens'
+                }
+              });
+              err = null;
+              console.info('gestao_tempo_cargas: using puxe_viagens as source');
+            }
+          }
+        } catch (e) {
+          // ignore and surface original error below
+        }
       }
 
-      setCargas(rows || []);
+        // First: try to fetch today's records from view_relatorio_puxe (preferred),
+        // then from puxe_viagens (by data and by hora_chegada prefix). Aggregate per placa.
+        try {
+          const { getTodayLocalDate } = await import('@/lib/date-utils')
+            .then(m => m)
+            .catch(() => ({ getTodayLocalDate: () => {
+              const t = new Date();
+              return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`
+            } }));
+
+          const todayIso = getTodayLocalDate();
+
+          // Helper to aggregate rows by placa, normalizing tempo fields
+          const aggregateRows = (rows: any[]) => {
+            const mapa = new Map<string, any>();
+            for (const v of rows) {
+              const placa = (v.placa || v.plate || '').toString().trim().toUpperCase();
+              if (!placa) continue;
+              if (!mapa.has(placa)) mapa.set(placa, { placa, motorista: v.motorista || v.driver || '', viagens: 0, rolos: 0, algodoeiraTimes: [], lavouraTimes: [] });
+              const ex = mapa.get(placa);
+              ex.viagens = (ex.viagens || 0) + 1;
+              ex.rolos = (ex.rolos || 0) + (Number(v.rolos ?? v.rolls) || 0);
+
+              const algodoeiraVal = v.tempo_unidade_min ?? v.tempo_algodoeira_min ?? v.tempo_algodoeira ?? v.tempo_unidade ?? v.tempo_unidade_minimo ?? null;
+              const lavouraVal = v.tempo_lavoura_min ?? v.tempo_lavoura ?? v.tempo_lavoura_minimo ?? null;
+
+              if (algodoeiraVal != null && !isNaN(Number(algodoeiraVal))) ex.algodoeiraTimes.push(Number(algodoeiraVal));
+              if (lavouraVal != null && !isNaN(Number(lavouraVal))) ex.lavouraTimes.push(Number(lavouraVal));
+            }
+
+            return Array.from(mapa.values()).map((it: any) => {
+              const avgAlg = it.algodoeiraTimes.length ? Math.round(it.algodoeiraTimes.reduce((s:number,a:number)=>s+a,0)/it.algodoeiraTimes.length) : null;
+              const avgLav = it.lavouraTimes.length ? Math.round(it.lavouraTimes.reduce((s:number,a:number)=>s+a,0)/it.lavouraTimes.length) : null;
+              return {
+                placa: it.placa,
+                motorista: it.motorista,
+                viagens: it.viagens,
+                rolos: it.rolos,
+                tempo_algodoeira: avgAlg,
+                tempo_lavoura: avgLav,
+                origem: 'aggregated'
+              };
+            }).sort((a,b) => (b.viagens || 0) - (a.viagens || 0));
+          }
+
+          // 1) Try view_relatorio_puxe (if available)
+          try {
+            const rView = await supabase
+              .from('view_relatorio_puxe')
+              .select('placa,motorista,data,rolos,tempo_unidade_min,tempo_lavoura_min,hora_chegada')
+              .limit(1000);
+
+            if (!rView.error && rView.data && rView.data.length > 0) {
+              // filter by today using local date extraction
+              const rowsToday = (rView.data || []).filter((v:any) => {
+                const d = v.data ?? v.hora_chegada;
+                if (!d) return false;
+                const ds = (typeof d === 'string' ? d.substring(0,10) : null) || null;
+                return ds === todayIso;
+              });
+              if (rowsToday.length > 0) {
+                const aggregated = aggregateRows(rowsToday);
+                setCargas(aggregated);
+                setLoading(false);
+                return;
+              }
+            }
+          } catch (e) {
+            // continue
+          }
+
+          // 2) Try puxe_viagens: first by data = today
+          try {
+            const rByData = await supabase
+              .from('puxe_viagens')
+              .select('placa,motorista,data,rolos,tempo_unidade_min,tempo_lavoura_min,hora_chegada')
+              .eq('data', todayIso)
+              .limit(1000);
+
+            let combinedRows: any[] = [];
+            if (!rByData.error && rByData.data) combinedRows = combinedRows.concat(rByData.data as any[]);
+
+            // then try by hora_chegada starting with today (avoid .or complexity)
+            try {
+              const rByHora = await supabase
+                .from('puxe_viagens')
+                .select('placa,motorista,data,rolos,tempo_unidade_min,tempo_lavoura_min,hora_chegada')
+                .ilike('hora_chegada', `${todayIso}%`)
+                .limit(1000);
+              if (!rByHora.error && rByHora.data) combinedRows = combinedRows.concat(rByHora.data as any[]);
+            } catch (e) {
+              // ignore
+            }
+
+            // deduplicate by placa+hora_chegada (or by index)
+            const uniqMap = new Map<string, any>();
+            for (const r of combinedRows) {
+              const key = `${(r.placa||'').toString().trim().toUpperCase()}|${r.hora_chegada||r.data||''}`;
+              if (!uniqMap.has(key)) uniqMap.set(key, r);
+            }
+            const uniqRows = Array.from(uniqMap.values());
+            if (uniqRows.length > 0) {
+              const aggregated = aggregateRows(uniqRows);
+              setCargas(aggregated);
+              setLoading(false);
+              return;
+            }
+          } catch (e) {
+            // ignore and fallback below
+          }
+        } catch (e) {
+          // ignore all and fallback to previous normalization
+        }
+
+        // Normalize and prefer today's records (use local date YYYY-MM-DD)
+      try {
+        // helper: produce local YYYY-MM-DD without relying on toISOString (which uses UTC)
+        const toLocalIsoDate = (val: any) => {
+          if (!val) return null
+          // if it's already a YYYY-MM-DD string, return as-is
+          if (typeof val === 'string') {
+            const s = val.trim()
+            // quick check for YYYY-MM-DD
+            if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
+            // if ISO-like with time, take first 10 chars
+            if (/^\d{4}-\d{2}-\d{2}T/.test(s)) return s.substring(0, 10)
+          }
+          const d = new Date(val)
+          if (isNaN(d.getTime())) return null
+          // Use local date components to avoid timezone shift
+          const yyyy = d.getFullYear()
+          const mm = String(d.getMonth() + 1).padStart(2, '0')
+          const dd = String(d.getDate()).padStart(2, '0')
+          return `${yyyy}-${mm}-${dd}`
+        }
+
+        // prefer local today (avoids UTC day-shift)
+        const { getTodayLocalDate } = await import('@/lib/date-utils')
+          .then(m => m)
+          .catch(() => ({ getTodayLocalDate: () => {
+            const t = new Date();
+            return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`
+          } }))
+
+        const todayIso = getTodayLocalDate()
+
+        const normalized = (rows || []).map((r: any) => ({
+          ...r,
+          _date_iso: toLocalIsoDate(r.date || r.data || r.hora_chegada || r.created_at || r.createdAt || r.created)
+        }))
+
+        const todayOnly = normalized.filter((r: any) => r._date_iso === todayIso)
+        // Do not fallback to historical rows: always show only today's cargas
+        setCargas(todayOnly)
+      } catch (e) {
+        setCargas(rows || [])
+      }
     } catch (err: any) {
       console.error('Erro ao buscar gestao_tempo_cargas:', err);
       setError(err?.message || String(err));

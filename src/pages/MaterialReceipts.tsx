@@ -113,7 +113,7 @@ const MaterialReceipts = () => {
   };
 
   // Estatísticas do dia
-  const today = new Date().toISOString().split('T')[0];
+  const today = getTodayLocalDate();
   const todayRecords = records.filter(r => r.date === today);
   const totalMaterials = materialTypes.map(type => ({
     type,

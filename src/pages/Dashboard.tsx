@@ -35,7 +35,7 @@ import { useTheme } from "@/lib/theme";
 import { useToast } from "@/hooks/use-toast";
 import logo from "@/assets/BF_logo.png";
 import { calculateLoadingTime } from "@/lib/time-utils";
-import { normalizeLocalDate } from "@/lib/date-utils";
+import { normalizeLocalDate, getTodayLocalDate } from "@/lib/date-utils";
 
 // Função helper para converter texto para Title Case
 const toTitleCase = (str: string): string => {
@@ -380,7 +380,7 @@ const Dashboard = () => {
   ];
 
   // Calcular estatísticas reais
-  const today = new Date().toISOString().split('T')[0];
+  const today = getTodayLocalDate();
   const todayVehicles = vehicles.filter(v => v.date === today);
   const allVehicles = vehicles; // TODOS os veículos (histórico completo)
   const todayCarregamentos = todayVehicles.filter(v => v.type === 'Carregamento');
@@ -1423,7 +1423,7 @@ const Dashboard = () => {
                         id="entryDate"
                         name="entryDate"
                         type="date"
-                        defaultValue={new Date().toISOString().split('T')[0]}
+                        defaultValue={getTodayLocalDate()}
                         required
                       />
                     </div>

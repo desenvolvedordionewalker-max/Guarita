@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, Plus, CloudRain, Droplets, Calendar, Loader2, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRainRecords } from "@/hooks/use-supabase";
+import { getTodayLocalDate, toLocalDateString } from "@/lib/date-utils";
 import { RainRecord } from "@/lib/supabase";
 
 const Rain = () => {
@@ -18,20 +19,20 @@ const Rain = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<RainRecord | null>(null);
 
-  const today = new Date().toISOString().split('T')[0];
-  const currentMonth = new Date().getMonth();
-  const currentYear = new Date().getFullYear();
+  const today = getTodayLocalDate();
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
   
   // Calcular início e fim da semana atual (segunda a domingo)
-  const now = new Date();
   const dayOfWeek = now.getDay(); // 0 = domingo, 1 = segunda, etc
   const monday = new Date(now);
   monday.setDate(now.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1)); // Ajusta para segunda-feira
   const sunday = new Date(monday);
   sunday.setDate(monday.getDate() + 6); // Domingo
   
-  const mondayStr = monday.toISOString().split('T')[0];
-  const sundayStr = sunday.toISOString().split('T')[0];
+  const mondayStr = toLocalDateString(monday);
+  const sundayStr = toLocalDateString(sunday);
 
   // Totalizadores
   const todayTotal = records

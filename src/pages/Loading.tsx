@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useLoadingRecords } from "@/hooks/use-supabase";
 import { LoadingRecord } from "@/lib/supabase";
-import { getTodayLocalDate, normalizeLocalDate } from "@/lib/date-utils";
+import { getTodayLocalDate, normalizeLocalDate, convertIsoToLocalDateString } from "@/lib/date-utils";
 import { calculateLoadingTime } from "@/lib/time-utils";
 
 const Loading = () => {
@@ -343,7 +343,8 @@ const Loading = () => {
     if (!l.loaded_at) return false;
 
     // Normaliza a data de 'loaded_at' para comparar com 'today'
-    const loadedDate = normalizeLocalDate(new Date(l.loaded_at)).toISOString().split('T')[0];
+    // Use convertIsoToLocalDateString para extrair YYYY-MM-DD de timestamps ISO sem conversão de timezone
+    const loadedDate = l.loaded_at ? convertIsoToLocalDateString(l.loaded_at) : null;
     
     // Mostra se foi carregado HOJE, independente do status ser 'carregado' ou 'concluido'
     if (loadedDate === today) {

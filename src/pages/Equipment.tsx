@@ -10,6 +10,7 @@ import { ArrowLeft, Plus, Settings, Image as ImageIcon, CheckCircle, Loader2, Ca
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useEquipment } from "@/hooks/use-supabase";
+import { getTodayLocalDate } from "@/lib/date-utils";
 import type { Equipment as EquipmentType } from "@/lib/supabase";
 
 const Equipment = () => {
@@ -136,7 +137,7 @@ const Equipment = () => {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="date">Data da Saída</Label>
-                  <Input type="date" name="date" required defaultValue={new Date().toISOString().split('T')[0]} />
+                  <Input type="date" name="date" required defaultValue={getTodayLocalDate()} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="photo">Foto do Item</Label>
@@ -379,7 +380,7 @@ const Equipment = () => {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="returnDate">Data de Retorno</Label>
-                <Input type="date" id="returnDate" defaultValue={new Date().toISOString().split('T')[0]} />
+                <Input type="date" id="returnDate" defaultValue={getTodayLocalDate()} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="returnNotes">Observações (opcional)</Label>

@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
+import { useGestaoTempoCargas } from "@/hooks/use-supabase";
+import { getTodayLocalDate } from "@/lib/date-utils";
 
 export default function PainelGuarita(): JSX.Element {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -13,12 +15,21 @@ export default function PainelGuarita(): JSX.Element {
     let mounted = true;
     async function carregar() {
       try {
-        const hoje = new Date().toISOString().split("T")[0];
+        const normalizePlate = (s?: string) => (s || '').toString().trim().replace(/\s+/g, '').toUpperCase()
+        const hoje = getTodayLocalDate();
+        // compute tomorrow for inclusive range filtering to avoid UTC shift
+        const d = new Date();
+        d.setDate(d.getDate() + 1);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        const amanha = `${yyyy}-${mm}-${dd}`;
 
         const { data: rank } = await supabase
           .from("ranking_puxe_lavoura")
           .select("*")
-          .eq("data", hoje)
+          .gte('data', `${hoje}T00:00:00`)
+          .lt('data', `${amanha}T00:00:00`)
           .order("rolos", { ascending: false });
 
         const { data: gest } = await supabase
@@ -29,7 +40,8 @@ export default function PainelGuarita(): JSX.Element {
         const { data: prod } = await supabase
           .from("carregamento_produtos")
           .select("*")
-          .eq("data", hoje);
+          .gte('data', `${hoje}T00:00:00`)
+          .lt('data', `${amanha}T00:00:00`);
 
         const { data: mat } = await supabase
           .from("movimentacoes_guarita")
@@ -39,7 +51,53 @@ export default function PainelGuarita(): JSX.Element {
 
         if (!mounted) return;
         setRanking(rank || []);
-        setGestao(gest || []);
+
+        // Normalize and merge gestao entries so truncated plates (e.g. "QCD4") merge into full plates (e.g. "QCD4F95") when possible.
+        const raw = (gest || []).map((g: any) => ({
+          ...g,
+          placa: normalizePlate(g.placa),
+          motorista: g.motorista || '',
+          viagens: Number(g.viagens) || 0,
+          rolos: Number(g.rolos) || 0,
+          total: g.total || 0,
+          tempo_algodoeira: g.tempo_algodoeira || g.tempo_algodoeira_min || null,
+          tempo_lavoura: g.tempo_lavoura || g.tempo_lavoura_min || null
+        }));
+
+        const mapa = new Map<string, any>();
+        for (const item of raw) {
+          const key = item.placa || '';
+          if (!mapa.has(key)) mapa.set(key, { ...item });
+          else {
+            const ex = mapa.get(key);
+            ex.viagens = (ex.viagens || 0) + (item.viagens || 0);
+            ex.rolos = (ex.rolos || 0) + (item.rolos || 0);
+            ex.total = (ex.total || 0) + (item.total || 0);
+            // average tempos when present
+            if (item.tempo_algodoeira) ex.tempo_algodoeira = Math.round(((ex.tempo_algodoeira || 0) + item.tempo_algodoeira) / 2);
+            if (item.tempo_lavoura) ex.tempo_lavoura = Math.round(((ex.tempo_lavoura || 0) + item.tempo_lavoura) / 2);
+            mapa.set(key, ex);
+          }
+        }
+
+        // Merge short keys (length 4) into longer keys that start with same prefix
+        for (const key of Array.from(mapa.keys())) {
+          if (key.length === 4) {
+            const longer = Array.from(mapa.keys()).find(k => k.length > 4 && k.startsWith(key));
+            if (longer) {
+              const shortItem = mapa.get(key);
+              const longItem = mapa.get(longer);
+              longItem.viagens = (longItem.viagens || 0) + (shortItem.viagens || 0);
+              longItem.rolos = (longItem.rolos || 0) + (shortItem.rolos || 0);
+              longItem.total = (longItem.total || 0) + (shortItem.total || 0);
+              if (shortItem.tempo_algodoeira) longItem.tempo_algodoeira = Math.round(((longItem.tempo_algodoeira || 0) + shortItem.tempo_algodoeira) / 2);
+              if (shortItem.tempo_lavoura) longItem.tempo_lavoura = Math.round(((longItem.tempo_lavoura || 0) + shortItem.tempo_lavoura) / 2);
+              mapa.delete(key);
+            }
+          }
+        }
+
+        setGestao(Array.from(mapa.values()));
         setProdutos(prod || []);
         setMateriais(mat || []);
       } catch (err) {
@@ -51,6 +109,20 @@ export default function PainelGuarita(): JSX.Element {
       mounted = false;
     };
   }, []);
+
+  // Use gestao cargas hook to show header averages
+  const { cargas, loading: gestaoLoading } = useGestaoTempoCargas();
+
+  const medias = useMemo(() => {
+    const rows = cargas || [];
+    if (!rows || rows.length === 0) return { algodoeira: null, lavoura: null };
+    const sumAlg = rows.reduce((s: number, r: any) => s + (Number(r.tempo_algodoeira) || Number(r.tempo_algodoeira_min) || 0), 0);
+    const sumLav = rows.reduce((s: number, r: any) => s + (Number(r.tempo_lavoura) || Number(r.tempo_lavoura_min) || 0), 0);
+    const cnt = rows.length;
+    const avgAlg = cnt > 0 ? Math.round(sumAlg / cnt) : null;
+    const avgLav = cnt > 0 ? Math.round(sumLav / cnt) : null;
+    return { algodoeira: avgAlg, lavoura: avgLav };
+  }, [cargas]);
 
   useEffect(() => {
     const ajustarEscala = () => {
@@ -160,18 +232,31 @@ export default function PainelGuarita(): JSX.Element {
             <div className="flex justify-between items-center">
               <h2 className="text-[#00C2FF] text-2xl font-semibold">Gestão de Tempo</h2>
               <div className="flex gap-6 text-lg">
-                <span className="text-[#FFC300]">🏭 Algodoeira: 25 min</span>
-                <span className="text-[#FF65A3]">🌾 Lavoura: 41 min</span>
+                <span className="text-[#FFC300]">🏭 Algodoeira: {gestaoLoading ? '...' : (medias.algodoeira != null ? `${medias.algodoeira} min` : '—')}</span>
+                <span className="text-[#FF65A3]">🌾 Lavoura: {gestaoLoading ? '...' : (medias.lavoura != null ? `${medias.lavoura} min` : '—')}</span>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3 mt-3">
-              {(gestao || []).map((g, i) => (
-                <div key={i} className="bg-[#0E1410] border border-[#1E2A33] p-3 rounded-xl">
-                  <h3 className="font-semibold text-[#00C2FF] text-lg">🚛 {g.placa} — {g.motorista}</h3>
-                  <p className="text-[#A8D6C4] text-sm">{g.viagens} viagens • {g.rolos} rolos</p>
-                  <p className="text-[#00FFB3] font-bold mt-1">Total: {g.total}</p>
-                </div>
-              ))}
+              {(!cargas || cargas.length === 0) ? (
+                <div className="col-span-2 flex items-center justify-center text-[#A8D6C4] text-xl font-semibold">Nenhuma Viagem Hoje</div>
+              ) : (
+                (cargas || []).map((g: any, i: number) => (
+                  <div key={i} className="bg-[#0E1410] border border-[#1E2A33] p-3 rounded-xl">
+                    <h3 className="font-semibold text-[#00C2FF] text-lg">🚛 {g.placa || g.plate || '—'} — {g.motorista || g.driver || '—'}</h3>
+                    <p className="text-[#A8D6C4] text-sm">{g.viagens || g.count || 0} viagens • {g.rolos || g.rolls || '—'} rolos</p>
+                    {/* Viagens incrementais: mostrar badges 1..N conforme o número de viagens */}
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {Array.from({ length: Math.min(Number(g.viagens || g.count || 0), 10) }).map((_, idx) => (
+                        <span key={idx} className="inline-flex items-center justify-center px-2 py-1 rounded-full bg-[#0B2A21] text-[#00FFB3] text-sm font-semibold">{idx + 1}</span>
+                      ))}
+                    </div>
+                    <div className="mt-2">
+                      <p className="text-[#A8D6C4] text-sm">⌛ Algodoeira: <span className="text-[#00FFB3] font-bold">{g.tempo_algodoeira != null ? `${g.tempo_algodoeira} min` : (g.tempo_algodoeira_min != null ? `${g.tempo_algodoeira_min} min` : '—')}</span></p>
+                      <p className="text-[#A8D6C4] text-sm">🌾 Lavoura: <span className="text-[#FF65A3] font-bold">{g.tempo_lavoura != null ? `${g.tempo_lavoura} min` : (g.tempo_lavoura_min != null ? `${g.tempo_lavoura_min} min` : '—')}</span></p>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </main>

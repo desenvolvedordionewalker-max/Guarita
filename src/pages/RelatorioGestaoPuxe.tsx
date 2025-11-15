@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ArrowLeft, TrendingUp, Clock, Users, BarChart3 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { getTodayLocalDate } from "@/lib/date-utils";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
 import logo from "@/assets/BF_logo.png";
 import { useCottonPull } from "@/hooks/use-supabase";
@@ -75,6 +76,27 @@ const RelatorioGestaoPuxe = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Helpers: normalize plate and extract date string from timestamps without timezone shift
+  const normalizePlate = (s?: string) => (s || '').toString().trim().replace(/\s+/g, '').toUpperCase();
+
+  const extractIsoDate = (val?: string | null) => {
+    if (!val) return null;
+    // If value looks like ISO or timestamp with T, take the left side before 'T'
+    if (typeof val === 'string') {
+      if (val.includes('T')) return val.split('T')[0];
+      if (val.includes(' ')) return val.split(' ')[0];
+      // fallback: try to parse and return ISO date
+      const d = new Date(val);
+      if (!isNaN(d.getTime())) {
+        const yyyy = d.getFullYear()
+        const mm = String(d.getMonth() + 1).padStart(2, '0')
+        const dd = String(d.getDate()).padStart(2, '0')
+        return `${yyyy}-${mm}-${dd}`
+      }
+    }
+    return null;
+  }
 
   const fetchData = async () => {
     setLoading(true);
@@ -157,12 +179,13 @@ const RelatorioGestaoPuxe = () => {
           console.warn('2. migrate_historical_puxe_data.sql (migra dados históricos)');
         } else {
           viagensRelatorio.forEach(v => {
-            // Criar chave: placa + data + hora (extrair apenas HH:mm do timestamp)
+            // Criar chave: normalized placa + data (yyyy-mm-dd) + hora (HH:mm)
+            const placaNorm = normalizePlate(v.placa);
+            const data = extractIsoDate(v.data || v.hora_chegada) || '';
             const dataHora = new Date(v.hora_chegada);
-            const hora = dataHora.toTimeString().substring(0, 5); // HH:mm
-            const data = dataHora.toISOString().split('T')[0]; // yyyy-mm-dd
-            const key = `${v.placa}_${data}_${hora}`;
-            
+            const hora = isNaN(dataHora.getTime()) ? (v.hora_chegada ? String(v.hora_chegada).substring(11,16) : '') : dataHora.toTimeString().substring(0, 5);
+            const key = `${placaNorm}_${data}_${hora}`;
+
             mapaViagens.set(key, {
               algodoeira: v.tempo_unidade_min || 0,
               viagem: v.tempo_lavoura_min || 0
@@ -213,7 +236,7 @@ const RelatorioGestaoPuxe = () => {
     try {
       // Buscar todos os registros dessa placa/motorista
       const registrosPlaca = cottonRecords.filter(
-        r => r.plate === placa && r.driver === motorista
+        r => normalizePlate(r.plate) === normalizePlate(placa) && r.driver === motorista
       ).sort((a, b) => `${b.date} ${b.entry_time}`.localeCompare(`${a.date} ${a.entry_time}`));
       
       // Adicionar cálculos de tempo
@@ -227,7 +250,7 @@ const RelatorioGestaoPuxe = () => {
         
         // Buscar tempo viagem lavoura do mapa
         const hora = r.entry_time ? r.entry_time.substring(0, 5) : '';
-        const mapKey = hora ? `${r.plate}_${r.date}_${hora}` : '';
+        const mapKey = hora ? `${normalizePlate(r.plate)}_${extractIsoDate(r.date) || r.date}_${hora}` : '';
         const tempos = mapKey ? puxeViagensMap.get(mapKey) : null;
         const tempo_viagem_lavoura_min = tempos?.viagem || null;
         
@@ -368,9 +391,7 @@ const RelatorioGestaoPuxe = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {(() => {
                   // Agrupar registros APENAS de HOJE por placa
-                  const hoje = new Date();
-                  const dataHoje = hoje.toISOString().split('T')[0];
-                  
+                  const dataHoje = getTodayLocalDate();
                   const registrosHoje = cottonRecords.filter(r => r.date === dataHoje);
 
                   // Agrupar por placa

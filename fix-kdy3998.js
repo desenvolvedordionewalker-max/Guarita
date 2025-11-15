@@ -46,9 +46,9 @@ async function fixKDY3998() {
         console.log('✅ KDY3998 corrigido! Agora loaded_at = HOJE');
         
         // Verificar se agora aparece nos concluídos
-        const hoje = new Date().toISOString().split('T')[0];
+        const hoje = (() => { const d = new Date(); const y = d.getFullYear(); const m = String(d.getMonth()+1).padStart(2,'0'); const dd = String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${dd}`; })();
         console.log(`📅 Data de hoje: ${hoje}`);
-        console.log(`📅 Nova data loaded_at: ${agora.split('T')[0]}`);
+        console.log(`📅 Nova data loaded_at: ${agora.substring(0, 10)}`);
         console.log('✅ Agora deve aparecer nos concluídos!');
       }
     } else {
@@ -75,11 +75,11 @@ async function fixAllLoadedToday() {
       return;
     }
     
-    const hoje = new Date().toISOString().split('T')[0];
+    const hoje = (() => { const d = new Date(); const y = d.getFullYear(); const m = String(d.getMonth()+1).padStart(2,'0'); const dd = String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${dd}`; })();
     console.log(`📅 Data de hoje: ${hoje}`);
     
     for (const registro of carregados) {
-      const loadedDate = registro.loaded_at ? new Date(registro.loaded_at).toISOString().split('T')[0] : null;
+      const loadedDate = registro.loaded_at ? String(registro.loaded_at).substring(0,10) : null;
       
       console.log(`\n📋 Placa ${registro.plate}:`);
       console.log(`  - Status: ${registro.status}`);

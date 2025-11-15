@@ -14,6 +14,7 @@ import { calculateLoadingTime } from "@/lib/time-utils";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
+import { getTodayLocalDate } from "@/lib/date-utils";
 
 // Extend jsPDF interface for autoTable
 interface jsPDFWithAutoTable extends jsPDF {
@@ -140,7 +141,7 @@ const Reports = () => {
     const wsVehicles = XLSX.utils.json_to_sheet(vehicleData);
     XLSX.utils.book_append_sheet(wb, wsVehicles, "Veículos");
 
-    XLSX.writeFile(wb, `Relatorio_Guarita_${new Date().toISOString().split('T')[0]}.xlsx`);
+    XLSX.writeFile(wb, `Relatorio_Guarita_${getTodayLocalDate()}.xlsx`);
     
     toast({
       title: "Relatório exportado!",
@@ -207,7 +208,7 @@ const Reports = () => {
       });
     }
 
-    doc.save(`Relatorio_Guarita_${new Date().toISOString().split('T')[0]}.pdf`);
+    doc.save(`Relatorio_Guarita_${getTodayLocalDate()}.pdf`);
     
     toast({
       title: "Relatório exportado!",
@@ -303,7 +304,7 @@ const Reports = () => {
 
   const generateDailySummary = (sendToWhatsAppFlag = false, showInModal = false) => {
     const today = new Date().toLocaleDateString('pt-BR');
-    const todayDate = new Date().toISOString().split('T')[0];
+    const todayDate = getTodayLocalDate();
     
     // Carregamentos do dia (entry_date = hoje)
     // Inclui: status 'carregando', 'carregado' (aguardando nota) E 'concluido' (já saiu)
@@ -475,7 +476,7 @@ const Reports = () => {
     const time = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     
     // Dados reais da fila de carregamento
-    const todayDate = new Date().toISOString().split('T')[0];
+    const todayDate = getTodayLocalDate();
     const filaCarregamento = loadingRecords.filter(l => !l.entry_date && (!dateFilter || l.date === dateFilter || l.date === todayDate));
     
     // Agrupar por produto
@@ -616,7 +617,7 @@ const Reports = () => {
 
   const generateCottonPullSummary = (sendToWhatsAppFlag = false, showInModal = false) => {
     const today = new Date().toLocaleDateString('pt-BR');
-    const todayDate = new Date().toISOString().split('T')[0];
+    const todayDate = getTodayLocalDate();
     
     // Filtrar registros do dia
     const todayRecords = cottonRecords.filter(record => record.date === todayDate);

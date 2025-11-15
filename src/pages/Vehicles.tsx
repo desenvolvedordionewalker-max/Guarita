@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useVehicles, useProducers } from "@/hooks/use-supabase";
 import { Vehicle } from "@/lib/supabase";
+import { getTodayLocalDate } from "@/lib/date-utils";
 
 const Vehicles = () => {
   const navigate = useNavigate();
@@ -176,7 +177,7 @@ const Vehicles = () => {
     }
   };
 
-  const todayVehicles = vehicles.filter(v => v.date === new Date().toISOString().split('T')[0]);
+  const todayVehicles = vehicles.filter(v => v.date === getTodayLocalDate());
   
   const calculateInternalTime = (entryTime: string, exitTime?: string) => {
     if (!exitTime) return "-";
@@ -252,7 +253,7 @@ const Vehicles = () => {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="date">Data</Label>
-                    <Input type="date" name="date" required defaultValue={new Date().toISOString().split('T')[0]} />
+                    <Input type="date" name="date" required defaultValue={getTodayLocalDate()} />
                   </div>
                 </div>
                 <div className="grid sm:grid-cols-2 gap-4">

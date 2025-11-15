@@ -11,6 +11,7 @@ import { ArrowLeft, Plus, Package, Loader2, Trash2, Edit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useCottonPull, useProducers, usePuxeViagens } from "@/hooks/use-supabase";
 import { supabase, CottonPull as CottonPullRecord } from "@/lib/supabase";
+import { getTodayLocalDate, formatDateForDisplay } from "@/lib/date-utils";
 
 const CottonPull = () => {
   const navigate = useNavigate();
@@ -26,7 +27,8 @@ const CottonPull = () => {
   const [exitRecordId, setExitRecordId] = useState<string>("");
   const [exitTime, setExitTime] = useState("");
   
-  const farms = ["CARAJAS", "VENTANIA", "SIMARELLI", "MAMOSE", "JUCARA", "SANTA LUZIA", "TALHAO"];
+  // Farms list: prefer producers from the DB so options like 'SAO JOSE' appear
+  const farms = (producers && producers.length > 0) ? producers.map(p => p.name) : ["CARAJAS", "VENTANIA", "SIMARELLI", "MAMOSE", "JUCARA", "SANTA LUZIA", "TALHAO"];
 
   // Sistema de autocomplete
   const [savedPlates, setSavedPlates] = useState<string[]>(() => {
@@ -109,8 +111,8 @@ const CottonPull = () => {
     }
   };
   
-  // Data de hoje no formato YYYY-MM-DD
-  const today = new Date().toISOString().split('T')[0];
+  // Data de hoje no formato YYYY-MM-DD (local)
+  const today = getTodayLocalDate();
   
   // Separar registros por status de exit_time
   const pendingExits = records.filter(record => !record.exit_time);
@@ -198,13 +200,14 @@ const CottonPull = () => {
       
       // Registrar também na tabela de viagens para gestão de tempos
       if (newRecord && newRecord.id) {
-        const horaChegada = new Date(`${date}T${entryTime}:00`);
+        // Store hora_chegada as local timestamp string to avoid UTC shift
+        const horaChegadaLocal = `${date}T${entryTime}:00`;
         await addViagem({
           placa: plate.toUpperCase(),
           motorista: driver,
           fazenda_origem: farm,
           data: date,
-          hora_chegada: horaChegada.toISOString(),
+          hora_chegada: horaChegadaLocal,
         });
       }
       
@@ -272,8 +275,10 @@ const CottonPull = () => {
           .limit(1);
         
         if (viagens && viagens.length > 0) {
+          // Save hora_saida using local-local timestamp string to avoid UTC conversion that shifts date
+          const horaSaidaLocal = `${record.date}T${exitTime}:00`;
           await updateViagem(viagens[0].id, {
-            hora_saida: horaSaida.toISOString()
+            hora_saida: horaSaidaLocal
           });
         }
       }
@@ -371,7 +376,7 @@ const CottonPull = () => {
             <form onSubmit={handleSubmit} className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="date">Data</Label>
-                <Input type="date" name="date" required defaultValue={new Date().toISOString().split('T')[0]} />
+                <Input type="date" name="date" required defaultValue={getTodayLocalDate()} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="entryTime">Hora da Entrada</Label>
@@ -551,7 +556,7 @@ const CottonPull = () => {
                           return (
                             <tr key={record.id} className="border-b hover:bg-muted/50 transition-colors">
                               <td className="p-3 font-medium">
-                                {new Date(record.date).toLocaleDateString('pt-BR')}
+                                {formatDateForDisplay(record.date)}
                               </td>
                               <td className="p-3">{record.entry_time}</td>
                               <td className="p-3">
