@@ -1061,12 +1061,34 @@ export const useGestaoTempoCargas = () => {
               ex.viagens = (ex.viagens || 0) + 1;
               ex.rolos = (ex.rolos || 0) + (Number(v.rolos ?? v.rolls) || 0);
 
-              const algodoeiraVal = v.tempo_unidade_min ?? v.tempo_algodoeira_min ?? v.tempo_algodoeira ?? v.tempo_unidade ?? v.tempo_unidade_minimo ?? null;
+              // Prefer explicit hora_chegada/hora_saida diff when available
+              let algodoeiraVal: any = v.tempo_unidade_min ?? v.tempo_algodoeira_min ?? v.tempo_algodoeira ?? v.tempo_unidade ?? v.tempo_unidade_minimo ?? null;
               const lavouraVal = v.tempo_lavoura_min ?? v.tempo_lavoura ?? v.tempo_lavoura_minimo ?? null;
+              try {
+                const hcRaw = v.hora_chegada || v.hora_arrival || v.arrival_time || null;
+                const hsRaw = v.hora_saida || v.hora_saida_unidade || v.saida_unidade || v.departure_time || null;
+                if (hcRaw && hsRaw) {
+                  const hc = new Date(hcRaw);
+                  const hs = new Date(hsRaw);
+                  if (!isNaN(hc.getTime()) && !isNaN(hs.getTime())) {
+                    const diffMin = Math.round((hs.getTime() - hc.getTime()) / 60000);
+                    // only accept reasonable diffs
+                    if (diffMin >= 0 && diffMin < 24 * 60) {
+                      algodoeiraVal = diffMin;
+                    }
+                  }
+                }
+              } catch (e) {
+                // ignore parsing errors
+              }
 
               if (algodoeiraVal != null && !isNaN(Number(algodoeiraVal))) {
                 const n = Number(algodoeiraVal);
                 if (n >= 0 && n < 24 * 60) ex.algodoeiraTimes.push(n);
+                else {
+                  // negative or unrealistic tempo detected — log for debug
+                  try { console.warn('[GestaoTempoCargas] tempo_algodoeira inválido para', placa, 'valor:', n); } catch(e) {}
+                }
               }
               if (lavouraVal != null && !isNaN(Number(lavouraVal))) {
                 const n = Number(lavouraVal);
