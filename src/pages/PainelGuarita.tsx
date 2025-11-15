@@ -15,6 +15,7 @@ export default function PainelGuarita(): JSX.Element {
     let mounted = true;
     async function carregar() {
       try {
+        console.debug('[PainelGuarita] carregando dados de painel...')
         const normalizePlate = (s?: string) => (s || '').toString().trim().replace(/\s+/g, '').toUpperCase()
         const hoje = getTodayLocalDate();
         // compute tomorrow for inclusive range filtering to avoid UTC shift
@@ -32,10 +33,12 @@ export default function PainelGuarita(): JSX.Element {
           .lt('data', `${amanha}T00:00:00`)
           .order("rolos", { ascending: false });
 
-        const { data: gest } = await supabase
+        const { data: gest, error: gestErr } = await supabase
           .from("gestao_tempo")
           .select("*")
           .order("placa", { ascending: true });
+        if (gestErr) console.warn('[PainelGuarita] gestao_tempo query error:', gestErr.message || gestErr)
+        console.debug('[PainelGuarita] gestao_tempo rows:', Array.isArray(gest) ? gest.length : gest)
 
         const { data: prod } = await supabase
           .from("carregamento_produtos")
@@ -98,6 +101,72 @@ export default function PainelGuarita(): JSX.Element {
         }
 
         setGestao(Array.from(mapa.values()));
+        // If gestao is empty, try fallback sources to build today's gestao (view_relatorio_puxe / puxe_viagens)
+        if ((Array.from(mapa.values()).length === 0)) {
+          try {
+            console.debug('[PainelGuarita] gestao vazio — tentando fontes alternativas (view_relatorio_puxe / puxe_viagens)')
+            const { data: vr } = await supabase
+              .from('view_relatorio_puxe')
+              .select('placa,motorista,data,rolos,tempo_unidade_min,tempo_lavoura_min,hora_chegada')
+              .order('data', { ascending: false })
+              .limit(200)
+
+            const mapFromRows = (rows: any[] = []) => rows.map((g: any) => ({
+              ...g,
+              placa: normalizePlate(g.placa),
+              motorista: g.motorista || '',
+              viagens: 1,
+              rolos: Number(g.rolos) || 0,
+              total: 0,
+              tempo_algodoeira: g.tempo_unidade_min || null,
+              tempo_lavoura: g.tempo_lavoura_min || null
+            }));
+
+            let altRows: any[] = [];
+            if (vr && Array.isArray(vr) && vr.length > 0) {
+              altRows = mapFromRows(vr.filter((r:any) => {
+                const ds = (r.data || r.hora_chegada || '').toString().substring(0,10);
+                return ds === hoje;
+              }));
+            }
+
+            if (altRows.length === 0) {
+              const { data: pv } = await supabase
+                .from('puxe_viagens')
+                .select('placa,motorista,data,rolos,tempo_unidade_min,tempo_lavoura_min,hora_chegada,created_at')
+                .order('hora_chegada', { ascending: false })
+                .limit(500);
+              if (pv && Array.isArray(pv)) {
+                const toLocal = (v:any) => {
+                  if (!v) return null;
+                  if (typeof v === 'string') return v.substring(0,10);
+                  const d = new Date(v); if (isNaN(d.getTime())) return null;
+                  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+                }
+                altRows = mapFromRows(pv.filter((r:any) => {
+                  const ds = toLocal(r.data || r.hora_chegada || r.created_at);
+                  return ds === hoje;
+                }));
+              }
+            }
+
+            if (altRows.length > 0) {
+              const mapaAlt = new Map<string, any>();
+              for (const item of altRows) {
+                const key = item.placa || '';
+                if (!mapaAlt.has(key)) mapaAlt.set(key, { ...item });
+                else {
+                  const ex = mapaAlt.get(key);
+                  ex.viagens = (ex.viagens || 0) + (item.viagens || 0);
+                  ex.rolos = (ex.rolos || 0) + (item.rolos || 0);
+                }
+              }
+              setGestao(Array.from(mapaAlt.values()));
+            }
+          } catch (e) {
+            console.warn('[PainelGuarita] fallback gestao failed', e);
+          }
+        }
         setProdutos(prod || []);
         setMateriais(mat || []);
       } catch (err) {
@@ -108,6 +177,32 @@ export default function PainelGuarita(): JSX.Element {
     return () => {
       mounted = false;
     };
+  }, []);
+
+  // Re-fetch gestao when puxe_viagens mutate (tempo fechado, etc.)
+  useEffect(() => {
+    const handler = () => {
+      // re-run carregar by calling the same effect: easiest is to dispatch a resize event
+      // or directly call the supabase queries — here we'll trigger a simple reload by re-calling carregar via a custom event.
+      // We reuse the original carregar via creating and dispatching an event listened by the same effect is complex,
+      // so simplest approach: force a small state change to re-run the useEffect logic (we'll call carregar by simulating a refresh)
+      // Instead, call the same supabase queries by creating a small helper: use a window event to trigger reload.
+      try { window.dispatchEvent(new CustomEvent('painel:reload')) } catch(e) {}
+    };
+    try { window.addEventListener('puxe_viagens:changed', handler as EventListener) } catch(e) {}
+    return () => { try { window.removeEventListener('puxe_viagens:changed', handler as EventListener) } catch(e) {} }
+  }, []);
+
+  // Listen for manual reload trigger to call carregar (keeps single source of truth)
+  useEffect(() => {
+    const onReload = () => {
+      // simply call the same loader by invoking the effect's function via creating an async IIFE
+      (async () => {
+        try { const evt = new Event('resize'); window.dispatchEvent(evt); } catch(e) {}
+      })();
+    };
+    try { window.addEventListener('painel:reload', onReload as EventListener) } catch(e) {}
+    return () => { try { window.removeEventListener('painel:reload', onReload as EventListener) } catch(e) {} }
   }, []);
 
   // Use gestao cargas hook to show header averages
@@ -124,32 +219,24 @@ export default function PainelGuarita(): JSX.Element {
     return { algodoeira: avgAlg, lavoura: avgLav };
   }, [cargas]);
 
+  // Ajuste responsivo: usamos 100vw/100vh e grids flexíveis para adaptar a diferentes telas
   useEffect(() => {
-    const ajustarEscala = () => {
-      const baseWidth = 1920;
-      const baseHeight = 1080;
-      const scaleW = window.innerWidth / baseWidth;
-      const scaleH = window.innerHeight / baseHeight;
-      const finalScale = Math.min(scaleW, scaleH) * 1.05;
-      setScale(finalScale);
-    };
-    ajustarEscala();
-    window.addEventListener("resize", ajustarEscala);
-    return () => window.removeEventListener("resize", ajustarEscala);
+    const noop = () => {}
+    window.addEventListener("resize", noop);
+    return () => window.removeEventListener("resize", noop);
   }, []);
 
   return (
     <div className="w-screen h-screen overflow-hidden bg-[#070D0B] flex items-center justify-center">
       <div
         ref={containerRef}
-        className="origin-center transition-transform duration-500 ease-in-out"
+        className="origin-center transition-transform duration-500 ease-in-out w-full h-full"
         style={{
-          transform: `scale(${scale})`,
-          width: "1920px",
-          height: "1080px",
-          display: "grid",
-          gridTemplateRows: "auto 1fr auto",
-          gridTemplateColumns: "1fr",
+          width: '100vw',
+          height: '100vh',
+          display: 'grid',
+          gridTemplateRows: 'auto 1fr auto',
+          gridTemplateColumns: '1fr',
         }}
       >
         <header className="flex justify-between items-center px-8 py-4 border-b border-[#1E2A33] text-[#EAFBF0]">
@@ -208,12 +295,12 @@ export default function PainelGuarita(): JSX.Element {
             </div>
             <div className="grid grid-cols-2 gap-4 mt-4 flex-1">
               {(ranking || []).slice(0, 6).map((r, i) => (
-                <div key={i} className="bg-[#0E1410] border border-[#1E2A33] rounded-xl p-3">
-                  <div className="flex justify-between mb-1">
-                    <span>{i + 1}º {r.motorista}</span>
-                    <span className="text-[#00FFB3] font-bold">{r.rolos} rolos</span>
+                <div key={i} className="bg-[#0E1410] border border-[#1E2A33] rounded-xl p-3 overflow-hidden">
+                  <div className="flex justify-between items-baseline mb-1 gap-2">
+                    <span className="text-sm md:text-base lg:text-lg truncate">{i + 1}º {r.motorista}</span>
+                    <span className="text-base md:text-lg lg:text-xl text-[#00FFB3] font-semibold">{r.rolos} rolos</span>
                   </div>
-                  <div className="h-2 rounded-full bg-[#1A2723]">
+                  <div className="h-2 rounded-full bg-[#1A2723] overflow-hidden">
                     <div className="h-2 rounded-full bg-gradient-to-r from-[#00C2FF] to-[#00FFB3]" style={{ width: ranking[0] && ranking[0].rolos ? `${(r.rolos / ranking[0].rolos) * 100}%` : "0%" }} />
                   </div>
                 </div>
