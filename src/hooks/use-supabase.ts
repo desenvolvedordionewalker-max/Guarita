@@ -878,6 +878,68 @@ export const useGestaoTempo = () => {
     setLoading(true);
     setError(null);
     try {
+      // Prefer authoritative view `view_gestao_tempo_cargas` if present
+      try {
+        const { getTodayLocalDate } = await import('@/lib/date-utils')
+          .then(m => m)
+          .catch(() => ({ getTodayLocalDate: () => {
+            const t = new Date();
+            return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`
+          } }));
+
+        const todayIso = getTodayLocalDate();
+
+        // Try preferred view with explicit columns
+        let rView = await supabase
+          .from('view_gestao_tempo_cargas')
+          .select('placa,motorista,hora_entrada,hora_saida,rolos,tempo_unidade_min,tempo_lavoura_min')
+          .order('hora_entrada', { ascending: false })
+          .limit(1000);
+
+        if (rView.error) {
+          // fallback to select('*') if schema differs
+          try { rView = await supabase.from('view_gestao_tempo_cargas').select('*').limit(1000); } catch (e) { rView = { data: null, error: e as any } as any }
+        }
+
+        if (!rView.error && rView.data && rView.data.length > 0) {
+          try { console.debug('[useGestaoTempo] view_gestao_tempo_cargas returned', rView.data.length, 'rows (sample 3):', (rView.data || []).slice(0,3)); } catch(e) {}
+          const rowsToday = (rView.data || []).filter((v:any) => {
+            const he = v.hora_entrada || v.hora_chegada || v.hora_arrival || null;
+            const hs = v.hora_saida || v.hora_saida_unidade || v.saida_unidade || v.departure_time || null;
+            const ca = v.created_at || v.createdAt || v.created || null;
+            const localDate = (val: any) => {
+              if (!val) return null;
+              const dv = typeof val === 'string' ? new Date(val) : new Date(val);
+              if (isNaN(dv.getTime())) return null;
+              return `${dv.getFullYear()}-${String(dv.getMonth()+1).padStart(2,'0')}-${String(dv.getDate()).padStart(2,'0')}`;
+            };
+            const sHe = localDate(he);
+            const sHs = localDate(hs);
+            const sCa = localDate(ca);
+            return sHe === todayIso || sHs === todayIso || sCa === todayIso;
+          }).map((v:any) => ({
+            placa: v.placa || v.plate || null,
+            motorista: v.motorista || v.driver || null,
+            date: v.data || v.date || (v.hora_entrada ? (typeof v.hora_entrada === 'string' ? v.hora_entrada.substring(0,10) : (new Date(v.hora_entrada).toISOString().substring(0,10))) : null),
+            tempo_algodoeira: v.tempo_unidade_min ?? null,
+            tempo_lavoura: v.tempo_lavoura_min ?? null,
+            rolos: v.rolos ?? v.rolls ?? 0,
+            hora_chegada: v.hora_entrada || v.hora_chegada || null,
+            hora_saida: v.hora_saida || null,
+            origem: 'view_gestao_tempo_cargas'
+          }));
+
+          setData(rowsToday);
+          try { console.debug('[useGestaoTempo] rowsToday (after local-date filter) count:', rowsToday.length, 'sample:', rowsToday.slice(0,3)); } catch(e) {}
+          setLoading(false);
+          return;
+        }
+
+      } catch (e) {
+        // if the view is missing or errored, fall back to existing behavior below
+      }
+
+      // Fallback: previous behavior (try gestao_tempo or normalize rows)
       // Try with order by placa first (preferred)
       let res = await supabase.from('gestao_tempo').select('*').order('placa', { ascending: true });
       let rows = res.data;
@@ -917,7 +979,6 @@ export const useGestaoTempo = () => {
           return iso === todayIso
         })
         // Always use only today's rows (do not fallback to historical rows)
-        // The UI expects an empty list when there are no trips today.
         setData(filtered)
       } catch (e) {
         setData(rows || [])
@@ -1061,8 +1122,15 @@ export const useGestaoTempoCargas = () => {
               ex.viagens = (ex.viagens || 0) + 1;
               ex.rolos = (ex.rolos || 0) + (Number(v.rolos ?? v.rolls) || 0);
 
-              // Prefer explicit hora_chegada/hora_saida diff when available
-              let algodoeiraVal: any = v.tempo_unidade_min ?? v.tempo_algodoeira_min ?? v.tempo_algodoeira ?? v.tempo_unidade ?? v.tempo_unidade_minimo ?? null;
+              // If the row comes from `view_gestao_tempo_cargas`, prefer its reported
+              // `tempo_unidade_min` (the view computes closed tempos reliably in DB).
+              // Otherwise, prefer explicit hora_chegada/hora_saida diff when available.
+              let algodoeiraVal: any = null;
+              if (v.origem === 'view_gestao_tempo_cargas' && v.tempo_unidade_min != null && !isNaN(Number(v.tempo_unidade_min))) {
+                algodoeiraVal = Number(v.tempo_unidade_min);
+              } else {
+                algodoeiraVal = v.tempo_unidade_min ?? v.tempo_algodoeira_min ?? v.tempo_algodoeira ?? v.tempo_unidade ?? v.tempo_unidade_minimo ?? null;
+              }
               const lavouraVal = v.tempo_lavoura_min ?? v.tempo_lavoura ?? v.tempo_lavoura_minimo ?? null;
               try {
                 const hcRaw = v.hora_chegada || v.hora_arrival || v.arrival_time || null;
@@ -1074,7 +1142,8 @@ export const useGestaoTempoCargas = () => {
                     const diffMin = Math.round((hs.getTime() - hc.getTime()) / 60000);
                     // only accept reasonable diffs
                     if (diffMin >= 0 && diffMin < 24 * 60) {
-                      algodoeiraVal = diffMin;
+                      // Only overwrite if we don't already have a trusted value
+                      if (algodoeiraVal == null) algodoeiraVal = diffMin;
                     }
                   }
                 }
@@ -1131,7 +1200,62 @@ export const useGestaoTempoCargas = () => {
             }).sort((a,b) => (b.viagens || 0) - (a.viagens || 0));
           }
 
-          // 1) Try view_relatorio_puxe (if available)
+          // 1) Try view_gestao_tempo_cargas (preferred if available) ---
+          // This view (when present) contains cargas fechadas com hora_entrada/hora_saida
+          // which are the most reliable source to compute tempo_algodoeira.
+          try {
+            let rGestaoView = await supabase
+              .from('view_gestao_tempo_cargas')
+              .select('placa,motorista,hora_entrada,hora_saida,rolos,tempo_unidade_min,tempo_lavoura_min')
+              .limit(200)
+
+            if (rGestaoView.error) {
+              // fallback to selecting all columns if schema differs
+              try {
+                rGestaoView = await supabase.from('view_gestao_tempo_cargas').select('*').limit(200);
+              } catch (e) { rGestaoView = { data: null, error: e as any } as any }
+            }
+
+            if (!rGestaoView.error && rGestaoView.data && rGestaoView.data.length > 0) {
+              try { console.debug('[useGestaoTempoCargas] view_gestao_tempo_cargas returned', rGestaoView.data.length, 'rows (sample 3):', (rGestaoView.data || []).slice(0,3)); } catch(e) {}
+              const rowsToday = (rGestaoView.data || []).filter((v: any) => {
+                const he = v.hora_entrada || v.hora_chegada || v.hora_arrival || v.horaEntrada || null;
+                const hs = v.hora_saida || v.hora_saida_unidade || v.saida_unidade || v.departure_time || null;
+                const ca = v.created_at || v.createdAt || v.created || null;
+                const localDate = (val: any) => {
+                  if (!val) return null;
+                  const dv = typeof val === 'string' ? new Date(val) : new Date(val);
+                  if (isNaN(dv.getTime())) return null;
+                  return `${dv.getFullYear()}-${String(dv.getMonth()+1).padStart(2,'0')}-${String(dv.getDate()).padStart(2,'0')}`;
+                };
+                const sHe = localDate(he);
+                const sHs = localDate(hs);
+                const sCa = localDate(ca);
+                return sHe === todayIso || sHs === todayIso || sCa === todayIso;
+              }).map((v: any) => ({
+                placa: v.placa || v.plate || null,
+                motorista: v.motorista || v.driver || null,
+                date: v.data || v.date || (v.hora_entrada ? (typeof v.hora_entrada === 'string' ? v.hora_entrada.substring(0,10) : (new Date(v.hora_entrada).toISOString().substring(0,10))) : null),
+                hora_chegada: v.hora_entrada || v.hora_chegada || v.hora_arrival || null,
+                hora_saida: v.hora_saida || v.hora_saida_unidade || v.saida_unidade || v.departure_time || null,
+                tempo_unidade_min: v.tempo_unidade_min ?? v.tempo_unidade ?? null,
+                tempo_lavoura_min: v.tempo_lavoura_min ?? v.tempo_lavoura ?? null,
+                rolos: v.rolos ?? v.rolls ?? 0,
+                origem: 'view_gestao_tempo_cargas'
+              }));
+              try { console.debug('[useGestaoTempoCargas] rowsToday (after local-date filter) count:', rowsToday.length, 'sample:', rowsToday.slice(0,3)); } catch(e) {}
+              if (rowsToday.length > 0) {
+                const aggregated = aggregateRows(rowsToday as any[]);
+                setCargas(aggregated);
+                setLoading(false);
+                return;
+              }
+            }
+          } catch (e) {
+            // continue to next source
+          }
+
+          // 2) Try view_relatorio_puxe (if available)
           try {
             // Try preferred columns first; if the view schema is different, retry with select('*') and map dynamically
             let rView = await supabase

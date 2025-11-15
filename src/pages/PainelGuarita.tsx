@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
-import { useGestaoTempoCargas } from "@/hooks/use-supabase";
+import { useGestaoTempoCargas, useGestaoTempo } from "@/hooks/use-supabase";
 import { getTodayLocalDate } from "@/lib/date-utils";
 
 export default function PainelGuarita(): JSX.Element {
@@ -32,13 +32,6 @@ export default function PainelGuarita(): JSX.Element {
           .gte('data', `${hoje}T00:00:00`)
           .lt('data', `${amanha}T00:00:00`)
           .order("rolos", { ascending: false });
-
-        const { data: gest, error: gestErr } = await supabase
-          .from("gestao_tempo")
-          .select("*")
-          .order("placa", { ascending: true });
-        if (gestErr) console.warn('[PainelGuarita] gestao_tempo query error:', gestErr.message || gestErr)
-        console.debug('[PainelGuarita] gestao_tempo rows:', Array.isArray(gest) ? gest.length : gest)
 
         const { data: prod } = await supabase
           .from("carregamento_produtos")
@@ -100,73 +93,7 @@ export default function PainelGuarita(): JSX.Element {
           }
         }
 
-        setGestao(Array.from(mapa.values()));
-        // If gestao is empty, try fallback sources to build today's gestao (view_relatorio_puxe / puxe_viagens)
-        if ((Array.from(mapa.values()).length === 0)) {
-          try {
-            console.debug('[PainelGuarita] gestao vazio — tentando fontes alternativas (view_relatorio_puxe / puxe_viagens)')
-            const { data: vr } = await supabase
-              .from('view_relatorio_puxe')
-              .select('placa,motorista,data,rolos,tempo_unidade_min,tempo_lavoura_min,hora_chegada')
-              .order('data', { ascending: false })
-              .limit(200)
-
-            const mapFromRows = (rows: any[] = []) => rows.map((g: any) => ({
-              ...g,
-              placa: normalizePlate(g.placa),
-              motorista: g.motorista || '',
-              viagens: 1,
-              rolos: Number(g.rolos) || 0,
-              total: 0,
-              tempo_algodoeira: g.tempo_unidade_min || null,
-              tempo_lavoura: g.tempo_lavoura_min || null
-            }));
-
-            let altRows: any[] = [];
-            if (vr && Array.isArray(vr) && vr.length > 0) {
-              altRows = mapFromRows(vr.filter((r:any) => {
-                const ds = (r.data || r.hora_chegada || '').toString().substring(0,10);
-                return ds === hoje;
-              }));
-            }
-
-            if (altRows.length === 0) {
-              const { data: pv } = await supabase
-                .from('puxe_viagens')
-                .select('placa,motorista,data,rolos,tempo_unidade_min,tempo_lavoura_min,hora_chegada,created_at')
-                .order('hora_chegada', { ascending: false })
-                .limit(500);
-              if (pv && Array.isArray(pv)) {
-                const toLocal = (v:any) => {
-                  if (!v) return null;
-                  if (typeof v === 'string') return v.substring(0,10);
-                  const d = new Date(v); if (isNaN(d.getTime())) return null;
-                  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-                }
-                altRows = mapFromRows(pv.filter((r:any) => {
-                  const ds = toLocal(r.data || r.hora_chegada || r.created_at);
-                  return ds === hoje;
-                }));
-              }
-            }
-
-            if (altRows.length > 0) {
-              const mapaAlt = new Map<string, any>();
-              for (const item of altRows) {
-                const key = item.placa || '';
-                if (!mapaAlt.has(key)) mapaAlt.set(key, { ...item });
-                else {
-                  const ex = mapaAlt.get(key);
-                  ex.viagens = (ex.viagens || 0) + (item.viagens || 0);
-                  ex.rolos = (ex.rolos || 0) + (item.rolos || 0);
-                }
-              }
-              setGestao(Array.from(mapaAlt.values()));
-            }
-          } catch (e) {
-            console.warn('[PainelGuarita] fallback gestao failed', e);
-          }
-        }
+        // gestao is now provided by the `useGestaoTempo` hook (see effect below)
         setProdutos(prod || []);
         setMateriais(mat || []);
       } catch (err) {
@@ -207,6 +134,57 @@ export default function PainelGuarita(): JSX.Element {
 
   // Use gestao cargas hook to show header averages
   const { cargas, loading: gestaoLoading } = useGestaoTempoCargas();
+  const { data: gestaoData, loading: loadingGestao } = useGestaoTempo();
+
+  // debug toggle via URL: ?debug=1
+  let debugMode = false;
+  try {
+    if (typeof window !== 'undefined') {
+      const ps = new URLSearchParams(window.location.search);
+      debugMode = ps.get('debug') === '1';
+    }
+  } catch (e) { debugMode = false }
+
+  // emit debug logs for troubleshooting
+  useEffect(() => {
+    try {
+      if (debugMode) {
+        console.debug('[PainelGuarita][DEBUG] cargas:', cargas);
+        console.debug('[PainelGuarita][DEBUG] gestaoData:', gestaoData);
+      }
+    } catch (e) {}
+  }, [cargas, gestaoData, debugMode]);
+
+  // Sync hook-provided gestao data into local `gestao` state with normalization
+  useEffect(() => {
+    if (!gestaoData || !Array.isArray(gestaoData)) return;
+    const normalizePlate = (s?: string) => (s || '').toString().trim().replace(/\s+/g, '').toUpperCase();
+    const mapped = (gestaoData || []).map((g: any) => ({
+      placa: normalizePlate(g.placa || g.plate || g.plate_number),
+      motorista: g.motorista || g.driver || '',
+      viagens: Number(g.viagens || g.count || 1) || 1,
+      rolos: Number(g.rolos || g.rolls || 0) || 0,
+      total: g.total || 0,
+      tempo_algodoeira: g.tempo_algodoeira ?? g.tempo_unidade_min ?? g.tempo_algodoeira_min ?? null,
+      tempo_lavoura: g.tempo_lavoura ?? g.tempo_lavoura_min ?? g.tempo_lavoura_minimo ?? null,
+      origem: g.origem || null
+    }));
+    // merge by placa
+    const mapa = new Map<string, any>();
+    for (const item of mapped) {
+      const key = item.placa || '';
+      if (!mapa.has(key)) mapa.set(key, { ...item });
+      else {
+        const ex = mapa.get(key);
+        ex.viagens = (ex.viagens || 0) + (item.viagens || 0);
+        ex.rolos = (ex.rolos || 0) + (item.rolos || 0);
+        if (item.tempo_algodoeira) ex.tempo_algodoeira = Math.round(((ex.tempo_algodoeira || 0) + item.tempo_algodoeira) / 2);
+        if (item.tempo_lavoura) ex.tempo_lavoura = Math.round(((ex.tempo_lavoura || 0) + item.tempo_lavoura) / 2);
+        mapa.set(key, ex);
+      }
+    }
+    setGestao(Array.from(mapa.values()));
+  }, [gestaoData]);
 
   const medias = useMemo(() => {
     const rows = cargas || [];
@@ -346,6 +324,23 @@ export default function PainelGuarita(): JSX.Element {
               )}
             </div>
           </div>
+          {debugMode && (
+            <div style={{ position: 'fixed', right: 12, bottom: 12, zIndex: 9999, width: 560, maxHeight: '40vh', overflow: 'auto' }}>
+              <div className="bg-black/80 text-xs text-white p-3 rounded-lg border border-[#1E2A33]">
+                <div className="flex justify-between items-center mb-2">
+                  <strong>DEBUG: fontes gestao</strong>
+                  <button onClick={() => { try { window.location.search = ''; } catch(e){} }} className="text-sm underline">fechar</button>
+                </div>
+                <div style={{ fontFamily: 'monospace', fontSize: 11 }}>
+                  <div><strong>cargas (count):</strong> {(cargas || []).length}</div>
+                  <pre style={{ whiteSpace: 'pre-wrap', marginTop: 8 }}>{JSON.stringify(cargas || [], null, 2)}</pre>
+                  <div style={{ height: 8 }} />
+                  <div><strong>gestaoData (count):</strong> {(gestaoData || []).length}</div>
+                  <pre style={{ whiteSpace: 'pre-wrap', marginTop: 8 }}>{JSON.stringify(gestaoData || [], null, 2)}</pre>
+                </div>
+              </div>
+            </div>
+          )}
         </main>
       </div>
     </div>
