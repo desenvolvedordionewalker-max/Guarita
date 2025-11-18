@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, CloudRain, Truck, PackageCheck, Clock, Droplet, Leaf, Factory } from "lucide-react";
+import { Loader2, CloudRain, Truck, PackageCheck, Clock, Droplet } from "lucide-react";
 import { useVehicles, useCottonPull, useRainRecords, useLoadingRecords, useEquipment, useGestaoTempo, useGestaoTempoCargas } from "@/hooks/use-supabase";
 import { useRainAlert } from "@/hooks/use-rain-alert";
 import { useMaterialReceipts } from "@/hooks/use-material-receipts";
@@ -82,9 +82,7 @@ function DashboardPortariaTV() {
   // Auto-scroll para o card de Gestão de Tempo
   useEffect(() => {
     const scrollContainer = scrollContainerRef.current;
-    // Filtra apenas cargas de hoje para scroll automático
-    const cargasHojeLocal = (cargas || []).filter(c => convertIsoToLocalDateString(c.hora_entrada) === getTodayLocalDate());
-    if (!scrollContainer || cargasHojeLocal.length === 0) return;
+    if (!scrollContainer || cargas.length === 0) return;
 
     let scrollPosition = 0;
     const scrollSpeed = 0.5; // pixels por intervalo (bem devagar)
@@ -93,12 +91,12 @@ function DashboardPortariaTV() {
     const autoScroll = setInterval(() => {
       if (scrollContainer) {
         scrollPosition += scrollSpeed;
-
+        
         // Se chegou no final, volta pro início suavemente
         if (scrollPosition >= scrollContainer.scrollHeight - scrollContainer.clientHeight) {
           scrollPosition = 0;
         }
-
+        
         scrollContainer.scrollTop = scrollPosition;
       }
     }, scrollInterval);
@@ -467,34 +465,6 @@ function DashboardPortariaTV() {
   console.log('  Concluídos (Saída - global):', concluidosSaida.length);
   console.log('  Total Concluídos (top card):', totalConcluidosHoje); // Usando a nova variável
   console.log('---------------------------------');
-
-  // Filtrar apenas cargas do dia (para o card de Gestão de Tempo)
-  const cargasHoje = (cargas || []).filter(c => convertIsoToLocalDateString(c.hora_entrada) === todayStr);
-
-  // Agrupar cargas por placa e preparar fallback do cottonPull (pré-computado para uso no JSX)
-  const cargasPorPlaca: Record<string, typeof cargasHoje> = {};
-  (cargasHoje || []).forEach(c => {
-    if (!cargasPorPlaca[c.placa]) cargasPorPlaca[c.placa] = [];
-    cargasPorPlaca[c.placa].push(c);
-  });
-
-  const cottonByPlate: Record<string, any[]> = {};
-  const todayCotton = (cottonPullRecords || []).filter(r => r.date === todayStr);
-  todayCotton.forEach(r => {
-    if (!cottonByPlate[r.plate]) cottonByPlate[r.plate] = [];
-    cottonByPlate[r.plate].push(r);
-  });
-  Object.keys(cottonByPlate).forEach(k => {
-    cottonByPlate[k].sort((a, b) => (a.entry_time || '').localeCompare(b.entry_time || ''));
-  });
-
-  const placasArray = Object.entries(cargasPorPlaca).map(([placa, lista]) => {
-    const motorista = lista[0]?.motorista || '-';
-    const totalViagens = lista.length;
-    const totalRolos = lista.reduce((sum, item) => sum + (item.qtd_rolos || 0), 0);
-    return { placa, lista, motorista, totalViagens, totalRolos };
-  });
-  placasArray.sort((a, b) => b.totalRolos - a.totalRolos);
 
   // Debugging específico para Pluma e Caroço Aguardando NF
   console.log('\n--- DEBUG: Aguardando NF por Produto ---');
@@ -976,7 +946,7 @@ function DashboardPortariaTV() {
           </CardContent>
               </Card>
 
-              {/* Card de Gestão de Tempo - reescrito como cards por placa */}
+              {/* Card de Gestão de Tempo */}
               <Card className={`backdrop-blur-lg border transition-all duration-300 ${
                 isDarkMode 
                   ? 'bg-black/60 text-emerald-100 border-emerald-600/30' 
@@ -1016,101 +986,60 @@ function DashboardPortariaTV() {
                 <CardContent className={`p-[clamp(0.5rem,1vw,1rem)] ${
                   isDarkMode ? '' : '[&_.text-emerald-400]:!text-white [&_.text-emerald-300]:!text-gray-100'
                 }`}>
-                  {/* Novo layout: cards agrupados por placa */}
+                  {/* Detalhamento Carga a Carga - Scroll Interno */}
                   <div className="max-h-[65vh] overflow-y-auto scrollbar-thin scrollbar-thumb-muted/40">
                     <h4 className={`text-[clamp(0.7rem,1.1vw,1rem)] font-semibold mb-2 border-b pb-2 ${
                       isDarkMode ? 'text-emerald-400 border-emerald-600/30' : 'text-white border-emerald-400/30'
                     }`}>
-                      📊 Detalhamento por Placa (Hoje)
+                      📊 Detalhamento Carga a Carga (Hoje)
                     </h4>
-
-                    {/* Agrupar cargas por placa */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                      {placasArray && placasArray.length > 0 ? (
-                        placasArray.map(({ placa, lista, motorista, totalViagens, totalRolos }, placaIndex) => {
-                          const listaSorted = [...lista].sort((a, b) => (a.hora_entrada || '').localeCompare(b.hora_entrada || ''));
-
-                          return (
-                            <div key={placa} className="bg-black/30 border border-emerald-600/20 rounded p-3">
-                              <div className="flex justify-between items-center mb-2">
-                                <div>
-                                  <p className="font-semibold text-emerald-300">{placa} <span className="text-sm text-emerald-400">({motorista || '-'})</span></p>
-                                  <p className="text-sm text-emerald-400">{totalViagens} viagens • {totalRolos.toLocaleString('pt-BR')} rolos</p>
-                                </div>
-                                <div className="text-right">
-                                  <span className="inline-block rounded-full px-2 py-1 bg-emerald-600/40 text-emerald-200 text-sm font-bold">{placaIndex + 1}º</span>
-                                </div>
-                              </div>
-
-                              <div className="space-y-1">
-                                {listaSorted.map((c, idx) => {
-                                  // derive tempo_algodoeira if missing using hora_entrada/hora_saida
-                                  let tempoAlgodoeira = c.tempo_algodoeira || 0;
-                                  if ((!tempoAlgodoeira || tempoAlgodoeira === 0) && c.hora_entrada && c.hora_saida) {
-                                    const [eH, eM] = c.hora_entrada.split(':').map(Number);
-                                    const [sH, sM] = c.hora_saida.split(':').map(Number);
-                                    let diff = (sH * 60 + sM) - (eH * 60 + eM);
-                                    if (diff < 0) diff += 1440;
-                                    tempoAlgodoeira = diff;
-                                  }
-
-                                  // fallback: use cottonPullRecords entry if carga has no hora_entrada/hora_saida
-                                  if ((!tempoAlgodoeira || tempoAlgodoeira === 0) && (!c.hora_entrada || !c.hora_saida)) {
-                                    const fallback = cottonByPlate[placa] && cottonByPlate[placa][idx];
-                                    if (fallback && fallback.entry_time && fallback.exit_time) {
-                                      const [eH, eM] = fallback.entry_time.split(':').map(Number);
-                                      const [sH, sM] = fallback.exit_time.split(':').map(Number);
-                                      let diff = (sH * 60 + sM) - (eH * 60 + eM);
-                                      if (diff < 0) diff += 1440;
-                                      tempoAlgodoeira = diff;
-                                    }
-                                  }
-
-                                  // derive tempo_lavoura for trips > 1 using previous viagem's hora_saida
-                                  let tempoLavoura = c.tempo_lavoura || 0;
-                                  if ((!tempoLavoura || tempoLavoura === 0) && idx > 0) {
-                                    const prev = listaSorted[idx - 1];
-                                    if (prev && prev.hora_saida && c.hora_entrada) {
-                                      const [psH, psM] = prev.hora_saida.split(':').map(Number);
-                                      const [eH, eM] = c.hora_entrada.split(':').map(Number);
-                                      let diff = (eH * 60 + eM) - (psH * 60 + psM);
-                                      if (diff < 0) diff += 1440;
-                                      if (diff > 0) tempoLavoura = diff;
-                                    } else {
-                                      const fallbackPrev = cottonByPlate[placa] && cottonByPlate[placa][idx - 1];
-                                      const fallbackCurr = cottonByPlate[placa] && cottonByPlate[placa][idx];
-                                      if (fallbackPrev && fallbackPrev.exit_time && fallbackCurr && fallbackCurr.entry_time) {
-                                        const [psH, psM] = fallbackPrev.exit_time.split(':').map(Number);
-                                        const [eH, eM] = fallbackCurr.entry_time.split(':').map(Number);
-                                        let diff = (eH * 60 + eM) - (psH * 60 + psM);
-                                        if (diff < 0) diff += 1440;
-                                        if (diff > 0) tempoLavoura = diff;
-                                      }
-                                    }
-                                  }
-
-                                  return (
-                                    <div key={`${placa}-${idx}`} className="flex justify-between text-[clamp(0.7rem,1vw,1rem)] border-b border-emerald-500/20 pb-1">
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-emerald-300 font-semibold">{idx + 1}º</span>
-                                        <span className="flex items-center gap-1 text-green-400">🌱 {tempoLavoura ? formatTime(tempoLavoura) : "-"}</span>
-                                      </div>
-
-                                      <div className="flex items-center gap-1 text-cyan-300">🏭 {tempoAlgodoeira ? formatTime(tempoAlgodoeira) : "-"}</div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
+                    <div 
+                      ref={scrollContainerRef}
+                      className={`border rounded-lg p-[clamp(0.4rem,0.8vw,0.8rem)] max-h-[50vh] overflow-y-auto scroll-smooth ${
+                        isDarkMode ? 'bg-black/30 border-emerald-600/20' : 'bg-emerald-800/30 border-emerald-400/20'
+                      }`}
+                    >
+                      {loadingCargas ? (
+                        <p className="text-emerald-400 text-center text-[clamp(0.65rem,1vw,0.9rem)] py-3">Carregando...</p>
+                      ) : cargas.length > 0 ? (
+                        <div className="space-y-1">
+                          {/* Cabeçalho da tabela */}
+                          <div className="grid grid-cols-8 gap-[clamp(0.2rem,0.4vw,0.5rem)] text-[clamp(0.55rem,0.8vw,0.75rem)] font-semibold text-white pb-1 sm:pb-2 border-b border-emerald-600/20">
+                            <div>Placa</div>
+                            <div>Motorista</div>
+                            <div className="text-center">Talhão</div>
+                            <div className="text-center">Viagem</div>
+                            <div className="text-center">Rolos</div>
+                            <div className="text-center">T.Lavoura</div>
+                            <div className="text-center">T.Algod.</div>
+                            <div className="text-center">Total</div>
+                          </div>
+                          {/* Linhas de dados */}
+                          {cargas.map((carga, index) => (
+                            <div 
+                              key={`${carga.placa}-${carga.viagem_num}`}
+                              className={`grid grid-cols-8 gap-[clamp(0.2rem,0.4vw,0.5rem)] text-[clamp(0.5rem,0.75vw,0.7rem)] py-1 sm:py-1.5 ${
+                                index % 2 === 0 ? 'bg-muted/30' : ''
+                              }`}
+                            >
+                              <div className="text-emerald-400 font-semibold truncate text-[clamp(0.65rem,1vw,0.9rem)]">{carga.placa}</div>
+                              <div className="text-emerald-300 font-medium truncate text-[clamp(0.6rem,0.9vw,0.8rem)]">{carga.motorista}</div>
+                              <div className="text-center text-orange-400 font-semibold text-[clamp(0.6rem,0.9vw,0.8rem)]">{carga.talhao || '-'}</div>
+                              <div className="text-center text-blue-400 font-semibold text-[clamp(0.6rem,0.9vw,0.8rem)]">{carga.viagem_num}ª</div>
+                              <div className="text-center text-yellow-400 font-medium text-[clamp(0.6rem,0.9vw,0.8rem)]">{carga.qtd_rolos}</div>
+                              <div className="text-center text-emerald-400 font-semibold text-[clamp(0.6rem,0.9vw,0.8rem)]">{formatTime(carga.tempo_lavoura)}</div>
+                              <div className="text-center text-emerald-400 font-semibold text-[clamp(0.6rem,0.9vw,0.8rem)]">{formatTime(carga.tempo_algodoeira)}</div>
+                              <div className="text-center text-emerald-400 font-bold text-[clamp(0.65rem,1vw,0.9rem)]">{formatTime(carga.tempo_total)}</div>
                             </div>
-                          );
-                        })
+                          ))}
+                        </div>
                       ) : (
-                        <p className="text-emerald-400 text-center py-4 text-[clamp(0.5rem,0.75vw,0.8rem)]">Nenhuma carga hoje</p>
+                        <p className="text-emerald-400 text-center text-[clamp(0.65rem,1vw,0.9rem)] py-2 sm:py-3">Nenhuma carga completa registrada hoje</p>
                       )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
           </div>
         </div>
       </div>
