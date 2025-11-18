@@ -382,10 +382,9 @@ All colors MUST be HSL.
 }
 
 /* User-provided base styles for ultra-modern TV (explicit additions) */
-/* FUNDO DARK PREMIUM */
+/* FUNDO DARK PREMIUM - only apply the special TV background globally but keep text color controlled by theme variables */
 body {
   background: radial-gradient(circle at center, #1e2538 0%, #0e1220 60%, #05070d 100%);
-  color: #e5e7eb;
   font-family: 'Inter', sans-serif;
 }
 
