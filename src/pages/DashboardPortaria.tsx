@@ -1019,89 +1019,89 @@ function DashboardPortariaTV() {
                           cottonByPlate[k].sort((a, b) => (a.entry_time || '').localeCompare(b.entry_time || ''));
                         });
 
-                        return Object.entries(cargasPorPlaca).map(([placa, lista]) => {
+                        const placasArray = Object.entries(cargasPorPlaca).map(([placa, lista]) => {
                           const motorista = lista[0]?.motorista || '-';
                           const totalViagens = lista.length;
                           const totalRolos = lista.reduce((sum, item) => sum + (item.qtd_rolos || 0), 0);
+                          return { placa, lista, motorista, totalViagens, totalRolos };
+                        });
+
+                        // Ordenar por totalRolos desc para exibir quem puxou mais primeiro
+                        placasArray.sort((a, b) => b.totalRolos - a.totalRolos);
+
+                        return placasArray.map(({ placa, lista, motorista, totalViagens, totalRolos }, placaIndex) => {
+                          const listaSorted = [...lista].sort((a, b) => (a.hora_entrada || '').localeCompare(b.hora_entrada || ''));
 
                           return (
-                            <div key={placa} className="bg-black/50 border border-emerald-500/30 rounded-xl p-[clamp(0.6rem,1vw,1.3rem)] backdrop-blur-xl flex flex-col gap-3">
-                              <div className="flex justify-between items-center">
+                            <div key={placa} className="bg-black/30 border border-emerald-600/20 rounded p-3">
+                              <div className="flex justify-between items-center mb-2">
                                 <div>
-                                  <div className="text-emerald-400 font-bold text-[clamp(1rem,1.5vw,1.8rem)]">{placa}</div>
-                                  <div className="text-muted-foreground text-[clamp(0.75rem,1vw,1rem)]">{motorista}</div>
-                                  <div className="text-emerald-300 text-[clamp(0.7rem,0.9vw,1rem)]">{totalViagens} viagens</div>
+                                  <p className="font-semibold text-emerald-300">{placa} <span className="text-sm text-emerald-400">({motorista || '-'})</span></p>
+                                  <p className="text-sm text-emerald-400">{totalViagens} viagens • {totalRolos.toLocaleString('pt-BR')} rolos</p>
                                 </div>
-
                                 <div className="text-right">
-                                  <div className="text-xs text-muted-foreground">Total Rolos</div>
-                                  <div className="text-yellow-400 font-bold text-[clamp(1rem,1.3vw,1.6rem)]">{totalRolos}</div>
+                                  <span className="inline-block rounded-full px-2 py-1 bg-emerald-600/40 text-emerald-200 text-sm font-bold">{placaIndex + 1}º</span>
                                 </div>
                               </div>
 
-                              <div className="flex flex-col gap-2">
-                                        {(() => {
-                                          const listaSorted = lista.slice().sort((a, b) => a.viagem_num - b.viagem_num);
-                                          return listaSorted.map((c, index) => {
-                                            // derive tempo_algodoeira if missing using hora_entrada/hora_saida
-                                            let tempoAlgodoeira = c.tempo_algodoeira;
-                                            if ((!tempoAlgodoeira || tempoAlgodoeira === 0) && c.hora_entrada && c.hora_saida) {
-                                              const [eH, eM] = c.hora_entrada.split(':').map(Number);
-                                              const [sH, sM] = c.hora_saida.split(':').map(Number);
-                                              let diff = (sH * 60 + sM) - (eH * 60 + eM);
-                                              if (diff < 0) diff += 1440;
-                                              tempoAlgodoeira = diff;
-                                            }
+                              <div className="space-y-1">
+                                {listaSorted.map((c, idx) => {
+                                  // derive tempo_algodoeira if missing using hora_entrada/hora_saida
+                                  let tempoAlgodoeira = c.tempo_algodoeira || 0;
+                                  if ((!tempoAlgodoeira || tempoAlgodoeira === 0) && c.hora_entrada && c.hora_saida) {
+                                    const [eH, eM] = c.hora_entrada.split(':').map(Number);
+                                    const [sH, sM] = c.hora_saida.split(':').map(Number);
+                                    let diff = (sH * 60 + sM) - (eH * 60 + eM);
+                                    if (diff < 0) diff += 1440;
+                                    tempoAlgodoeira = diff;
+                                  }
 
-                                              // fallback: use cottonPullRecords entry if carga has no hora_entrada/hora_saida
-                                              if ((!tempoAlgodoeira || tempoAlgodoeira === 0) && (!c.hora_entrada || !c.hora_saida)) {
-                                                const fallback = cottonByPlate[placa] && cottonByPlate[placa][index];
-                                                if (fallback && fallback.entry_time && fallback.exit_time) {
-                                                  const [eH, eM] = fallback.entry_time.split(':').map(Number);
-                                                  const [sH, sM] = fallback.exit_time.split(':').map(Number);
-                                                  let diff = (sH * 60 + sM) - (eH * 60 + eM);
-                                                  if (diff < 0) diff += 1440;
-                                                  tempoAlgodoeira = diff;
-                                                }
-                                              }
+                                  // fallback: use cottonPullRecords entry if carga has no hora_entrada/hora_saida
+                                  if ((!tempoAlgodoeira || tempoAlgodoeira === 0) && (!c.hora_entrada || !c.hora_saida)) {
+                                    const fallback = cottonByPlate[placa] && cottonByPlate[placa][idx];
+                                    if (fallback && fallback.entry_time && fallback.exit_time) {
+                                      const [eH, eM] = fallback.entry_time.split(':').map(Number);
+                                      const [sH, sM] = fallback.exit_time.split(':').map(Number);
+                                      let diff = (sH * 60 + sM) - (eH * 60 + eM);
+                                      if (diff < 0) diff += 1440;
+                                      tempoAlgodoeira = diff;
+                                    }
+                                  }
 
-                                            // derive tempo_lavoura for trips > 1 using previous viagem's hora_saida
-                                            let tempoLavoura = c.tempo_lavoura;
-                                            if ((!tempoLavoura || tempoLavoura === 0) && index > 0) {
-                                              const prev = listaSorted[index - 1];
-                                              // primary: use previous viagem's hora_saida and current hora_entrada
-                                              if (prev && prev.hora_saida && c.hora_entrada) {
-                                                const [psH, psM] = prev.hora_saida.split(':').map(Number);
-                                                const [eH, eM] = c.hora_entrada.split(':').map(Number);
-                                                let diff = (eH * 60 + eM) - (psH * 60 + psM);
-                                                if (diff < 0) diff += 1440;
-                                                if (diff > 0) tempoLavoura = diff;
-                                              } else {
-                                                // fallback: try cottonPullRecords sequence for this plate
-                                                const fallbackPrev = cottonByPlate[placa] && cottonByPlate[placa][index - 1];
-                                                const fallbackCurr = cottonByPlate[placa] && cottonByPlate[placa][index];
-                                                if (fallbackPrev && fallbackPrev.exit_time && fallbackCurr && fallbackCurr.entry_time) {
-                                                  const [psH, psM] = fallbackPrev.exit_time.split(':').map(Number);
-                                                  const [eH, eM] = fallbackCurr.entry_time.split(':').map(Number);
-                                                  let diff = (eH * 60 + eM) - (psH * 60 + psM);
-                                                  if (diff < 0) diff += 1440;
-                                                  if (diff > 0) tempoLavoura = diff;
-                                                }
-                                              }
-                                            }
+                                  // derive tempo_lavoura for trips > 1 using previous viagem's hora_saida
+                                  let tempoLavoura = c.tempo_lavoura || 0;
+                                  if ((!tempoLavoura || tempoLavoura === 0) && idx > 0) {
+                                    const prev = listaSorted[idx - 1];
+                                    if (prev && prev.hora_saida && c.hora_entrada) {
+                                      const [psH, psM] = prev.hora_saida.split(':').map(Number);
+                                      const [eH, eM] = c.hora_entrada.split(':').map(Number);
+                                      let diff = (eH * 60 + eM) - (psH * 60 + psM);
+                                      if (diff < 0) diff += 1440;
+                                      if (diff > 0) tempoLavoura = diff;
+                                    } else {
+                                      const fallbackPrev = cottonByPlate[placa] && cottonByPlate[placa][idx - 1];
+                                      const fallbackCurr = cottonByPlate[placa] && cottonByPlate[placa][idx];
+                                      if (fallbackPrev && fallbackPrev.exit_time && fallbackCurr && fallbackCurr.entry_time) {
+                                        const [psH, psM] = fallbackPrev.exit_time.split(':').map(Number);
+                                        const [eH, eM] = fallbackCurr.entry_time.split(':').map(Number);
+                                        let diff = (eH * 60 + eM) - (psH * 60 + psM);
+                                        if (diff < 0) diff += 1440;
+                                        if (diff > 0) tempoLavoura = diff;
+                                      }
+                                    }
+                                  }
 
-                                            return (
-                                              <div key={index} className="flex justify-between text-[clamp(0.7rem,1vw,1rem)] border-b border-emerald-500/20 pb-1">
-                                                <div className="flex items-center gap-2">
-                                                  <span className="text-emerald-300 font-semibold">{index + 1}º</span>
-                                                  <span className="flex items-center gap-1 text-green-400">🌱 {tempoLavoura ? formatTime(tempoLavoura) : "-"}</span>
-                                                </div>
+                                  return (
+                                    <div key={`${placa}-${idx}`} className="flex justify-between text-[clamp(0.7rem,1vw,1rem)] border-b border-emerald-500/20 pb-1">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-emerald-300 font-semibold">{idx + 1}º</span>
+                                        <span className="flex items-center gap-1 text-green-400">🌱 {tempoLavoura ? formatTime(tempoLavoura) : "-"}</span>
+                                      </div>
 
-                                                <div className="flex items-center gap-1 text-cyan-300">🏭 {tempoAlgodoeira ? formatTime(tempoAlgodoeira) : "-"}</div>
-                                              </div>
-                                            );
-                                          });
-                                        })()}
+                                      <div className="flex items-center gap-1 text-cyan-300">🏭 {tempoAlgodoeira ? formatTime(tempoAlgodoeira) : "-"}</div>
+                                    </div>
+                                  );
+                                })}
                               </div>
                             </div>
                           );

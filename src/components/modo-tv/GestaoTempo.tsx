@@ -68,6 +68,7 @@ type GestaoItem = {
   placa: string;
   motorista: string;
   viagens: Viagem[];
+  rolos?: number;
 };
 
 const GestaoTempo: React.FC<{
@@ -108,26 +109,32 @@ const GestaoTempo: React.FC<{
         className="grid flex-1 gap-5 overflow-hidden"
         style={{
           display: "grid",
-          gridTemplateColumns: `repeat(auto-fit, minmax(320px, 1fr))`,
+          // For TV mode we want a clear top-to-bottom order: use single column
+          gridTemplateColumns: `1fr`,
           alignContent: "start",
         }}
       >
-        {items.map((it) => {
-          const viagensToShow = onlyToday ? it.viagens.filter((v) => isSameDay(v.when)) : it.viagens;
-          if (viagensToShow.length === 0) return null;
-          return (
-            <div
-              key={it.placa}
-              className="bg-[#0f1724]/60 p-4 rounded-2xl border border-white/10
-            shadow-inner flex flex-col justify-between transition-all hover:bg-[#182030]/80"
-            >
+        {items
+          .slice()
+          .sort((a, b) => (b.rolos || 0) - (a.rolos || 0))
+          .map((it, index) => {
+            const viagensToShow = onlyToday ? it.viagens.filter((v) => isSameDay(v.when)) : it.viagens;
+            if (viagensToShow.length === 0) return null;
+            return (
+              <div
+                key={it.placa}
+                className="bg-[#0f1724]/60 p-4 rounded-2xl border border-white/10
+              shadow-inner flex flex-col justify-between transition-all hover:bg-[#182030]/80 relative"
+              >
+                {/* Rank badge */}
+                <div className="absolute -top-3 -left-3 bg-emerald-500 text-black font-bold px-3 py-1 rounded-br-lg shadow-md">{index + 1}º</div>
               {/* Cabeçalho do motorista */}
               <div className="flex items-center justify-between mb-3">
                 <div>
                   <div className="font-bold text-lg text-cyan-300">{it.placa}</div>
                   <div className="text-sm text-gray-400">{it.motorista}</div>
                 </div>
-                <div className="text-xs text-gray-500 italic">{viagensToShow.length} viagem{viagensToShow.length > 1 ? "s" : ""}</div>
+                <div className="text-xs text-gray-500 italic">{viagensToShow.length} viagem{viagensToShow.length > 1 ? "s" : ""} • {it.rolos || 0} rolos</div>
               </div>
 
               {/* Lista de viagens */}

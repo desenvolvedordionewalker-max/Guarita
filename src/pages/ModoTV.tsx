@@ -2,11 +2,15 @@ import React, { useEffect, useState } from "react";
 import ProdutoCard from "@/components/modo-tv/ProdutoCard";
 import logo from '@/assets/BF_logo.png';
 import { Clock } from 'lucide-react';
-import { useLoadingRecords } from '@/hooks/use-supabase';
+import { useLoadingRecords, useCottonPull } from '@/hooks/use-supabase';
 import { LoadingRecord } from '@/lib/supabase';
+import GestaoTempo from '@/components/modo-tv/GestaoTempo';
+import { Viagem } from '@/components/modo-tv/mockData';
+import { getTodayLocalDate, convertIsoToLocalDateString } from '@/lib/date-utils';
 
 const ModoTV: React.FC = () => {
   const { records: loadingRecords } = useLoadingRecords();
+  const { records: cottonPullRecords } = useCottonPull();
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
@@ -45,6 +49,40 @@ const ModoTV: React.FC = () => {
 
   const resources = mapResources();
 
+  // Construir itens agrupados por placa a partir de cotton pull (apenas hoje), ordenados por rolos
+  const gestaoItems = (() => {
+    try {
+      const today = getTodayLocalDate();
+      const pulledToday = (cottonPullRecords || []).filter((r: any) => {
+        const rDate = r.date || r.created_at || null;
+        if (!rDate) return false;
+        const local = convertIsoToLocalDateString(rDate) || String(rDate).slice(0,10);
+        return local === today;
+      });
+
+      const map: Record<string, { placa: string; motorista: string; viagens: Viagem[]; rolos: number }> = {};
+      pulledToday.forEach((r: any) => {
+        const plate = r.plate || 'N/A';
+        if (!map[plate]) map[plate] = { placa: plate, motorista: r.driver || r.carrier || '', viagens: [], rolos: 0 };
+        map[plate].viagens.push({
+          title: `${plate} - ${map[plate].viagens.length + 1}ª Viagem`,
+          lavoura: r.talhao || r.field || '',
+          algodoeira: r.farm || r.producer || '',
+          total: `${r.rolls || 0} rolos`,
+          status: 'normal',
+          when: r.date || r.created_at || new Date().toISOString(),
+        });
+        map[plate].rolos += Number(r.rolls || 0);
+      });
+
+      const items = Object.values(map).sort((a, b) => b.rolos - a.rolos).map(({placa, motorista, viagens, rolos}) => ({ placa, motorista, viagens, rolos }));
+      console.log('Gestao items (ordenados):', items.map(i => ({ placa: i.placa, rolos: i.rolos })));
+      return items;
+    } catch (e) {
+      return [];
+    }
+  })();
+
   return (
     <div className="tv-modern-root tv-container-full tv-full tv-no-scroll">
       <div className="px-8 py-6 flex items-center justify-between glass-card card-shadow mx-6">
@@ -81,6 +119,11 @@ const ModoTV: React.FC = () => {
               />
             );
           })}
+        </div>
+
+        {/* Gestão de Tempo - modo TV (ordenado por quem puxou mais) */}
+        <div className="mt-6">
+          <GestaoTempo items={gestaoItems} />
         </div>
       </div>
     </div>
