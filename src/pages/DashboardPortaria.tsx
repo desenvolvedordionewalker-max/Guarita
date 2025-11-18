@@ -471,6 +471,31 @@ function DashboardPortariaTV() {
   // Filtrar apenas cargas do dia (para o card de Gestão de Tempo)
   const cargasHoje = (cargas || []).filter(c => convertIsoToLocalDateString(c.hora_entrada) === todayStr);
 
+  // Agrupar cargas por placa e preparar fallback do cottonPull (pré-computado para uso no JSX)
+  const cargasPorPlaca: Record<string, typeof cargasHoje> = {};
+  (cargasHoje || []).forEach(c => {
+    if (!cargasPorPlaca[c.placa]) cargasPorPlaca[c.placa] = [];
+    cargasPorPlaca[c.placa].push(c);
+  });
+
+  const cottonByPlate: Record<string, any[]> = {};
+  const todayCotton = (cottonPullRecords || []).filter(r => r.date === todayStr);
+  todayCotton.forEach(r => {
+    if (!cottonByPlate[r.plate]) cottonByPlate[r.plate] = [];
+    cottonByPlate[r.plate].push(r);
+  });
+  Object.keys(cottonByPlate).forEach(k => {
+    cottonByPlate[k].sort((a, b) => (a.entry_time || '').localeCompare(b.entry_time || ''));
+  });
+
+  const placasArray = Object.entries(cargasPorPlaca).map(([placa, lista]) => {
+    const motorista = lista[0]?.motorista || '-';
+    const totalViagens = lista.length;
+    const totalRolos = lista.reduce((sum, item) => sum + (item.qtd_rolos || 0), 0);
+    return { placa, lista, motorista, totalViagens, totalRolos };
+  });
+  placasArray.sort((a, b) => b.totalRolos - a.totalRolos);
+
   // Debugging específico para Pluma e Caroço Aguardando NF
   console.log('\n--- DEBUG: Aguardando NF por Produto ---');
   ['PLUMA', 'CAROÇO'].forEach(productName => {
@@ -1001,35 +1026,8 @@ function DashboardPortariaTV() {
 
                     {/* Agrupar cargas por placa */}
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                      {(() => {
-                        const cargasPorPlaca: Record<string, typeof cargasHoje> = {};
-                        (cargasHoje || []).forEach(c => {
-                          if (!cargasPorPlaca[c.placa]) cargasPorPlaca[c.placa] = [];
-                          cargasPorPlaca[c.placa].push(c);
-                        });
-
-                        // Fallback: agrupar registros de cottonPull por placa para tentar derivar horas quando ausentes
-                        const cottonByPlate: Record<string, any[]> = {};
-                        const todayCotton = (cottonPullRecords || []).filter(r => r.date === todayStr);
-                        todayCotton.forEach(r => {
-                          if (!cottonByPlate[r.plate]) cottonByPlate[r.plate] = [];
-                          cottonByPlate[r.plate].push(r);
-                        });
-                        Object.keys(cottonByPlate).forEach(k => {
-                          cottonByPlate[k].sort((a, b) => (a.entry_time || '').localeCompare(b.entry_time || ''));
-                        });
-
-                        const placasArray = Object.entries(cargasPorPlaca).map(([placa, lista]) => {
-                          const motorista = lista[0]?.motorista || '-';
-                          const totalViagens = lista.length;
-                          const totalRolos = lista.reduce((sum, item) => sum + (item.qtd_rolos || 0), 0);
-                          return { placa, lista, motorista, totalViagens, totalRolos };
-                        });
-
-                        // Ordenar por totalRolos desc para exibir quem puxou mais primeiro
-                        placasArray.sort((a, b) => b.totalRolos - a.totalRolos);
-
-                        return placasArray.map(({ placa, lista, motorista, totalViagens, totalRolos }, placaIndex) => {
+                      {placasArray && placasArray.length > 0 ? (
+                        placasArray.map(({ placa, lista, motorista, totalViagens, totalRolos }, placaIndex) => {
                           const listaSorted = [...lista].sort((a, b) => (a.hora_entrada || '').localeCompare(b.hora_entrada || ''));
 
                           return (
@@ -1105,8 +1103,10 @@ function DashboardPortariaTV() {
                               </div>
                             </div>
                           );
-                        });
-                      })()}
+                        })
+                      ) : (
+                        <p className="text-emerald-400 text-center py-4 text-[clamp(0.5rem,0.75vw,0.8rem)]">Nenhuma carga hoje</p>
+                      )}
                     </div>
                   </div>
                 </CardContent>
