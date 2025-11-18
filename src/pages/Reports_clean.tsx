@@ -8,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, BarChart3, Download, Share2, Loader2, Filter, FileSpreadsheet, FileText, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useVehicles, useCottonPull, useRainRecords, useEquipment, useLoadingRecords } from "@/hooks/use-supabase";
-import { getTodayLocalDate } from "@/lib/date-utils";
 import { useMaterialReceipts } from "@/hooks/use-material-receipts";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -49,22 +48,22 @@ const Reports = () => {
   // Calcular estatísticas reais
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
-
-  const thisMonthVehicles = vehicles.filter(v =>
-    new Date(v.date).getMonth() === currentMonth &&
+  
+  const thisMonthVehicles = vehicles.filter(v => 
+    new Date(v.date).getMonth() === currentMonth && 
     new Date(v.date).getFullYear() === currentYear
   );
-
-  const carregamentosPluma = thisMonthVehicles.filter(v =>
+  
+  const carregamentosPluma = thisMonthVehicles.filter(v => 
     v.type === 'Carregamento' && v.purpose?.toLowerCase().includes('pluma')
   );
-
-  const carregamentosCaroco = thisMonthVehicles.filter(v =>
+  
+  const carregamentosCaroco = thisMonthVehicles.filter(v => 
     v.type === 'Carregamento' && v.purpose?.toLowerCase().includes('caroço')
   );
-
+  
   const totalRolls = cottonRecords.reduce((sum, r) => sum + r.rolls, 0);
-
+  
   const yearRain = rainRecords
     .filter(r => new Date(r.date).getFullYear() === currentYear)
     .reduce((sum, r) => sum + r.millimeters, 0);
@@ -72,7 +71,7 @@ const Reports = () => {
   // Funções de exportação
   const exportToExcel = () => {
     const wb = XLSX.utils.book_new();
-
+    
     // Aba Carregamentos
     const loadingData = loadingRecords.map(record => ({
       'Data': record.date,
@@ -137,7 +136,7 @@ const Reports = () => {
     XLSX.utils.book_append_sheet(wb, wsVehicles, "Veículos");
 
     XLSX.writeFile(wb, `Relatorio_Guarita_${new Date().toISOString().split('T')[0]}.xlsx`);
-
+    
     toast({
       title: "Relatório exportado!",
       description: "Arquivo Excel baixado com sucesso.",
@@ -146,13 +145,13 @@ const Reports = () => {
 
   const exportToPDF = () => {
     const doc = new jsPDF() as jsPDFWithAutoTable;
-
+    
     // Título do relatório
     doc.setFontSize(16);
     doc.text('Relatório Sistema Guarita', 14, 15);
     doc.setFontSize(10);
     doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 25);
-
+    
     let yPosition = 35;
 
     // Carregamentos
@@ -160,7 +159,7 @@ const Reports = () => {
       doc.setFontSize(12);
       doc.text('Carregamentos', 14, yPosition);
       yPosition += 10;
-
+      
       const loadingTableData = loadingRecords.slice(0, 20).map(record => [
         record.date,
         record.product,
@@ -168,7 +167,7 @@ const Reports = () => {
         record.driver,
         record.destination
       ]);
-
+      
       (doc as any).autoTable({
         head: [['Data', 'Produto', 'Placa', 'Motorista', 'Destino']],
         body: loadingTableData,
@@ -176,7 +175,7 @@ const Reports = () => {
         theme: 'grid',
         styles: { fontSize: 8 }
       });
-
+      
       yPosition = doc.lastAutoTable.finalY + 10;
     }
 
@@ -185,7 +184,7 @@ const Reports = () => {
       doc.setFontSize(12);
       doc.text('Puxe de Algodão', 14, yPosition);
       yPosition += 10;
-
+      
       const cottonTableData = cottonRecords.slice(0, 15).map(record => [
         record.date,
         record.producer,
@@ -193,7 +192,7 @@ const Reports = () => {
         record.rolls.toString(),
         record.entry_time
       ]);
-
+      
       (doc as any).autoTable({
         head: [['Data', 'Produtor', 'Placa', 'Rolos', 'Entrada']],
         body: cottonTableData,
@@ -204,45 +203,45 @@ const Reports = () => {
     }
 
     doc.save(`Relatorio_Guarita_${new Date().toISOString().split('T')[0]}.pdf`);
-
+    
     toast({
       title: "Relatório exportado!",
       description: "Arquivo PDF baixado com sucesso.",
     });
   };
-
+    
   const equipmentsSaidas = equipmentRecords.length;
 
   const stats = [
-    {
-      label: "Total de Veículos (Mês)",
-      value: loadingVehicles ? "..." : thisMonthVehicles.length.toString(),
-      change: "+12%"
+    { 
+      label: "Total de Veículos (Mês)", 
+      value: loadingVehicles ? "..." : thisMonthVehicles.length.toString(), 
+      change: "+12%" 
     },
-    {
-      label: "Carregamentos Pluma",
-      value: loadingVehicles ? "..." : carregamentosPluma.length.toString(),
-      change: "+8%"
+    { 
+      label: "Carregamentos Pluma", 
+      value: loadingVehicles ? "..." : carregamentosPluma.length.toString(), 
+      change: "+8%" 
     },
-    {
-      label: "Carregamentos Caroço",
-      value: loadingVehicles ? "..." : carregamentosCaroco.length.toString(),
-      change: "+5%"
+    { 
+      label: "Carregamentos Caroço", 
+      value: loadingVehicles ? "..." : carregamentosCaroco.length.toString(), 
+      change: "+5%" 
     },
-    {
-      label: "Rolos Puxados",
-      value: loadingCotton ? "..." : totalRolls.toLocaleString('pt-BR'),
-      change: "+15%"
+    { 
+      label: "Rolos Puxados", 
+      value: loadingCotton ? "..." : totalRolls.toLocaleString('pt-BR'), 
+      change: "+15%" 
     },
-    {
-      label: "Chuva Acumulada (Ano)",
-      value: loadingRain ? "..." : `${yearRain.toFixed(1)} mm`,
-      change: "-3%"
+    { 
+      label: "Chuva Acumulada (Ano)", 
+      value: loadingRain ? "..." : `${yearRain.toFixed(1)} mm`, 
+      change: "-3%" 
     },
-    {
-      label: "Equipamentos Saídos",
-      value: loadingEquipment ? "..." : equipmentsSaidas.toString(),
-      change: "+2%"
+    { 
+      label: "Equipamentos Saídos", 
+      value: loadingEquipment ? "..." : equipmentsSaidas.toString(), 
+      change: "+2%" 
     },
   ];
 
@@ -264,7 +263,7 @@ const Reports = () => {
   const truckTypeStats = loadingRecords.reduce((acc, loading) => {
     // Determinar o tipo de caminhão baseado na placa ou outros critérios
     let truckType = "Carreta"; // padrão
-
+    
     // Lógica para determinar tipo (pode ser expandida conforme necessário)
     if (loading.plate && loading.plate.length > 0) {
       // Assumir que placas com determinado padrão são sider ou outros tipos
@@ -272,7 +271,7 @@ const Reports = () => {
     }
 
     const key = loading.is_sider ? `${truckType} (Sider)` : truckType;
-
+    
     if (!acc[key]) {
       acc[key] = 0;
     }
@@ -299,34 +298,34 @@ const Reports = () => {
 
   const generateDailySummary = () => {
     const today = new Date().toLocaleDateString('pt-BR');
-    const todayDate = getTodayLocalDate();
-
+    const todayDate = new Date().toISOString().split('T')[0];
+    
     // Carregamentos concluídos do dia
     const carregamentosConcluidos = loadingRecords.filter(l => l.exit_date === todayDate);
-
+    
     // Agrupar carregamentos concluídos por produto
     const plumaCarregamentos = carregamentosConcluidos.filter(l => l.product === 'Pluma');
     const carocoCarregamentos = carregamentosConcluidos.filter(l => l.product === 'Caroço');
     const fibrilhaCarregamentos = carregamentosConcluidos.filter(l => l.product === 'Fibrilha');
     const briqueteCarregamentos = carregamentosConcluidos.filter(l => l.product === 'Briquete');
-
+    
     // Calcular totais
     const totalPlumaFardos = plumaCarregamentos.reduce((sum, l) => sum + (l.bales || 0), 0);
     const totalCarocoKg = carocoCarregamentos.reduce((sum, l) => sum + (l.weight || 0), 0);
     const totalFibrilhaFardos = fibrilhaCarregamentos.reduce((sum, l) => sum + (l.bales || 0), 0);
     const totalBriqueteKg = briqueteCarregamentos.reduce((sum, l) => sum + (l.weight || 0), 0);
-
+    
     // Puxe de algodão do dia
     const todayCotton = cottonRecords.filter(r => r.date === todayDate);
     const todayRolls = todayCotton.reduce((sum, r) => sum + r.rolls, 0);
-
+    
     // Fila de carregamento atual (apenas na fila)
     const filaAtual = loadingRecords.filter(l => !l.entry_date);
     const filaPluma = filaAtual.filter(l => l.product === 'Pluma').length;
     const filaCaroco = filaAtual.filter(l => l.product === 'Caroço').length;
     const filaFibrilha = filaAtual.filter(l => l.product === 'Fibrilha').length;
     const filaBriquete = filaAtual.filter(l => l.product === 'Briquete').length;
-
+    
     let message = `🏢 IBA Santa Luzia - Controle Guarita
 📅 Resumo Diário - ${today}
 
@@ -380,19 +379,18 @@ const Reports = () => {
   const generateQueueStatus = () => {
     const today = new Date().toLocaleDateString('pt-BR');
     const time = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-
-    // Dados reais da fila de carregamento — sempre considerar a fila atual
-    // A fila não deve depender do filtro de data; trazer todos os registros que
-    // ainda não têm `entry_date` (estão aguardando na fila).
-    const filaCarregamento = loadingRecords.filter(l => !l.entry_date);
-
+    
+    // Dados reais da fila de carregamento
+    const todayDate = new Date().toISOString().split('T')[0];
+    const filaCarregamento = loadingRecords.filter(l => !l.entry_date && (!dateFilter || l.date === dateFilter || l.date === todayDate));
+    
     // Agrupar por produto
     const filaPluma = filaCarregamento.filter(l => l.product === 'Pluma');
     const filaCaroco = filaCarregamento.filter(l => l.product === 'Caroço');
     const filaFibrilha = filaCarregamento.filter(l => l.product === 'Fibrilha');
     const filaBriquete = filaCarregamento.filter(l => l.product === 'Briquete');
     const filaOutros = filaCarregamento.filter(l => !['Pluma', 'Caroço', 'Fibrilha', 'Briquete'].includes(l.product));
-
+    
     let message = `🏢 IBA Santa Luzia - Controle Guarita
 🕒 Fila de Carregamento - ${today} - ${time}\n\n`;
 
@@ -457,38 +455,38 @@ const Reports = () => {
 
   const sendDailyReportToWhatsApp = () => {
     const today = new Date().toLocaleDateString('pt-BR');
-    const todayDate = getTodayLocalDate();
-
+    const todayDate = new Date().toISOString().split('T')[0];
+    
     // Carregamentos concluídos do dia
     const carregamentosConcluidos = loadingRecords.filter(l => l.exit_date === todayDate);
-
+    
     // Agrupar carregamentos concluídos por produto
     const plumaCarregamentos = carregamentosConcluidos.filter(l => l.product === 'Pluma');
     const carocoCarregamentos = carregamentosConcluidos.filter(l => l.product === 'Caroço');
     const fibrilhaCarregamentos = carregamentosConcluidos.filter(l => l.product === 'Fibrilha');
     const briqueteCarregamentos = carregamentosConcluidos.filter(l => l.product === 'Briquete');
-
+    
     // Calcular totais
     const totalPlumaFardos = plumaCarregamentos.reduce((sum, l) => sum + (l.bales || 0), 0);
     const totalCarocoKg = carocoCarregamentos.reduce((sum, l) => sum + (l.weight || 0), 0);
     const totalFibrilhaFardos = fibrilhaCarregamentos.reduce((sum, l) => sum + (l.bales || 0), 0);
     const totalBriqueteKg = briqueteCarregamentos.reduce((sum, l) => sum + (l.weight || 0), 0);
-
+    
     // Puxe de algodão do dia
     const todayCotton = cottonRecords.filter(r => r.date === todayDate);
     const todayRolls = todayCotton.reduce((sum, r) => sum + r.rolls, 0);
-
+    
     // Materiais recebidos (assumindo que você tem os dados de materiais)
     // Como não temos os dados reais ainda, vou deixar preparado
     const todayMaterials = materialRecords.filter(m => m.date === todayDate);
-
+    
     // Fila de carregamento atual (apenas na fila)
     const filaAtual = loadingRecords.filter(l => !l.entry_date);
     const filaPluma = filaAtual.filter(l => l.product === 'Pluma').length;
     const filaCaroco = filaAtual.filter(l => l.product === 'Caroço').length;
     const filaFibrilha = filaAtual.filter(l => l.product === 'Fibrilha').length;
     const filaBriquete = filaAtual.filter(l => l.product === 'Briquete').length;
-
+    
     let message = `🏢 IBA Santa Luzia - Controle Guarita
 📅 Resumo Diário - ${today}
 
@@ -550,17 +548,17 @@ const Reports = () => {
   const sendQueueStatusToWhatsApp = () => {
     const today = new Date().toLocaleDateString('pt-BR');
     const time = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-
+    
     // Dados reais da fila de carregamento (apenas os que estão na fila)
     const filaCarregamento = loadingRecords.filter(l => !l.entry_date);
-
+    
     // Agrupar por produto
     const filaPluma = filaCarregamento.filter(l => l.product === 'Pluma');
     const filaCaroco = filaCarregamento.filter(l => l.product === 'Caroço');
     const filaFibrilha = filaCarregamento.filter(l => l.product === 'Fibrilha');
     const filaBriquete = filaCarregamento.filter(l => l.product === 'Briquete');
     const filaOutros = filaCarregamento.filter(l => !['Pluma', 'Caroço', 'Fibrilha', 'Briquete'].includes(l.product));
-
+    
     let message = `🏢 IBA Santa Luzia - Controle Guarita
 🕒 Fila de Carregamento - ${today} - ${time}
 
@@ -595,11 +593,11 @@ const Reports = () => {
 
   const generateCottonPullSummary = () => {
     const today = new Date().toLocaleDateString('pt-BR');
-    const todayDate = getTodayLocalDate();
-
+    const todayDate = new Date().toISOString().split('T')[0];
+    
     // Filtrar registros do dia
     const todayRecords = cottonRecords.filter(record => record.date === todayDate);
-
+    
     if (todayRecords.length === 0) {
       toast({
         title: "Sem dados",
@@ -634,10 +632,10 @@ const Reports = () => {
           lastExit: null
         };
       }
-
+      
       acc[key].rolls += record.rolls;
       acc[key].trips += 1;
-
+      
       // Calcular tempo de permanência (se houver entrada e saída)
       if (record.entry_time && record.exit_time) {
         const [entryH, entryM] = record.entry_time.split(':').map(Number);
@@ -647,7 +645,7 @@ const Reports = () => {
           acc[key].totalTime += timeInMinutes;
         }
       }
-
+      
       // Primeira entrada e última saída
       if (!acc[key].firstEntry || record.entry_time < acc[key].firstEntry) {
         acc[key].firstEntry = record.entry_time;
@@ -655,7 +653,7 @@ const Reports = () => {
       if (!acc[key].lastExit || (record.exit_time && record.exit_time > acc[key].lastExit)) {
         acc[key].lastExit = record.exit_time;
       }
-
+      
       return acc;
     }, {} as Record<string, VehicleData>);
 

@@ -1,55 +1,28 @@
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  ArrowLeft,
-  Plus,
-  CloudRain,
-  Droplets,
-  Calendar,
-  Loader2,
-  Edit,
-  Trash2,
-} from "lucide-react";
+import { ArrowLeft, Plus, CloudRain, Droplets, Calendar, Loader2, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRainRecords } from "@/hooks/use-supabase";
 import { RainRecord } from "@/lib/supabase";
-import {
-  formatDateForDisplay,
-  getTodayLocalDate,
-  toLocalDateString,
-  normalizeLocalDate,
-} from "@/lib/date-utils";
+import { formatDateForDisplay } from "@/lib/date-utils";
 
 const Rain = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { records, loading, addRecord, updateRecord, deleteRecord } =
-    useRainRecords();
-
+  const { records, loading, addRecord, updateRecord, deleteRecord } = useRainRecords();
+  
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<RainRecord | null>(null);
 
-  const today = getTodayLocalDate();
+  const today = new Date().toISOString().split('T')[0];
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
-
+  
   // Calcular início e fim da semana atual (segunda a domingo)
   const now = new Date();
   const dayOfWeek = now.getDay(); // 0 = domingo, 1 = segunda, etc
@@ -57,36 +30,25 @@ const Rain = () => {
   monday.setDate(now.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1)); // Ajusta para segunda-feira
   const sunday = new Date(monday);
   sunday.setDate(monday.getDate() + 6); // Domingo
-
-  const mondayStr = toLocalDateString(monday);
-  const sundayStr = toLocalDateString(sunday);
+  
+  const mondayStr = monday.toISOString().split('T')[0];
+  const sundayStr = sunday.toISOString().split('T')[0];
 
   // Totalizadores
   const todayTotal = records
-    .filter((r) => r.date === today && r.millimeters !== null)
+    .filter(r => r.date === today && r.millimeters !== null)
     .reduce((sum, r) => sum + (r.millimeters || 0), 0);
-
+  
   const weekTotal = records
-    .filter(
-      (r) =>
-        r.date >= mondayStr && r.date <= sundayStr && r.millimeters !== null
-    )
+    .filter(r => r.date >= mondayStr && r.date <= sundayStr && r.millimeters !== null)
     .reduce((sum, r) => sum + (r.millimeters || 0), 0);
 
   const monthTotal = records
-    .filter(
-      (r) =>
-        new Date(r.date).getMonth() === currentMonth &&
-        new Date(r.date).getFullYear() === currentYear &&
-        r.millimeters !== null
-    )
+    .filter(r => new Date(r.date).getMonth() === currentMonth && new Date(r.date).getFullYear() === currentYear && r.millimeters !== null)
     .reduce((sum, r) => sum + (r.millimeters || 0), 0);
 
   const yearTotal = records
-    .filter(
-      (r) =>
-        new Date(r.date).getFullYear() === currentYear && r.millimeters !== null
-    )
+    .filter(r => new Date(r.date).getFullYear() === currentYear && r.millimeters !== null)
     .reduce((sum, r) => sum + (r.millimeters || 0), 0);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -97,7 +59,7 @@ const Rain = () => {
     const startTimeValue = formData.get("startTime") as string;
 
     const recordData = {
-      date: normalizeLocalDate(formData.get("date") as string),
+      date: formData.get("date") as string,
       start_time: startTimeValue,
       time: startTimeValue, // Adicionado para preencher a coluna NOT NULL
       end_time: endTimeValue || null,
@@ -106,12 +68,12 @@ const Rain = () => {
 
     // Validação para evitar NaN
     if (mmValue && isNaN(recordData.millimeters)) {
-      toast({
-        title: "Valor inválido",
-        description: "Por favor, insira um número válido para os milímetros.",
-        variant: "destructive",
-      });
-      return;
+        toast({
+            title: "Valor inválido",
+            description: "Por favor, insira um número válido para os milímetros.",
+            variant: "destructive",
+        });
+        return;
     }
 
     try {
@@ -147,15 +109,15 @@ const Rain = () => {
       end_time: endTimeValue || null,
       millimeters: mmValue ? parseFloat(mmValue) : null,
     };
-
+    
     // Validação para evitar NaN
     if (mmValue && isNaN(updatedData.millimeters)) {
-      toast({
-        title: "Valor inválido",
-        description: "O campo milímetros deve ser um número.",
-        variant: "destructive",
-      });
-      return;
+        toast({
+            title: "Valor inválido",
+            description: "O campo milímetros deve ser um número.",
+            variant: "destructive",
+        });
+        return;
     }
 
     try {
@@ -167,22 +129,16 @@ const Rain = () => {
         description: "O registro de chuva foi atualizado com sucesso.",
       });
     } catch (error) {
-      console.error("Erro ao editar registro:", error);
+      console.error('Erro ao editar registro:', error);
     }
   };
 
   const handleDeleteRecord = async (id: string, date: string) => {
-    if (
-      confirm(
-        `Tem certeza que deseja excluir o registro de chuva de ${new Date(
-          date
-        ).toLocaleDateString("pt-BR")}?`
-      )
-    ) {
+    if (confirm(`Tem certeza que deseja excluir o registro de chuva de ${new Date(date).toLocaleDateString('pt-BR')}?`)) {
       try {
         await deleteRecord(id);
       } catch (error) {
-        console.error("Erro ao excluir registro:", error);
+        console.error('Erro ao excluir registro:', error);
       }
     }
   };
@@ -202,12 +158,7 @@ const Rain = () => {
     <div className="min-h-screen bg-gradient-to-br from-info/5 via-background to-primary/5">
       <header className="border-b bg-blue-800 backdrop-blur-sm sticky top-0 z-10 text-white">
         <div className="container mx-auto px-4 py-4 flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate("/dashboard")}
-            className="text-white hover:bg-blue-700"
-          >
+          <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")} className="text-white hover:bg-blue-700">
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div className="flex items-center gap-3">
@@ -215,12 +166,8 @@ const Rain = () => {
               <CloudRain className="w-6 h-6 text-blue-300 drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white">
-                Controle de Chuva
-              </h1>
-              <p className="text-sm text-blue-200">
-                Medições pluviométricas - IBA Santa Luzia
-              </p>
+              <h1 className="text-xl font-bold text-white">Controle de Chuva</h1>
+              <p className="text-sm text-blue-200">Medições pluviométricas - IBA Santa Luzia</p>
             </div>
           </div>
         </div>
@@ -233,9 +180,7 @@ const Rain = () => {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-3xl font-bold text-info">
-                    {todayTotal.toFixed(1)}
-                  </p>
+                  <p className="text-3xl font-bold text-info">{todayTotal.toFixed(1)}</p>
                   <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
                     <Droplets className="w-3 h-3" />
                     Hoje (mm)
@@ -249,9 +194,7 @@ const Rain = () => {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-3xl font-bold text-info">
-                    {weekTotal.toFixed(1)}
-                  </p>
+                  <p className="text-3xl font-bold text-info">{weekTotal.toFixed(1)}</p>
                   <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
                     <Calendar className="w-3 h-3" />
                     Semana (mm)
@@ -265,9 +208,7 @@ const Rain = () => {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-3xl font-bold text-info">
-                    {monthTotal.toFixed(1)}
-                  </p>
+                  <p className="text-3xl font-bold text-info">{monthTotal.toFixed(1)}</p>
                   <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
                     <Calendar className="w-3 h-3" />
                     Mês (mm)
@@ -281,9 +222,7 @@ const Rain = () => {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-3xl font-bold text-info">
-                    {yearTotal.toFixed(1)}
-                  </p>
+                  <p className="text-3xl font-bold text-info">{yearTotal.toFixed(1)}</p>
                   <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
                     <Calendar className="w-3 h-3" />
                     Ano (mm)
@@ -309,12 +248,7 @@ const Rain = () => {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="date">Data</Label>
-                  <Input
-                    type="date"
-                    name="date"
-                    required
-                    defaultValue={today}
-                  />
+                  <Input type="date" name="date" required defaultValue={today} />
                 </div>
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -328,17 +262,9 @@ const Rain = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="mm">Milímetros (mm)</Label>
-                  <Input
-                    type="number"
-                    name="mm"
-                    step="0.1"
-                    placeholder="Opcional no início"
-                  />
+                  <Input type="number" name="mm" step="0.1" placeholder="Opcional no início" />
                 </div>
-                <Button
-                  type="submit"
-                  className="w-full bg-blue-600 hover:bg-blue-700"
-                >
+                <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">
                   <Plus className="w-4 h-4 mr-2" />
                   Registrar Medição
                 </Button>
@@ -367,22 +293,14 @@ const Rain = () => {
                           {formatDateForDisplay(record.date)}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {record.start_time
-                            ? `${record.start_time}${
-                                record.end_time ? ` - ${record.end_time}` : ""
-                              }`
-                            : record.time}
+                          {record.start_time ? `${record.start_time}${record.end_time ? ` - ${record.end_time}` : ''}` : record.time}
                         </p>
                       </div>
                     </div>
                     <div className="text-right flex flex-col items-end gap-2">
                       <div>
-                        <p className="text-2xl font-bold text-info">
-                          {record.millimeters}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          milímetros
-                        </p>
+                        <p className="text-2xl font-bold text-info">{record.millimeters}</p>
+                        <p className="text-xs text-muted-foreground">milímetros</p>
                       </div>
                       <div className="flex gap-1">
                         <Button
@@ -397,9 +315,7 @@ const Rain = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() =>
-                            handleDeleteRecord(record.id, record.date)
-                          }
+                          onClick={() => handleDeleteRecord(record.id, record.date)}
                           className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                           title="Excluir"
                         >
@@ -429,34 +345,32 @@ const Rain = () => {
             <form onSubmit={handleSaveEdit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="editDate">Data</Label>
-                <Input
+                <Input 
                   id="editDate"
                   name="editDate"
-                  type="date"
+                  type="date" 
                   defaultValue={editingRecord.date}
-                  required
+                  required 
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="editStartTime">Hora Inicial</Label>
-                  <Input
+                  <Input 
                     id="editStartTime"
                     name="editStartTime"
-                    type="time"
-                    defaultValue={
-                      editingRecord.start_time || editingRecord.time || ""
-                    }
-                    required
+                    type="time" 
+                    defaultValue={editingRecord.start_time || editingRecord.time || ""}
+                    required 
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="editEndTime">Hora Final</Label>
-                  <Input
+                  <Input 
                     id="editEndTime"
                     name="editEndTime"
-                    type="time"
+                    type="time" 
                     defaultValue={editingRecord.end_time || ""}
                   />
                 </div>
@@ -464,14 +378,14 @@ const Rain = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="editMm">Milímetros</Label>
-                <Input
+                <Input 
                   id="editMm"
                   name="editMm"
-                  type="number"
-                  step="0.1"
-                  min="0"
+                  type="number" 
+                  step="0.1" 
+                  min="0" 
                   defaultValue={editingRecord.millimeters ?? ""}
-                  required
+                  required 
                   placeholder="0.0"
                 />
               </div>
@@ -480,9 +394,9 @@ const Rain = () => {
                 <Button type="submit" className="flex-1">
                   Salvar Alterações
                 </Button>
-                <Button
-                  type="button"
-                  variant="outline"
+                <Button 
+                  type="button" 
+                  variant="outline" 
                   onClick={() => {
                     setIsEditModalOpen(false);
                     setEditingRecord(null);
