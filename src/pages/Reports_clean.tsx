@@ -381,9 +381,10 @@ const Reports = () => {
     const today = new Date().toLocaleDateString('pt-BR');
     const time = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
-    // Dados reais da fila de carregamento
-    const todayDate = getTodayLocalDate();
-    const filaCarregamento = loadingRecords.filter(l => !l.entry_date && (!dateFilter || l.date === dateFilter || l.date === todayDate));
+    // Dados reais da fila de carregamento — sempre considerar a fila atual
+    // A fila não deve depender do filtro de data; trazer todos os registros que
+    // ainda não têm `entry_date` (estão aguardando na fila).
+    const filaCarregamento = loadingRecords.filter(l => !l.entry_date);
 
     // Agrupar por produto
     const filaPluma = filaCarregamento.filter(l => l.product === 'Pluma');

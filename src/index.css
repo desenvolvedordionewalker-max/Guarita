@@ -300,6 +300,11 @@ All colors MUST be HSL.
   align-items: stretch;
 }
 
+/* Ensure cards stretch evenly and avoid broken columns on TV */
+.grid-tv {
+  grid-auto-rows: 1fr;
+}
+
 .mini-indicator {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.06);
@@ -327,8 +332,20 @@ All colors MUST be HSL.
 .tv-container-full {
   width: 100vw;
   height: 100vh;
-  padding: 28px;
+  padding: 0; /* remove default padding for TV */
   box-sizing: border-box;
+}
+
+/* User-requested TV utility classes */
+.tv-full {
+  width: 100vw;
+  height: 100vh;
+  overflow-x: hidden;
+}
+
+.tv-root {
+  padding: 0;
+  margin: 0;
 }
 
 /* smooth scaling for very large displays */
@@ -337,3 +354,30 @@ All colors MUST be HSL.
     transform: scale(1.02);
   }
 }
+
+/* Additional TV helper classes added for Modo TV ultra-modern */
+.mini-glass {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 0.6rem;
+  padding: 0.4rem 0.6rem;
+}
+
+.tv-card-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 160px;
+  height: 100%;
+}
+
+.neon-glow {
+  box-shadow: 0 6px 20px rgba(0,255,191,0.06), inset 0 1px 0 rgba(255,255,255,0.02);
+}
+
+/* Keep TV clean: avoid scrollbars unless necessary */
+.tv-no-scroll {
+  overflow: hidden !important;
+}
+

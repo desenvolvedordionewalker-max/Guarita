@@ -43,7 +43,7 @@ export const initialResources: Record<ResourceKey, Resource> = {
     value: "475 Fardos",
     stats: { fila: 12, carregando: 3, concluidos: 460 },
     vehicles: ["ABC-1234 - 1ª Viagem", "DEF-5678 - 2ª Viagem"],
-  },
+
   caroco: {
     title: "CAROÇO",
     color: "#43A047",
