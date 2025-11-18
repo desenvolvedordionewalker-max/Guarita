@@ -381,3 +381,48 @@ All colors MUST be HSL.
   overflow: hidden !important;
 }
 
+/* User-provided base styles for ultra-modern TV (explicit additions) */
+/* FUNDO DARK PREMIUM */
+body {
+  background: radial-gradient(circle at center, #1e2538 0%, #0e1220 60%, #05070d 100%);
+  color: #e5e7eb;
+  font-family: 'Inter', sans-serif;
+}
+
+/* SHADOW PREMIUM */
+.card-shadow {
+  box-shadow: 0 0 25px rgba(0, 255, 170, 0.08);
+}
+
+/* GLASS EFFECT (utility) */
+.glass {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+}
+
+/* TITULOS */
+.title-neon {
+  color: #00ffbf;
+  text-shadow: 0 0 12px rgba(0, 255, 191, 0.4);
+}
+
+/* BOTOES */
+.btn-modern {
+  border-radius: 12px;
+  padding: 8px 18px;
+  font-weight: bold;
+  transition: 0.2s;
+}
+
+.btn-modern:hover {
+  filter: brightness(1.25);
+}
+
+/* GRID INTELIGENTE (reinforce) */
+.grid-tv {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+}
+
