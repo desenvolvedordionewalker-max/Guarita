@@ -86,9 +86,13 @@ SELECT
   viagem_num,
   rolls as qtd_rolos,
   parada_puxe,
-  COALESCE(ROUND(tempo_lavoura::numeric, 0), 0) as tempo_lavoura,
-  COALESCE(ROUND(tempo_algodoeira::numeric, 0), 0) as tempo_algodoeira,
-  COALESCE(ROUND((tempo_lavoura + tempo_algodoeira)::numeric, 0), ROUND(tempo_algodoeira::numeric, 0)) as tempo_total,
+  ROUND(tempo_lavoura::numeric, 0) as tempo_lavoura,
+  ROUND(tempo_algodoeira::numeric, 0) as tempo_algodoeira,
+  CASE
+    WHEN tempo_lavoura IS NOT NULL THEN ROUND((tempo_lavoura + tempo_algodoeira)::numeric, 0)
+    WHEN tempo_algodoeira IS NOT NULL THEN ROUND(tempo_algodoeira::numeric, 0)
+    ELSE NULL
+  END as tempo_total,
   entry_time as hora_entrada,
   exit_time as hora_saida
 FROM viagens_com_tempo_lavoura
