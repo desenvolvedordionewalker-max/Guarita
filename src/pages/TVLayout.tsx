@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Clock } from 'lucide-react';
 import ProdutoCard from '@/components/modo-tv/ProdutoCard';
-import { useLoadingRecords, useCottonPull, useMaterialReceipts, useEquipment, useGestaoTempoCargas } from '@/hooks/use-supabase';
+import { useLoadingRecords, useCottonPull, useEquipment, useGestaoTempoCargas } from '@/hooks/use-supabase';
+import { useMaterialReceipts } from '@/hooks/use-material-receipts';
 import { getTodayLocalDate, convertIsoToLocalDateString } from '@/lib/date-utils';
 
 // TVLayout - Ultra Modern TV Mode
