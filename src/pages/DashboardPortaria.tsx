@@ -901,7 +901,7 @@ function DashboardPortariaTV() {
                 <h3 className={`text-[clamp(0.65rem,0.9vw,0.85rem)] font-semibold mb-[clamp(0.15rem,0.3vh,0.3rem)] border-b pb-[clamp(0.15rem,0.3vh,0.3rem)] ${
                   isDarkMode ? 'text-emerald-400 border-emerald-600/30' : 'text-white border-emerald-400/30'
                 }`}>
-                  HOJE
+                  HOJE {totalRolosToday > 0 ? `(${totalRolosToday.toLocaleString('pt-BR')} rolos)` : ''}
                 </h3>
                 <div className="space-y-[clamp(0.1rem,0.2vh,0.25rem)] flex-1 overflow-y-auto">
                   {rankingDiaArray.length > 0 ? (

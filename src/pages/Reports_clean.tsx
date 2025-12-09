@@ -56,7 +56,7 @@ const Reports = () => {
   
   const carregamentosPluma = thisMonthVehicles.filter(v => 
     v.type === 'Carregamento' && v.purpose?.toLowerCase().includes('pluma')
-  );
+    const filaCarregamento = loadingRecords.filter(l => !l.entry_date);
   
   const carregamentosCaroco = thisMonthVehicles.filter(v => 
     v.type === 'Carregamento' && v.purpose?.toLowerCase().includes('caroço')
@@ -382,7 +382,7 @@ const Reports = () => {
     
     // Dados reais da fila de carregamento
     const todayDate = new Date().toISOString().split('T')[0];
-    const filaCarregamento = loadingRecords.filter(l => !l.entry_date && (!dateFilter || l.date === dateFilter || l.date === todayDate));
+    const filaCarregamento = loadingRecords.filter(l => !l.entry_date);
     
     // Agrupar por produto
     const filaPluma = filaCarregamento.filter(l => l.product === 'Pluma');

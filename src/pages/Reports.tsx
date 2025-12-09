@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ArrowLeft, BarChart3, Download, Share2, Loader2, Filter, FileSpreadsheet, FileText, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useVehicles, useCottonPull, useRainRecords, useEquipment, useLoadingRecords } from "@/hooks/use-supabase";
+import { useVehicles, useCottonPull, useRainRecords, useEquipment, useLoadingRecords, useGestaoTempoCargas } from "@/hooks/use-supabase";
 import { useMaterialReceipts } from "@/hooks/use-material-receipts";
 import { calculateLoadingTime } from "@/lib/time-utils";
 import jsPDF from "jspdf";
@@ -38,6 +38,7 @@ const Reports = () => {
   const { records: rainRecords, loading: loadingRain } = useRainRecords();
   const { records: equipmentRecords, loading: loadingEquipment } = useEquipment();
   const { records: loadingRecords, loading: loadingLoadings } = useLoadingRecords();
+  const { cargas: gestaoCargas, loading: loadingCargas } = useGestaoTempoCargas();
   const { records: materialRecords, loading: loadingMaterials } = useMaterialReceipts();
 
   // Estados dos filtros
@@ -518,8 +519,8 @@ const Reports = () => {
     const monthStart = new Date(new Date(filterDateStr).getFullYear(), new Date(filterDateStr).getMonth(), 1).toISOString().split('T')[0];
     const chuvaMes = rainRecords.filter(r => r.date >= monthStart && r.date <= filterDateStr && r.millimeters !== null).reduce((sum, r) => sum + (r.millimeters || 0), 0);
 
-    // Dados reais da fila de carregamento
-    const filaCarregamento = loadingRecords.filter(l => !l.entry_date && (!dateFilter || l.date === filterDateStr));
+    // Dados reais da fila de carregamento (independente de data)
+    const filaCarregamento = loadingRecords.filter(l => !l.entry_date);
     
     // Agrupar por produto
     const filaPluma = filaCarregamento.filter(l => l.product === 'Pluma');
@@ -760,12 +761,23 @@ const Reports = () => {
     const avgMinutes = avgTripTime % 60;
     const avgTimeStr = avgHours > 0 ? `${avgHours}h ${avgMinutes}min` : `${avgMinutes}min`;
 
+    // Calcular média de tempo na lavoura (usando a view `view_gestao_tempo_cargas` via hook)
+    // Regras: desconsiderar zeros/nulls e valores extremos (>= 300 minutos)
+    const cargasHoje = (gestaoCargas || []).filter(c => !!c.placa);
+    const lavouraList = cargasHoje
+      .map(c => c.tempo_lavoura)
+      .filter(t => typeof t === 'number' && t > 0 && t < 300) as number[];
+    const avgLavouraTime = lavouraList.length > 0 ? Math.round(lavouraList.reduce((s, x) => s + x, 0) / lavouraList.length) : 0;
+    const lavouraHours = Math.floor(avgLavouraTime / 60);
+    const lavouraMinutes = avgLavouraTime % 60;
+    const lavouraTimeStr = lavouraHours > 0 ? `${lavouraHours}h ${lavouraMinutes}min` : `${lavouraMinutes}min`;
+
     message += `📊 RESUMO GERAL:\n`;
     message += `🚛 Veículos: ${vehiclesArray.length}\n`;
     message += ` Viagens: ${totalTrips}\n`;
     message += `📦 Rolos: ${totalRolls.toLocaleString('pt-BR')}\n`;
     message += `⏱️ Tempo Médio na Algodoeira: ${algodoeiraTimeStr}\n`;
-    message += `🚗 Tempo Médio de Viagem: ${avgTimeStr}\n\n`;
+    message += `🚜 Tempo Médio na Lavoura: ${lavouraTimeStr}\n\n`;
 
     message += `📋 DETALHAMENTO POR VEÍCULO:\n`;
     
