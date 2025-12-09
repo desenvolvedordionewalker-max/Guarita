@@ -20,11 +20,16 @@ const MaterialReceipts = () => {
   
   const materialTypes = [
     "Areia",
-    "Cascalho", 
+    "Cascalho",
     "Cavaco",
     "Pedra Brita",
     "Pó de Pedra",
-    "Álcool"
+    "Álcool",
+    "Diesel",
+    "Gasolina",
+    "Sacaria",
+    "Palanque para Cerca",
+    "Palanque para Bloco"
   ];
 
   const unitTypes = [
