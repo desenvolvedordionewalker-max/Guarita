@@ -24,7 +24,12 @@ const MaterialReceipts = () => {
     "Cavaco",
     "Pedra Brita",
     "Pó de Pedra",
-    "Álcool"
+    "Álcool",
+    "Diesel", // Adicionado
+    "Gasolina", // Adicionado
+    "Sacaria", // Adicionado
+    "Palanque Cerca", // Adicionado
+    "Palanque Bloco" // Adicionado
   ];
 
   const unitTypes = [
