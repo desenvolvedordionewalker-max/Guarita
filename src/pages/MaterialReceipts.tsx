@@ -17,6 +17,8 @@ const MaterialReceipts = () => {
   const [selectedRecord, setSelectedRecord] = useState<MaterialReceipt | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isExitModalOpen, setIsExitModalOpen] = useState(false);
+  const [exitModalRecord, setExitModalRecord] = useState<MaterialReceipt | null>(null);
   
   const materialTypes = [
     "Areia",
@@ -49,6 +51,8 @@ const MaterialReceipts = () => {
     const recordData: Omit<MaterialReceipt, 'id' | 'created_at' | 'updated_at'> = {
       date: normalizeLocalDate(formData.get("date") as string),
       entry_time: formData.get("time") as string,
+      exit_date: formData.get("exit_date") ? normalizeLocalDate(formData.get("exit_date") as string) : undefined,
+      exit_time: formData.get("exit_time") as string || undefined,
       material_type: formData.get("material_type") as string,
       plate: formData.get("plate") as string,
       driver: formData.get("driver") as string,
@@ -92,13 +96,26 @@ const MaterialReceipts = () => {
   };
 
   const handleMarkExit = async (id: string) => {
-    const now = new Date();
-    const exitTime = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    
+    // Open modal to confirm exit date/time
+    const record = records.find(r => r.id === id) || null;
+    setExitModalRecord(record);
+    setIsExitModalOpen(true);
+  };
+
+  const handleConfirmExit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!exitModalRecord) return;
+    const form = document.getElementById('exitForm') as HTMLFormElement | null;
+    if (!form) return;
+    const formData = new FormData(form);
+    const exit_date = normalizeLocalDate(formData.get('exit_date') as string);
+    const exit_time = formData.get('exit_time') as string;
     try {
-      await updateRecord(id, { exit_time: exitTime });
+      await updateRecord(exitModalRecord.id, { exit_date, exit_time });
+      setIsExitModalOpen(false);
+      setExitModalRecord(null);
     } catch (error) {
-      console.error('Erro ao marcar saída:', error);
+      console.error('Erro ao confirmar saída:', error);
     }
   };
 
@@ -233,7 +250,7 @@ const MaterialReceipts = () => {
                       </div>
                       {record.exit_time && (
                         <div className="text-sm text-green-600 bg-green-50 p-2 rounded">
-                          <span className="font-medium">Saída:</span> {record.exit_time}
+                          <span className="font-medium">Saída:</span> {record.exit_date ? `${formatDateForDisplay(record.exit_date)} ` : ''}{record.exit_time}
                         </div>
                       )}
                       {record.observations && (
@@ -322,6 +339,17 @@ const MaterialReceipts = () => {
                 />
               </div>
             </div>
+            {/* Exit date/time - visible when editing or provided on create */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="exit_date">Data de Saída (opcional)</Label>
+                <Input name="exit_date" type="date" defaultValue={selectedRecord?.exit_date || ""} />
+              </div>
+              <div>
+                <Label htmlFor="exit_time">Hora de Saída (opcional)</Label>
+                <Input name="exit_time" type="time" defaultValue={selectedRecord?.exit_time || ""} />
+              </div>
+            </div>
             
             <div>
               <Label htmlFor="material_type">Tipo de Material</Label>
@@ -407,6 +435,32 @@ const MaterialReceipts = () => {
               <Button type="submit" className="w-full">
                 {selectedRecord ? "Atualizar" : "Registrar"}
               </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal para confirmar data/hora de saída */}
+      <Dialog open={isExitModalOpen} onOpenChange={(open) => { if (!open) { setIsExitModalOpen(false); setExitModalRecord(null); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Confirmar Saída</DialogTitle>
+            <DialogDescription>Informe a data e hora de saída para finalizar o recebimento.</DialogDescription>
+          </DialogHeader>
+          <form id="exitForm" onSubmit={handleConfirmExit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Data de Saída</Label>
+                <Input name="exit_date" type="date" defaultValue={exitModalRecord?.date || getTodayLocalDate()} required />
+              </div>
+              <div>
+                <Label>Hora de Saída</Label>
+                <Input name="exit_time" type="time" defaultValue={new Date().toTimeString().slice(0,5)} required />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => { setIsExitModalOpen(false); setExitModalRecord(null); }}>Cancelar</Button>
+              <Button type="submit" className="bg-green-600">Confirmar Saída</Button>
             </DialogFooter>
           </form>
         </DialogContent>

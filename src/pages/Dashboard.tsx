@@ -63,6 +63,8 @@ const Dashboard = () => {
   const [filtroFila, setFFiltroFila] = useState<string>("Todos");
   const [showAllVehicles, setShowAllVehicles] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<string | null>(null);
+  const [plateFilter, setPlateFilter] = useState<string>('');
+  const [driverFilter, setDriverFilter] = useState<string>('');
   const { theme, toggleTheme } = useTheme();
 
   const handleRegisterVehicleExit = async (id: string) => {
@@ -70,7 +72,21 @@ const Dashboard = () => {
     const exitTime = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     
     try {
-      await updateVehicle(id, { exit_time: exitTime });
+      // Try to send exit_date: prefer an existing exit_date on the vehicle (from edit), otherwise use today
+      const vehicle = allVehicles.find(v => v.id === id) as any;
+      const exitDateToSend = (vehicle && vehicle.exit_date) ? vehicle.exit_date : getTodayLocalDate();
+
+      try {
+        await updateVehicle(id, { exit_time: exitTime, exit_date: exitDateToSend });
+      } catch (err: any) {
+        const msg = err?.message || '';
+        // If DB doesn't have exit_date column yet, retry without it
+        if (msg.includes("Could not find the 'exit_date' column") || msg.includes('exit_date')) {
+          await updateVehicle(id, { exit_time: exitTime });
+        } else {
+          throw err;
+        }
+      }
     } catch (error) {
       console.error('Erro ao registrar saída:', error);
     }
@@ -96,6 +112,14 @@ const Dashboard = () => {
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
     return hours > 0 ? `${hours}h ${minutes}min` : `${minutes}min`;
+  };
+
+  const resolveTruckType = (plate?: string, fallback?: string) => {
+    if (!plate) return fallback || '-';
+    const norm = plate.trim().toUpperCase();
+    const found = vehicles?.find(v => v.plate && v.plate.trim().toUpperCase() === norm);
+    if (found) return (found.vehicle_type || found.type || fallback || '-');
+    return fallback || '-';
   };
 
   const handleLoadingCardClick = (loading: LoadingRecord) => {
@@ -1060,7 +1084,10 @@ const Dashboard = () => {
                                     </span>
                                   )}
                                 </div>
-                                <p className="font-semibold text-base">{loading.plate}</p>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-semibold text-base">{loading.plate}</p>
+                                  <span className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-800">{resolveTruckType(loading.plate, loading.truck_type)}</span>
+                                </div>
                                 <p className="text-xs text-muted-foreground truncate">{loading.driver}</p>
                                 <p className="text-xs font-medium text-purple-600 truncate">{loading.carrier}</p>
                                 <p className="text-xs font-medium text-blue-600 truncate">{loading.destination}</p>
@@ -1223,7 +1250,10 @@ const Dashboard = () => {
                                     </span>
                                   )}
                                 </div>
-                                <p className="font-semibold">{loading.plate}</p>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-semibold">{loading.plate}</p>
+                                  <span className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-800">{resolveTruckType(loading.plate, loading.truck_type)}</span>
+                                </div>
                               </div>
                             </div>
                             <div className="text-xs text-muted-foreground">
@@ -1367,6 +1397,16 @@ const Dashboard = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                <div className="space-y-2">
+                  <Label className="text-sm">Filtrar Placa</Label>
+                  <Input placeholder="Placa" value={plateFilter} onChange={(e) => setPlateFilter(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm">Filtrar Motorista</Label>
+                  <Input placeholder="Motorista" value={driverFilter} onChange={(e) => setDriverFilter(e.target.value)} />
+                </div>
+              </div>
               {!loadingVehicles && allVehicles.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">
@@ -1386,6 +1426,10 @@ const Dashboard = () => {
                     </thead>
                     <tbody>
                       {allVehicles
+                        .filter(v => (
+                          (!plateFilter || v.plate?.toLowerCase().includes(plateFilter.toLowerCase())) &&
+                          (!driverFilter || v.driver?.toLowerCase().includes(driverFilter.toLowerCase()))
+                        ))
                         .sort((a, b) => new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime())
                         .slice(0, showAllVehicles ? allVehicles.length : 20)
                         .map((vehicle) => {
@@ -1401,14 +1445,14 @@ const Dashboard = () => {
                               )}
                             </td>
                             <td className="p-2 text-sm">{toTitleCase(vehicle.driver)}</td>
-                            <td className="p-2 text-sm">{toTitleCase(vehicle.type)}</td>
+                            <td className="p-2 text-sm">{toTitleCase(resolveTruckType(vehicle.plate, vehicle.vehicle_type || vehicle.type))}</td>
                             <td className="p-2 text-sm">{vehicle.company ? toTitleCase(vehicle.company) : '-'}</td>
                             <td className="p-2 text-sm">{toTitleCase(vehicle.purpose)}</td>
                             <td className="p-2 text-sm">
                               {vehicle.entry_time ? `${vehicle.date} ${vehicle.entry_time}` : '-'}
                             </td>
                             <td className="p-2 text-sm">
-                              {vehicle.exit_time ? `${vehicle.date} ${vehicle.exit_time}` : '-'}
+                              {vehicle.exit_time ? `${(vehicle.exit_date || vehicle.date)} ${vehicle.exit_time}` : '-'}
                             </td>
                             <td className="p-2 text-sm">
                               {isExternalExit 
@@ -1793,23 +1837,43 @@ const Dashboard = () => {
                 onSubmit={async (e) => {
                   e.preventDefault();
                   const formData = new FormData(e.currentTarget);
-                  
+
+                  const updates: any = {
+                    plate: (formData.get('plate') as string).toUpperCase(),
+                    date: (formData.get('entry_date') as string) || vehicle.date,
+                    driver: formData.get('driver') as string,
+                    type: formData.get('type') as string,
+                    company: formData.get('company') as string,
+                    purpose: formData.get('purpose') as string,
+                    entry_time: formData.get('entry_time') as string || undefined,
+                    exit_time: formData.get('exit_time') as string || undefined,
+                  };
+
+                  // include exit_date from form if provided
+                  const exitDateValue = formData.get('exit_date') as string;
+                  if (exitDateValue) updates.exit_date = exitDateValue;
+
                   try {
-                    await updateVehicle(editingVehicle, {
-                      plate: (formData.get('plate') as string).toUpperCase(),
-                      driver: formData.get('driver') as string,
-                      type: formData.get('type') as string,
-                      company: formData.get('company') as string,
-                      purpose: formData.get('purpose') as string,
-                      entry_time: formData.get('entry_time') as string || undefined,
-                      exit_time: formData.get('exit_time') as string || undefined,
-                    });
-                    
+                    // Try to update including exit_date (if present). If the DB doesn't have the column
+                    // PostgREST returns an error; in that case retry without exit_date.
+                    try {
+                      await updateVehicle(editingVehicle, updates);
+                    } catch (err: any) {
+                      const msg = err?.message || '';
+                      if (msg.includes("Could not find the 'exit_date' column") || msg.includes("exit_date")) {
+                        // remove exit_date and retry
+                        delete updates.exit_date;
+                        await updateVehicle(editingVehicle, updates);
+                      } else {
+                        throw err;
+                      }
+                    }
+
                     toast({
                       title: "✅ Veículo atualizado",
                       description: "As informações foram atualizadas com sucesso.",
                     });
-                    
+
                     setEditingVehicle(null);
                   } catch (error) {
                     console.error('Erro ao atualizar veículo:', error);
@@ -1831,6 +1895,30 @@ const Dashboard = () => {
                     required
                     className="h-9"
                   />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="edit-entry-date" className="text-sm">Data Entrada</Label>
+                    <Input
+                      id="edit-entry-date"
+                      name="entry_date"
+                      type="date"
+                      defaultValue={vehicle.date}
+                      className="h-9"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="edit-exit-date" className="text-sm">Data Saída</Label>
+                    <Input
+                      id="edit-exit-date"
+                      name="exit_date"
+                      type="date"
+                      defaultValue={(vehicle as any).exit_date || ''}
+                      className="h-9"
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-1">

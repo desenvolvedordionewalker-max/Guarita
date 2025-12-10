@@ -69,8 +69,10 @@ viagens_com_tempo_lavoura AS (
   FROM viagens_dia v1
 )
 SELECT 
-  plate as placa,
-  driver as motorista,
+  vctl.plate as placa,
+  vctl.driver as motorista,
+  to_char(vctl.date::date, 'DD/MM/YY') as data,
+  v.vehicle_type as tipo_veiculo,
   talhao,
   viagem_num,
   rolls as qtd_rolos,
@@ -82,10 +84,11 @@ SELECT
     WHEN tempo_algodoeira IS NOT NULL THEN ROUND(tempo_algodoeira::numeric, 0)
     ELSE NULL
   END as tempo_total,
-  entry_time as hora_entrada,
-  exit_time as hora_saida
-FROM viagens_com_tempo_lavoura
+  CASE WHEN vctl.entry_time IS NOT NULL THEN to_char(vctl.entry_time::time, 'HH24:MI') ELSE NULL END as hora_entrada,
+  CASE WHEN vctl.exit_time IS NOT NULL THEN to_char(vctl.exit_time::time, 'HH24:MI') ELSE NULL END as hora_saida
+FROM viagens_com_tempo_lavoura vctl
+LEFT JOIN vehicles v ON vctl.plate = v.plate
 WHERE tempo_algodoeira IS NOT NULL
-ORDER BY plate, viagem_num;
+ORDER BY vctl.plate, viagem_num;
 
 -- Fim da migração

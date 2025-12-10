@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ArrowLeft, BarChart3, Download, Share2, Loader2, Filter, FileSpreadsheet, FileText, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useVehicles, useCottonPull, useRainRecords, useEquipment, useLoadingRecords, useGestaoTempoCargas } from "@/hooks/use-supabase";
@@ -37,7 +37,7 @@ const Reports = () => {
   const { records: cottonRecords, loading: loadingCotton } = useCottonPull();
   const { records: rainRecords, loading: loadingRain } = useRainRecords();
   const { records: equipmentRecords, loading: loadingEquipment } = useEquipment();
-  const { records: loadingRecords, loading: loadingLoadings } = useLoadingRecords();
+  const { records: loadingRecords, loading: loadingLoadings, updateRecord } = useLoadingRecords();
   const { cargas: gestaoCargas, loading: loadingCargas } = useGestaoTempoCargas();
   const { records: materialRecords, loading: loadingMaterials } = useMaterialReceipts();
 
@@ -57,8 +57,49 @@ const Reports = () => {
     product: '',
     driver: '',
     carrier: '',
-    destination: ''
+    destination: '',
+    type: ''
   });
+
+  // Edit modal states for loading record
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingLoading, setEditingLoading] = useState<any>(null);
+  const [editEntryDate, setEditEntryDate] = useState('');
+  const [editEntryTime, setEditEntryTime] = useState('');
+  const [editExitDate, setEditExitDate] = useState('');
+  const [editExitTime, setEditExitTime] = useState('');
+
+  const openEditModal = (loading: any) => {
+    setEditingLoading(loading);
+    setEditEntryDate(loading.entry_date || '');
+    setEditEntryTime(loading.entry_time || '');
+    setEditExitDate(loading.exit_date || '');
+    setEditExitTime(loading.exit_time || '');
+    setIsEditModalOpen(true);
+  }
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingLoading) return;
+    try {
+      await updateRecord(editingLoading.id, {
+        entry_date: editEntryDate === '' ? null : editEntryDate,
+        entry_time: editEntryTime === '' ? null : editEntryTime,
+        exit_date: editExitDate === '' ? null : editExitDate,
+        exit_time: editExitTime === '' ? null : editExitTime,
+      });
+      setIsEditModalOpen(false);
+      setEditingLoading(null);
+    } catch (err) {
+      console.error('Erro salvando edição:', err);
+    }
+  }
+
+  const getTypeFor = (plate: string, loadingType?: string) => {
+    if (!plate) return loadingType || '-'
+    const v = vehicles.find(v => v.plate?.toLowerCase() === plate.toLowerCase())
+    return v?.vehicle_type || loadingType || '-'
+  }
   
   // Estado para modal de visualização de mensagem
   const [messageModal, setMessageModal] = useState({ open: false, title: '', content: '' });
@@ -1040,6 +1081,7 @@ const Reports = () => {
                           />
                         </div>
                       </th>
+
                       <th className="border border-gray-300 p-2 text-left text-sm">
                         <div className="space-y-1">
                           <div>Placa</div>
@@ -1051,6 +1093,19 @@ const Reports = () => {
                           />
                         </div>
                       </th>
+
+                      <th className="border border-gray-300 p-2 text-left text-sm">
+                        <div className="space-y-1">
+                          <div>Tipo</div>
+                          <Input 
+                            placeholder="Filtrar..."
+                            className="h-7 text-xs"
+                            value={columnFilters.type}
+                            onChange={(e) => setColumnFilters({...columnFilters, type: e.target.value})}
+                          />
+                        </div>
+                      </th>
+
                       <th className="border border-gray-300 p-2 text-left text-sm">
                         <div className="space-y-1">
                           <div>Produto</div>
@@ -1062,6 +1117,7 @@ const Reports = () => {
                           />
                         </div>
                       </th>
+
                       <th className="border border-gray-300 p-2 text-left text-sm">
                         <div className="space-y-1">
                           <div>Motorista</div>
@@ -1073,6 +1129,7 @@ const Reports = () => {
                           />
                         </div>
                       </th>
+
                       <th className="border border-gray-300 p-2 text-left text-sm">
                         <div className="space-y-1">
                           <div>Transportadora</div>
@@ -1084,6 +1141,7 @@ const Reports = () => {
                           />
                         </div>
                       </th>
+
                       <th className="border border-gray-300 p-2 text-left text-sm">
                         <div className="space-y-1">
                           <div>Destino</div>
@@ -1095,6 +1153,7 @@ const Reports = () => {
                           />
                         </div>
                       </th>
+
                       <th className="border border-gray-300 p-2 text-left text-sm">Marcação</th>
                       <th className="border border-gray-300 p-2 text-left text-sm">Entrada</th>
                       <th className="border border-gray-300 p-2 text-left text-sm">Saída</th>
@@ -1115,6 +1174,7 @@ const Reports = () => {
                           (!columnFilters.plate || l.plate?.toLowerCase().includes(columnFilters.plate.toLowerCase())) &&
                           (!columnFilters.product || l.product?.toLowerCase().includes(columnFilters.product.toLowerCase())) &&
                           (!columnFilters.driver || l.driver?.toLowerCase().includes(columnFilters.driver.toLowerCase())) &&
+                          (!columnFilters.type || ( (l.truck_type || '').toLowerCase().includes(columnFilters.type.toLowerCase()) || (vehicles.find(v => v.plate?.toLowerCase() === l.plate?.toLowerCase())?.vehicle_type || '').toLowerCase().includes(columnFilters.type.toLowerCase()) )) &&
                           (!columnFilters.carrier || l.carrier?.toLowerCase().includes(columnFilters.carrier.toLowerCase())) &&
                           (!columnFilters.destination || l.destination?.toLowerCase().includes(columnFilters.destination.toLowerCase()));
                         
@@ -1147,6 +1207,7 @@ const Reports = () => {
                               </span>
                             </td>
                             <td className="border border-gray-300 p-2 font-medium text-sm">{loading.plate.toUpperCase()}</td>
+                            <td className="border border-gray-300 p-2 text-sm">{getTypeFor(loading.plate, loading.truck_type)}</td>
                             <td className="border border-gray-300 p-2">
                               <span className={`px-2 py-1 rounded text-xs ${
                                 loading.product === 'Pluma' ? 'bg-yellow-100 text-yellow-800' :
@@ -1160,7 +1221,12 @@ const Reports = () => {
                             <td className="border border-gray-300 p-2 text-sm">{toTitleCase(loading.driver)}</td>
                             <td className="border border-gray-300 p-2 text-sm">{toTitleCase(loading.carrier)}</td>
                             <td className="border border-gray-300 p-2 text-sm">{toTitleCase(loading.destination)}</td>
-                            <td className="border border-gray-300 p-2 text-sm">{loading.date} {loading.time}</td>
+                            <td className="border border-gray-300 p-2 text-sm flex items-center justify-between">
+                              <span>{loading.date} {loading.time}</span>
+                              <Button size="sm" variant="outline" onClick={() => openEditModal(loading)}>
+                                Editar
+                              </Button>
+                            </td>
                             <td className="border border-gray-300 p-2 text-sm">
                               {loading.entry_date && loading.entry_time ? 
                                 `${loading.entry_date} ${loading.entry_time}` : 
@@ -1531,6 +1597,46 @@ const Reports = () => {
               📋 Copiar
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+      {/* Modal de edição de Marcação (entrada/saída) */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Datas/Horários</DialogTitle>
+            <DialogDescription>Atualize a data e horário de entrada e saída.</DialogDescription>
+          </DialogHeader>
+
+          {editingLoading && (
+            <form onSubmit={handleSaveEdit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-entry-date">Data de Entrada</Label>
+                  <Input id="edit-entry-date" type="date" value={editEntryDate} onChange={(e) => setEditEntryDate(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-entry-time">Hora de Entrada</Label>
+                  <Input id="edit-entry-time" type="time" value={editEntryTime} onChange={(e) => setEditEntryTime(e.target.value)} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-exit-date">Data de Saída</Label>
+                  <Input id="edit-exit-date" type="date" value={editExitDate} onChange={(e) => setEditExitDate(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-exit-time">Hora de Saída</Label>
+                  <Input id="edit-exit-time" type="time" value={editExitTime} onChange={(e) => setEditExitTime(e.target.value)} />
+                </div>
+              </div>
+
+              <DialogFooter className="gap-2">
+                <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)}>Cancelar</Button>
+                <Button type="submit">Salvar</Button>
+              </DialogFooter>
+            </form>
+          )}
         </DialogContent>
       </Dialog>
     </div>

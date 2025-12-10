@@ -12,6 +12,7 @@ export interface Vehicle {
   date: string
   entry_time?: string // Agora opcional para suportar saída externa
   exit_time?: string
+  exit_date?: string
   plate: string
   driver: string
   vehicle_type: string
@@ -132,6 +133,7 @@ export interface MaterialReceipt {
   date: string
   entry_time: string
   exit_time?: string
+  exit_date?: string
   material_type: string // Areia, Cascalho, Cavaco, Pedra Brita, Pó de Pedra, Álcool
   plate: string
   driver: string
