@@ -329,7 +329,7 @@ const MaterialReceipts = () => {
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o material" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-56 overflow-auto">
                   {materialTypes.map(type => (
                     <SelectItem key={type} value={type}>{type}</SelectItem>
                   ))}
@@ -373,7 +373,7 @@ const MaterialReceipts = () => {
                   <SelectTrigger>
                     <SelectValue placeholder="Tipo de medida" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="max-h-56 overflow-auto">
                     {unitTypes.map(unit => (
                       <SelectItem key={unit.value} value={unit.value}>{unit.label}</SelectItem>
                     ))}
