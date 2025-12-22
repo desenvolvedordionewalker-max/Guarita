@@ -50,6 +50,7 @@ const Equipment = () => {
     };
     
     try {
+      console.log('DEBUG: equipment submit payload', recordData);
       await addRecord(recordData);
       e.currentTarget.reset();
     } catch (error) {
