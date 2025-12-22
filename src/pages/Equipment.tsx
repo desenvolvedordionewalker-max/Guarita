@@ -10,6 +10,7 @@ import { ArrowLeft, Plus, Settings, Image as ImageIcon, CheckCircle, Loader2, Ca
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useEquipment } from "@/hooks/use-supabase";
+import { getTodayLocalDate, normalizeLocalDate } from "@/lib/date-utils";
 import type { Equipment as EquipmentType } from "@/lib/supabase";
 
 const Equipment = () => {
@@ -34,8 +35,9 @@ const Equipment = () => {
     const formData = new FormData(e.currentTarget);
     const purpose = formData.get("purpose") as string;
     
+    const recordDate = formData.get("date") as string;
     const recordData = {
-      date: formData.get("date") as string,
+      date: recordDate ? normalizeLocalDate(recordDate) : getTodayLocalDate(),
       photo_url: "https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400",
       name: formData.get("name") as string,
       type: formData.get("type") as string,
@@ -73,7 +75,7 @@ const Equipment = () => {
     try {
       await updateRecord(selectedEquipment.id, {
         status: "completed",
-        return_date: returnDate,
+        return_date: returnDate ? normalizeLocalDate(returnDate) : getTodayLocalDate(),
         return_notes: returnNotes
       });
       
