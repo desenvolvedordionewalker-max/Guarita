@@ -621,9 +621,9 @@ const Dashboard = () => {
   const username = localStorage.getItem("username") || "Usuário";
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-b from-white to-neutral-50 flex flex-col items-center">
+    <div className="min-h-screen w-full bg-background flex flex-col items-center">
       {/* Header */}
-      <header className="w-full px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 2xl:px-16 py-3 flex justify-between items-center bg-white dark:bg-neutral-900 shadow-md sticky top-0 z-50 border-b dark:border-neutral-700">
+      <header className="w-full px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 2xl:px-16 py-3 flex justify-between items-center bg-background shadow-md sticky top-0 z-50 border-b">
         <div className="flex items-center gap-4">
           <button 
             onClick={toggleTheme}
@@ -654,7 +654,7 @@ const Dashboard = () => {
                   variant="ghost"
                   size="sm"
                   onClick={() => navigate(module.route)}
-                  className="flex flex-col items-center gap-1 p-3 h-auto hover:bg-gray-50"
+                  className="flex flex-col items-center gap-1 p-3 h-auto hover:bg-sidebar-accent hover:text-sidebar-accent-foreground dark:hover:bg-sidebar-accent"
                 >
                   <module.icon className={`w-6 h-6 ${module.color}`} />
                   <span className="text-xs font-medium">{module.title}</span>

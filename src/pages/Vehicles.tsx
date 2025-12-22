@@ -338,11 +338,11 @@ const Vehicles = () => {
                       </TableRow>
                     ) : (
                       todayVehicles.map((vehicle) => (
-                        <TableRow key={vehicle.id} className={vehicle.type === "Saída Externa" ? "bg-orange-50" : ""}>
+                        <TableRow key={vehicle.id} className={vehicle.type === "Saída Externa" ? "bg-orange-50 dark:bg-emerald-900" : ""}>
                           <TableCell className="font-medium">
                             {vehicle.plate}
                             {vehicle.type === "Saída Externa" && (
-                              <span className="ml-2 px-2 py-1 text-xs bg-orange-100 text-orange-700 rounded-full">
+                              <span className="ml-2 px-2 py-1 text-xs bg-orange-100 dark:bg-emerald-800 text-orange-700 dark:text-emerald-100 rounded-full">
                                 Externa
                               </span>
                             )}
@@ -365,7 +365,7 @@ const Vehicles = () => {
                                   variant="outline"
                                   size="sm"
                                   onClick={() => handleRegisterReturn(vehicle.id)}
-                                  className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                  className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-primary/20"
                                   title="Registrar Retorno"
                                 >
                                   <ArrowLeftCircle className="h-4 w-4" />
@@ -375,7 +375,7 @@ const Vehicles = () => {
                                   variant="outline"
                                   size="sm"
                                   onClick={() => handleRegisterExit(vehicle.id)}
-                                  className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                  className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-primary/20"
                                   title="Registrar Saída"
                                 >
                                   <Exit className="h-4 w-4" />
