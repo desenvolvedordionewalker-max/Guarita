@@ -117,6 +117,19 @@ const MaterialReceipts = () => {
       setExitModalRecord(null);
     } catch (error) {
       console.error('Erro ao confirmar saída:', error);
+      // Se o Supabase/PostgREST não reconhecer a coluna `exit_date` no cache,
+      // fazemos uma tentativa de fallback atualizando apenas `exit_time`.
+      const msg = (error as any)?.message || (error as any)?.details || '';
+      if (typeof msg === 'string' && (msg.includes("Could not find the 'exit_date' column") || msg.includes('exit_date'))) {
+        try {
+          await updateRecord(exitModalRecord.id, { exit_time });
+          setIsExitModalOpen(false);
+          setExitModalRecord(null);
+          return;
+        } catch (err2) {
+          console.error('Retry without exit_date falhou:', err2);
+        }
+      }
     }
   };
 
