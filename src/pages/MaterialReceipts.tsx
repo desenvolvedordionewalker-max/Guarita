@@ -38,7 +38,8 @@ const MaterialReceipts = () => {
     { value: "KG", label: "Peso (KG)" },
     { value: "M3", label: "Volume (M³)" },
     { value: "M2", label: "Área (M²)" },
-    { value: "LITROS", label: "Volume (Litros)" }
+    { value: "LITROS", label: "Volume (Litros)" },
+    { value: "UN", label: "Unidades (UN)" }
   ];
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -122,6 +123,7 @@ const MaterialReceipts = () => {
   const getQuantityValue = (record: MaterialReceipt) => {
     switch (record.unit_type) {
       case "KG": return record.net_weight || 0;
+      case "UN": return record.net_weight || 0;
       case "M3": return record.volume_m3 || 0;
       case "M2": return record.volume_m2 || 0;
       case "LITROS": return record.volume_liters || 0;

@@ -355,7 +355,7 @@ function DashboardPortariaTV() {
 
   const rankingDiaArray = Object.values(rankingDia)
     .sort((a, b) => b.rolos - a.rolos)
-    .slice(0, 10);
+    ;
 
   const totalRolosToday = rankingDiaArray.reduce((sum, r) => sum + (r.rolos || 0), 0);
   const totalViagensToday = rankingDiaArray.reduce((sum, r) => sum + (r.viagens || 0), 0);
@@ -457,7 +457,7 @@ function DashboardPortariaTV() {
 
   const rankingMesArray = Object.values(rankingMes)
     .sort((a, b) => b.rolos - a.rolos)
-    .slice(0, 10);
+    ;
 
   // Sistema responsivo otimizado para TVs
   const totalCards = produtosParaExibir.length;
