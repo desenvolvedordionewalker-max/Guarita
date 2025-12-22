@@ -113,7 +113,7 @@ const LoadingHistory = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-background to-blue-50">
-      <header className="border-b bg-white shadow-md sticky top-0 z-10">
+      <header className="border-b bg-background dark:bg-sidebar-background shadow-md sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate("/loading")}>
             <ArrowLeft className="w-5 h-5" />
@@ -249,7 +249,7 @@ const LoadingHistory = () => {
                   {Object.entries(totalsByProduct)
                     .sort(([, a], [, b]) => b.weight - a.weight)
                     .map(([product, data]) => (
-                      <tr key={product} className="border-b hover:bg-gray-50">
+                      <tr key={product} className="border-b hover:bg-muted/40 dark:hover:bg-muted/30">
                         <td className="p-3">
                           <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                             product === 'Pluma' ? 'bg-yellow-100 text-yellow-800' :
@@ -322,7 +322,7 @@ const LoadingHistory = () => {
                           {dayRecords
                             .sort((a, b) => (b.exit_time || '').localeCompare(a.exit_time || ''))
                             .map(record => (
-                              <tr key={record.id} className="border-b hover:bg-gray-50 text-sm">
+                              <tr key={record.id} className="border-b hover:bg-muted/40 dark:hover:bg-muted/30 text-sm">
                                 <td className="p-2">
                                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                                     record.product === 'Pluma' ? 'bg-yellow-100 text-yellow-800' :

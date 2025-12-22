@@ -558,17 +558,9 @@ function DashboardPortariaTV() {
 
   return (
     <ControleGuaritaFitScreen>
-      <div className={`fixed inset-0 w-screen h-screen flex flex-col overflow-y-auto transition-colors duration-300 ${
-        isDarkMode 
-          ? 'bg-[#0a0a0a] text-foreground' 
-          : 'bg-gray-50 text-gray-900'
-      }`}>
+      <div className={`fixed inset-0 w-screen h-screen flex flex-col overflow-y-auto transition-colors duration-300 bg-background text-foreground`}>
         {/* HEADER - Fluido e Responsivo */}
-        <header className={`relative flex flex-wrap items-center justify-between gap-2 backdrop-blur-sm border-b px-[clamp(0.5rem,2vw,3rem)] py-2 sm:py-3 transition-colors duration-300 ${
-          isDarkMode 
-            ? 'bg-black/70 border-emerald-600/30' 
-            : 'bg-white/80 border-emerald-500/40'
-        }`}>
+        <header className={`relative flex flex-wrap items-center justify-between gap-2 backdrop-blur-sm border-b px-[clamp(0.5rem,2vw,3rem)] py-2 sm:py-3 transition-colors duration-300 bg-background/80 dark:bg-black/70 border-emerald-500/40 dark:border-emerald-600/30`}>
           {/* Animação de chuva no header */}
           {isRaining && <RainHeaderAnimation />}
           
@@ -672,7 +664,7 @@ function DashboardPortariaTV() {
               <Card key={produto} className={`backdrop-blur-lg border flex flex-col transition-all duration-500 hover:shadow-xl ${
                 isDarkMode 
                   ? 'bg-black/60 border-emerald-600/30 text-emerald-100' 
-                  : 'bg-white/90 border-emerald-500/30 text-gray-900'
+                  : 'bg-background/90 dark:bg-sidebar-background/90 border-emerald-500/30 text-gray-900'
               }`}>
                 <CardHeader className={`border-b p-[clamp(0.4rem,0.8vw,0.8rem)] flex-shrink-0 transition-colors duration-300 ${
                   isDarkMode ? 'border-emerald-600/30' : 'border-emerald-500/30'
@@ -1068,7 +1060,7 @@ function DashboardPortariaTV() {
                 }`}>
                   {/* Mostrar apenas ranking por placa com viagens do DIA (sem cards médios) */}
                   <div>
-                    <div className={`p-3 rounded-lg border ${isDarkMode ? 'bg-black/40 border-emerald-600/20' : 'bg-white/5 border-emerald-400/10'}`}>
+                    <div className={`p-3 rounded-lg border ${isDarkMode ? 'bg-black/40 border-emerald-600/20' : 'bg-background/5 border-emerald-400/10'}`}>
                       <p className="text-sm text-muted-foreground">Ranking de Placas (Hoje)</p>
                       {rankingDiaArray.length > 0 ? (
                         <div className="mt-2 grid grid-cols-1 gap-3">
@@ -1096,7 +1088,7 @@ function DashboardPortariaTV() {
                                 plateCargasColumns.push(plateCargasAll.slice(i, i + 3));
                               }
                               return (
-                                <div key={r.plate} className={`relative p-2 rounded-md border ${isDarkMode ? 'bg-black/30 border-emerald-600/10' : 'bg-white/3 border-emerald-400/5'}`}>
+                                <div key={r.plate} className={`relative p-2 rounded-md border ${isDarkMode ? 'bg-black/30 border-emerald-600/10' : 'bg-background/3 border-emerald-400/5'}`}>
                                   <div className="flex items-center justify-between">
                                     <div className="min-w-0">
                                       <div className="flex items-baseline gap-3">

@@ -866,7 +866,7 @@ const Reports = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
-      <header className="border-b bg-white shadow-md sticky top-0 z-10">
+      <header className="border-b bg-background dark:bg-sidebar-background shadow-md sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
             <ArrowLeft className="w-5 h-5" />
@@ -919,7 +919,7 @@ const Reports = () => {
 
         {/* Movimentação Geral de Veículos */}
         <Card>
-          <CardHeader>
+          <CardHeader className="bg-background dark:bg-sidebar-background">
             <CardTitle className="flex items-center justify-between text-base">
               <div className="flex items-center gap-2">
                 <Filter className="w-5 h-5" />
@@ -1042,8 +1042,8 @@ const Reports = () => {
 
             {/* Tabela de Resultados Filtrados - SEMPRE VISÍVEL quando expandido */}
             {isExpanded && (
-              <div className="overflow-x-auto border-4 border-orange-500 rounded-lg p-4 bg-orange-50">
-                <div className="mb-4 p-3 bg-orange-100 rounded border-2 border-orange-600">
+              <div className="overflow-x-auto border-4 border-orange-500 rounded-lg p-4 bg-orange-50 dark:bg-muted/10">
+                <div className="mb-4 p-3 bg-orange-100 dark:bg-muted/10 rounded border-2 border-orange-600">
                   <h3 className="font-bold text-orange-900 text-lg mb-2">🎯 TABELA COM FILTROS ATIVA</h3>
                   <div className="flex items-center gap-4">
                     <Button
@@ -1067,9 +1067,9 @@ const Reports = () => {
                   💡 Use os filtros abaixo em cada coluna para refinar a busca
                 </div>
                 
-                <table className="w-full border-collapse border border-gray-300">
+                  <table className="w-full border-collapse border border-border">
                   <thead>
-                    <tr className="bg-gray-50">
+                    <tr className="bg-muted/10 dark:bg-card">
                       <th className="border border-gray-300 p-2 text-left text-sm">
                         <div className="space-y-1">
                           <div>Status</div>
@@ -1194,46 +1194,46 @@ const Reports = () => {
                         return (
                           <tr 
                             key={`loading-${loading.id}`} 
-                            className={`hover:bg-gray-100 ${isComplete ? 'bg-green-50 border-l-4 border-l-green-500' : hasMissingData ? 'bg-yellow-50 border-l-4 border-l-yellow-400' : ''}`}
+                            className={`hover:bg-muted/40 dark:hover:bg-muted/30 ${isComplete ? 'bg-green-100 dark:bg-green-900 border-l-4 border-l-green-500' : hasMissingData ? 'bg-yellow-100 dark:bg-yellow-900 border-l-4 border-l-yellow-400' : ''}`}
                           >
-                            <td className="border border-gray-300 p-2 text-sm">
+                            <td className="border border-border p-2 text-sm">
                               <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                loading.status === 'concluido' ? 'bg-green-100 text-green-800' :
-                                loading.status === 'carregado' ? 'bg-blue-100 text-blue-800' :
-                                loading.status === 'carregando' ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-gray-100 text-gray-800'
+                                loading.status === 'concluido' ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' :
+                                loading.status === 'carregado' ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200' :
+                                loading.status === 'carregando' ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200' :
+                                'bg-muted/10 dark:bg-card text-muted-foreground'
                               }`}>
                                 {loading.status ? toTitleCase(loading.status) : '-'}
                               </span>
                             </td>
-                            <td className="border border-gray-300 p-2 font-medium text-sm">{loading.plate.toUpperCase()}</td>
-                            <td className="border border-gray-300 p-2 text-sm">{getTypeFor(loading.plate, loading.truck_type)}</td>
-                            <td className="border border-gray-300 p-2">
+                            <td className="border border-border p-2 font-medium text-sm">{loading.plate.toUpperCase()}</td>
+                            <td className="border border-border p-2 text-sm">{getTypeFor(loading.plate, loading.truck_type)}</td>
+                            <td className="border border-border p-2">
                               <span className={`px-2 py-1 rounded text-xs ${
-                                loading.product === 'Pluma' ? 'bg-yellow-100 text-yellow-800' :
-                                loading.product === 'Caroço' ? 'bg-brown-100 text-brown-800' :
-                                loading.product === 'Fibrilha' ? 'bg-green-100 text-green-800' :
-                                'bg-gray-100 text-gray-800'
+                                loading.product === 'Pluma' ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200' :
+                                loading.product === 'Caroço' ? 'bg-brown-100 text-brown-800 dark:bg-muted/10 dark:text-brown-100' :
+                                loading.product === 'Fibrilha' ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' :
+                                'bg-muted/10 dark:bg-card text-muted-foreground'
                               }`}>
                                 {toTitleCase(loading.product)}
                               </span>
                             </td>
-                            <td className="border border-gray-300 p-2 text-sm">{toTitleCase(loading.driver)}</td>
-                            <td className="border border-gray-300 p-2 text-sm">{toTitleCase(loading.carrier)}</td>
-                            <td className="border border-gray-300 p-2 text-sm">{toTitleCase(loading.destination)}</td>
-                            <td className="border border-gray-300 p-2 text-sm flex items-center justify-between">
+                            <td className="border border-border p-2 text-sm">{toTitleCase(loading.driver)}</td>
+                            <td className="border border-border p-2 text-sm">{toTitleCase(loading.carrier)}</td>
+                            <td className="border border-border p-2 text-sm">{toTitleCase(loading.destination)}</td>
+                            <td className="border border-border p-2 text-sm flex items-center justify-between">
                               <span>{loading.date} {loading.time}</span>
                               <Button size="sm" variant="outline" onClick={() => openEditModal(loading)}>
                                 Editar
                               </Button>
                             </td>
-                            <td className="border border-gray-300 p-2 text-sm">
+                            <td className="border border-border p-2 text-sm">
                               {loading.entry_date && loading.entry_time ? 
                                 `${loading.entry_date} ${loading.entry_time}` : 
                                 <span className="text-red-500 font-semibold">Pendente</span>
                               }
                             </td>
-                            <td className="border border-gray-300 p-2 text-sm">
+                            <td className="border border-border p-2 text-sm">
                               {loading.exit_date && loading.exit_time ? 
                                 `${loading.exit_date} ${loading.exit_time}` : 
                                 <span className="text-red-500 font-semibold">Pendente</span>
@@ -1306,7 +1306,7 @@ const Reports = () => {
                         </thead>
                         <tbody>
                           {sortedDrivers.map((driver, index) => (
-                            <tr key={`${driver.driver}-${driver.plate}`} className="border-b hover:bg-gray-50">
+                            <tr key={`${driver.driver}-${driver.plate}`} className="border-b hover:bg-muted/40 dark:hover:bg-muted/30">
                               <td className="p-2">
                                 <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
                                   index === 0 ? 'bg-yellow-500 text-white' :
@@ -1477,7 +1477,7 @@ const Reports = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Filtro de Data para Relatórios */}
-            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="p-4 bg-muted/10 dark:bg-card rounded-lg border border-border">
               <Label htmlFor="reportDateFilter" className="font-semibold">📅 Selecionar Data do Relatório</Label>
               <Input 
                 id="reportDateFilter"
@@ -1572,8 +1572,8 @@ const Reports = () => {
               Visualize a mensagem abaixo e clique em "Copiar" para copiar para a área de transferência
             </DialogDescription>
           </DialogHeader>
-          <div className="mt-4">
-            <pre className="bg-gray-50 p-4 rounded-lg overflow-auto max-h-[50vh] text-sm whitespace-pre-wrap font-mono">
+            <div className="mt-4">
+            <pre className="bg-muted/10 dark:bg-card p-4 rounded-lg overflow-auto max-h-[50vh] text-sm whitespace-pre-wrap font-mono">
               {messageModal.content}
             </pre>
           </div>

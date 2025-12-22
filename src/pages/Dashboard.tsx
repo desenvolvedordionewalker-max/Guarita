@@ -290,21 +290,21 @@ const Dashboard = () => {
   const getProductColor = (product: string) => {
     switch (product) {
       case 'Pluma':
-        return 'border-l-yellow-500 bg-yellow-50 text-yellow-800';
+        return 'border-l-yellow-500 bg-yellow-50 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200';
       case 'Caroço':
-        return 'border-l-amber-600 bg-amber-50 text-amber-800';
+        return 'border-l-amber-600 bg-amber-50 dark:bg-amber-900 text-amber-800 dark:text-amber-200';
       case 'Fibrilha':
-        return 'border-l-green-500 bg-green-50 text-green-800';
+        return 'border-l-green-500 bg-green-50 dark:bg-green-900 text-green-800 dark:text-green-200';
       case 'Briquete':
-        return 'border-l-purple-500 bg-purple-50 text-purple-800';
+        return 'border-l-purple-500 bg-purple-50 dark:bg-purple-900 text-purple-800 dark:text-purple-200';
       case 'Reciclados':
-        return 'border-l-blue-500 bg-blue-50 text-blue-800';
+        return 'border-l-blue-500 bg-blue-50 dark:bg-blue-900 text-blue-800 dark:text-blue-200';
       case 'Cavaco':
-        return 'border-l-orange-500 bg-orange-50 text-orange-800';
+        return 'border-l-orange-500 bg-orange-50 dark:bg-orange-900 text-orange-800 dark:text-orange-200';
       case 'Outros':
-        return 'border-l-pink-500 bg-pink-50 text-pink-800';
+        return 'border-l-pink-500 bg-pink-50 dark:bg-pink-900 text-pink-800 dark:text-pink-200';
       default:
-        return 'border-l-gray-500 bg-gray-50 text-gray-800';
+        return 'border-l-gray-500 bg-muted/10 dark:bg-card text-muted-foreground';
     }
   };
 
@@ -623,23 +623,22 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen w-full bg-background flex flex-col items-center">
       {/* Header */}
-      <header className="w-full px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 2xl:px-16 py-3 flex justify-between items-center bg-background shadow-md sticky top-0 z-50 border-b">
+      <header className="w-full px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 2xl:px-16 py-3 flex justify-between items-center bg-background dark:bg-sidebar-background shadow-md sticky top-0 z-50 border-b">
         <div className="flex items-center gap-4">
-          <button 
+          <Button 
             onClick={toggleTheme}
-            className="w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden hover:opacity-80 transition-opacity cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary"
+            className="w-14 h-14 md:w-16 md:h-16 rounded-lg overflow-hidden hover:opacity-80 transition-opacity cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary relative"
             aria-label="Alternar tema"
           >
-            {theme === "dark" ? (
-              <Moon className="w-full h-full p-4 text-yellow-400" />
-            ) : (
-              <img 
-                src={logo}
-                alt="Bom Futuro Logo" 
-                className="w-full h-full object-contain"
-              />
+            <img 
+              src={logo}
+              alt="Bom Futuro Logo" 
+              className="w-full h-full object-contain"
+            />
+            {theme === 'dark' && (
+              <Moon className="absolute top-1 right-1 text-yellow-400 w-5 h-5 p-0.5 bg-black/20 rounded-full" />
             )}
-          </button>
+          </Button>
           <div>
             <h1 className="text-lg md:text-xl lg:text-2xl font-bold tv-title">Controle Guarita</h1>
             <p className="text-sm text-muted-foreground">IBA Santa Luzia</p>
@@ -692,7 +691,7 @@ const Dashboard = () => {
         </div>
       </header>
 
-      <main className="w-full max-w-[1600px] flex-1 px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 py-8">
+      <main className="w-full max-w-[1600px] flex-1 px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 py-8 bg-transparent">
         {/* Enhanced Stats Cards with Product Details */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {/* Fila Hoje */}
@@ -920,7 +919,7 @@ const Dashboard = () => {
                   <div className="overflow-x-auto max-h-96 overflow-y-auto">
                     <table className="w-full text-xs border-collapse">
                       <thead>
-                        <tr className="border-b bg-gray-50">
+                        <tr className="border-b bg-muted/10 dark:bg-card">
                           <th className="p-2 font-semibold text-left">Placa</th>
                           <th className="p-2 font-semibold text-left">Motorista</th>
                           <th className="p-2 font-semibold text-left">Fazenda</th>
@@ -934,10 +933,10 @@ const Dashboard = () => {
                       <tbody>
                         {algodaoConcluido
                           .sort((a, b) => new Date(b.exit_time!).getTime() - new Date(a.exit_time!).getTime())
-                          .slice(0, 20)
+                            .slice(0, 20)
                           .map((cotton) => (
-                            <tr key={cotton.id} className="border-b hover:bg-green-50 transition-colors">
-                              <td className="p-2 font-medium border border-gray-200">{cotton.plate}</td>
+                            <tr key={cotton.id} className="border-b hover:bg-muted/40 dark:hover:bg-muted/30 transition-colors">
+                              <td className="p-2 font-medium border border-border">{cotton.plate}</td>
                               <td className="p-2 border border-gray-200 truncate max-w-24">{cotton.driver}</td>
                               <td className="p-2 border border-gray-200 truncate max-w-24">{cotton.farm}</td>
                               <td className="p-2 border border-gray-200">{cotton.talhao || '-'}</td>
@@ -1435,7 +1434,7 @@ const Dashboard = () => {
                         .map((vehicle) => {
                         const isExternalExit = vehicle.type === "Saída Externa";
                         return (
-                          <tr key={vehicle.id} className={`border-b hover:bg-gray-50 ${isExternalExit ? 'bg-orange-50' : ''}`}>
+                          <tr key={vehicle.id} className={`border-b hover:bg-muted/40 dark:hover:bg-muted/30 ${isExternalExit ? 'bg-orange-100 dark:bg-emerald-900' : ''}`}>
                             <td className="p-2 font-medium text-sm">
                               {vehicle.plate.toUpperCase()}
                               {isExternalExit && (
@@ -1497,7 +1496,7 @@ const Dashboard = () => {
                                   size="sm"
                                   variant="ghost"
                                   onClick={() => setEditingVehicle(vehicle.id)}
-                                  className="text-gray-600 hover:text-gray-700 hover:bg-gray-50 text-xs"
+                                  className="text-gray-600 dark:text-muted-foreground hover:text-gray-700 dark:hover:text-muted-foreground hover:bg-muted/40 dark:hover:bg-muted/30 text-xs"
                                 >
                                   ✏️ Editar
                                 </Button>
