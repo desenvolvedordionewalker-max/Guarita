@@ -1109,14 +1109,14 @@ const Dashboard = () => {
             </Card>
 
             {/* CARREGANDO */}
-            <Card className="lg:col-span-4 border-l-4 border-orange-500">
+            <Card className="lg:col-span-4 border-l-4 border-slate-500">
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Loader2 className="w-5 h-5 text-orange-600 animate-spin" />
+                    <Loader2 className="w-5 h-5 text-slate-600 animate-spin" />
                     <span>Carregando</span>
                   </div>
-                  <span className="text-sm font-normal bg-orange-100 text-orange-800 px-3 py-1 rounded-full">
+                  <span className="text-sm font-normal bg-slate-100 text-slate-800 px-3 py-1 rounded-full dark:bg-neutral-800 dark:text-gray-200">
                     {loadingCarregamentos ? '...' : loadingsCarregando.filter(l => filtroCarregando === "Todos" || l.product === filtroCarregando).length}
                   </span>
                 </CardTitle>
@@ -1129,7 +1129,7 @@ const Dashboard = () => {
                     onClick={() => setFiltroCarregando("Todos")}
                     className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
                       filtroCarregando === "Todos" 
-                        ? 'bg-orange-600 text-white' 
+                        ? 'bg-slate-600 text-white' 
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
@@ -1189,7 +1189,7 @@ const Dashboard = () => {
                     onClick={() => setFiltroCarregando("Cavaco")}
                     className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
                       filtroCarregando === "Cavaco" 
-                        ? 'bg-orange-600 text-white' 
+                        ? 'bg-slate-600 text-white' 
                         : 'bg-orange-100 text-orange-800 hover:bg-orange-200'
                     }`}
                   >
@@ -1202,14 +1202,13 @@ const Dashboard = () => {
                   <div className="space-y-2 max-h-64 overflow-y-auto">
                     {loadingsParaExibir
                       .filter(l => filtroCarregando === "Todos" || l.product === filtroCarregando)
-                      .map((loading) => (
+                        .map((loading) => (
                         <Card 
                           key={loading.id} 
                           className={`relative cursor-pointer hover:shadow-md transition-shadow ${getProductColor(loading.product)} ${
-                            loading.status === 'carregado' ? 'ring-2 ring-amber-400 bg-amber-50' : ''
+                            loading.status === 'carregado' ? 'ring-2 ring-amber-400 bg-amber-50 dark:bg-amber-900 dark:text-amber-200' : ''
                           }`}
-                          onClick={() => handleLoadingCardClick(loading)}
-                        >
+                          onClick={() => handleLoadingCardClick(loading)}>
                           <CardContent className="p-3">
                             {/* Badge de alerta para status "carregado" */}
                             {loading.status === 'carregado' && (
@@ -1221,14 +1220,14 @@ const Dashboard = () => {
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-2">
                                   <span className={`px-2 py-1 rounded text-xs font-bold ${
-                                    loading.product === 'Pluma' ? 'bg-yellow-100 text-yellow-800' :
-                                    loading.product === 'Caroço' ? 'bg-red-100 text-red-800' :
-                                    loading.product === 'Fibrilha' ? 'bg-green-100 text-green-800' :
-                                    loading.product === 'Briquete' ? 'bg-purple-100 text-purple-800' :
-                                    loading.product === 'Reciclados' ? 'bg-blue-100 text-blue-800' :
-                                    loading.product === 'Cavaco' ? 'bg-orange-100 text-orange-800' :
-                                    loading.product === 'Outros' ? 'bg-pink-100 text-pink-800' :
-                                    'bg-gray-100 text-gray-800'
+                                    loading.product === 'Pluma' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                                    loading.product === 'Caroço' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                                    loading.product === 'Fibrilha' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                                    loading.product === 'Briquete' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
+                                    loading.product === 'Reciclados' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                                    loading.product === 'Cavaco' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
+                                    loading.product === 'Outros' ? 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200' :
+                                    'bg-gray-100 text-gray-800 dark:bg-neutral-800 dark:text-gray-200'
                                   }`}>
                                     {loading.product}
                                   </span>
@@ -1251,7 +1250,7 @@ const Dashboard = () => {
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <p className="font-semibold">{loading.plate}</p>
-                                  <span className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-800">{resolveTruckType(loading.plate, loading.truck_type)}</span>
+                                  <span className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-800 dark:bg-neutral-800 dark:text-gray-200">{resolveTruckType(loading.plate, loading.truck_type)}</span>
                                 </div>
                               </div>
                             </div>
@@ -1303,7 +1302,7 @@ const Dashboard = () => {
                 {!loadingCarregamentos && loadingsConcluidos.length > 0 ? (
                   <div className="overflow-x-auto max-h-96 overflow-y-auto">
                     <table className="w-full text-sm">
-                      <thead className="bg-green-50 sticky top-0">
+                      <thead className="bg-green-50 sticky top-0 dark:bg-black dark:text-white">
                         <tr>
                           <th className="p-2 text-left border text-xs">Placa</th>
                           <th className="p-2 text-left border text-xs">Motorista</th>
@@ -1326,7 +1325,6 @@ const Dashboard = () => {
                             const timeB = new Date(b.exit_date || b.loaded_at!).getTime();
                             return timeB - timeA;
                           })
-                          .slice(0, 10)
                           .map((loading) => {
                             const permanencia = calculateLoadingTime(
                               loading.entry_date,
@@ -1336,15 +1334,15 @@ const Dashboard = () => {
                             );
                             
                             return (
-                              <tr key={loading.id} className="border-b hover:bg-green-50 transition-colors">
+                              <tr key={loading.id} className="border-b hover:bg-green-50 dark:hover:bg-neutral-800 transition-colors">
                                 <td className="p-2 font-medium border border-gray-200">{loading.plate}</td>
                                 <td className="p-2 border border-gray-200 truncate max-w-24">{loading.driver}</td>
                                 <td className="p-2 border border-gray-200">
                                   <span className={`px-2 py-1 rounded text-xs ${
-                                    loading.product === 'Pluma' ? 'bg-yellow-100 text-yellow-800' :
-                                    loading.product === 'Caroço' ? 'bg-red-100 text-red-800' :
-                                    loading.product === 'Fibrilha' ? 'bg-green-100 text-green-800' :
-                                    'bg-gray-100 text-gray-800'
+                                    loading.product === 'Pluma' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                                    loading.product === 'Caroço' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                                    loading.product === 'Fibrilha' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                                    'bg-gray-100 text-gray-800 dark:bg-neutral-800 dark:text-gray-200'
                                   }`}>
                                     {loading.product}
                                   </span>

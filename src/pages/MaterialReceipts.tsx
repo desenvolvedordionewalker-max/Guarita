@@ -244,11 +244,11 @@ const MaterialReceipts = () => {
                   return new Date(`${b.date} ${b.entry_time}`).getTime() - new Date(`${a.date} ${a.entry_time}`).getTime();
                 })
                 .map((record) => (
-                <div key={record.id} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
+                        <div key={record.id} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
                   <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                     <div className="flex-1 space-y-2">
                       <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="outline" className="bg-orange-50 border-orange-200">
+                        <Badge variant="outline" className="bg-orange-50 border-orange-200 dark:bg-orange-900 dark:border-orange-700 dark:text-orange-200">
                           {record.material_type}
                         </Badge>
                         <Badge variant="secondary">{formatQuantity(record)}</Badge>
@@ -264,7 +264,7 @@ const MaterialReceipts = () => {
                         <div><span className="font-medium">Motorista:</span> {record.driver}</div>
                       </div>
                       {record.exit_time && (
-                        <div className="text-sm text-green-600 bg-green-50 p-2 rounded">
+                        <div className="text-sm text-green-600 bg-green-50 dark:bg-green-900 dark:text-green-200 p-2 rounded">
                           <span className="font-medium">Saída:</span> {record.exit_date ? `${formatDateForDisplay(record.exit_date)} ` : ''}{record.exit_time}
                         </div>
                       )}
