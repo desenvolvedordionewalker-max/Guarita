@@ -72,7 +72,9 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 20 14% 8%;
+    /* Usar o verde da logo como fundo no modo escuro (mantendo a cor dos cards)
+       --primary já está definido como 160 84% 39% (verde da logo) */
+    --background: 160 84% 39%;
     --foreground: 0 0% 98%;
     --card: 20 14% 10%;
     --card-foreground: 0 0% 98%;
