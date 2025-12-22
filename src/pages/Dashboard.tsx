@@ -623,17 +623,17 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen w-full bg-background flex flex-col items-center">
       {/* Header */}
-      <header className="w-full px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 2xl:px-16 py-3 flex justify-between items-center bg-background dark:bg-sidebar-background shadow-md sticky top-0 z-50 border-b">
+      <header className="w-full px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 2xl:px-16 py-3 flex justify-between items-center bg-background dark:bg-card shadow-md sticky top-0 z-50 border-b">
         <div className="flex items-center gap-4">
           <Button 
             onClick={toggleTheme}
-            className="w-14 h-14 md:w-16 md:h-16 rounded-lg overflow-hidden hover:opacity-80 transition-opacity cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary relative"
+            className="w-20 h-20 md:w-24 md:h-24 rounded-lg overflow-hidden hover:opacity-80 transition-opacity cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary relative"
             aria-label="Alternar tema"
           >
             <img 
               src={logo}
               alt="Bom Futuro Logo" 
-              className="w-full h-full object-contain"
+              className="w-full h-full object-contain scale-105"
             />
             {theme === 'dark' && (
               <Moon className="absolute top-1 right-1 text-yellow-400 w-5 h-5 p-0.5 bg-black/20 rounded-full" />
