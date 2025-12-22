@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useTheme } from "@/lib/theme";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, CloudRain, Clock, Droplet, Timer, Leaf, Factory } from "lucide-react";
 import { useVehicles, useCottonPull, useRainRecords, useLoadingRecords, useEquipment, useGestaoTempo, useGestaoTempoCargas } from "@/hooks/use-supabase";
@@ -35,6 +36,17 @@ function DashboardPortariaTV() {
   // Salvar preferência de tema
   useEffect(() => {
     localStorage.setItem('tv-mode-theme', isDarkMode ? 'dark' : 'light');
+    // Atualizar ThemeProvider / classe root para aplicar variáveis CSS
+    try {
+      setTheme(isDarkMode ? 'dark' : 'light');
+    } catch (e) {
+      // se não houver ThemeProvider, fallback para manipular a classe diretamente
+      const root = window?.document?.documentElement;
+      if (root) {
+        root.classList.remove('light', 'dark');
+        root.classList.add(isDarkMode ? 'dark' : 'light');
+      }
+    }
   }, [isDarkMode]);
   
   const [currentTime, setCurrentTime] = useState(new Date());
