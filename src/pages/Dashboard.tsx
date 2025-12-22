@@ -627,7 +627,7 @@ const Dashboard = () => {
         <div className="flex items-center gap-4">
           <Button 
             onClick={toggleTheme}
-            className="w-20 h-20 md:w-24 md:h-24 rounded-lg overflow-hidden hover:opacity-80 transition-opacity cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary relative"
+            className="w-20 h-20 md:w-24 md:h-24 rounded-lg overflow-hidden bg-white dark:bg-black p-1 hover:opacity-80 transition-opacity cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary relative"
             aria-label="Alternar tema"
           >
             <img 

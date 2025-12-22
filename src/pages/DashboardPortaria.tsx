@@ -565,13 +565,17 @@ function DashboardPortariaTV() {
           {isRaining && <RainHeaderAnimation />}
           
           <div className="relative z-10 flex items-center gap-2">
-            <img 
-              src={logo} 
-              alt="Logo" 
-              className="h-[clamp(2rem,3vw,3.5rem)] w-auto cursor-pointer hover:scale-105 transition-transform duration-300" 
+            <button
               onClick={() => setIsDarkMode(!isDarkMode)}
               title={isDarkMode ? 'Clique para ativar modo claro' : 'Clique para ativar modo escuro'}
-            />
+              className="p-1 rounded-md bg-white dark:bg-black overflow-hidden hover:scale-105 transition-transform duration-300"
+            >
+              <img 
+                src={logo} 
+                alt="Logo" 
+                className="h-[clamp(1.9rem,2.8vw,3.4rem)] w-auto"
+              />
+            </button>
             <div>
               <h1 className={`text-[clamp(1rem,2vw,1.8rem)] font-semibold transition-colors duration-300 ${
                 isDarkMode ? 'text-emerald-400' : 'text-emerald-600'
