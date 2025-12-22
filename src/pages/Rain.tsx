@@ -156,7 +156,7 @@ const Rain = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-info/5 via-background to-primary/5">
-      <header className="border-b bg-blue-800 backdrop-blur-sm sticky top-0 z-10 text-white">
+      <header className="border-b bg-blue-800 backdrop-blur-sm sticky top-0 z-10 text-white dark:bg-black">
         <div className="container mx-auto px-4 py-4 flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")} className="text-white hover:bg-blue-700">
             <ArrowLeft className="w-5 h-5" />

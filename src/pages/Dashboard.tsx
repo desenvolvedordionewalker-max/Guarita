@@ -623,7 +623,7 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen w-full bg-background flex flex-col items-center">
       {/* Header */}
-      <header className="w-full px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 2xl:px-16 py-3 flex justify-between items-center bg-background dark:bg-card shadow-md sticky top-0 z-50 border-b">
+      <header className="w-full px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 2xl:px-16 py-3 flex justify-between items-center bg-background dark:bg-black shadow-md sticky top-0 z-50 border-b">
         <div className="flex items-center gap-4">
           <Button 
             onClick={toggleTheme}

@@ -560,7 +560,7 @@ function DashboardPortariaTV() {
     <ControleGuaritaFitScreen>
       <div className={`fixed inset-0 w-screen h-screen flex flex-col overflow-y-auto transition-colors duration-300 bg-background text-foreground`}>
         {/* HEADER - Fluido e Responsivo */}
-        <header className={`relative flex flex-wrap items-center justify-between gap-2 backdrop-blur-sm border-b px-[clamp(0.5rem,2vw,3rem)] py-2 sm:py-3 transition-colors duration-300 bg-background/80 dark:bg-card border-emerald-500/40 dark:border-emerald-600/30`}>
+        <header className={`relative flex flex-wrap items-center justify-between gap-2 backdrop-blur-sm border-b px-[clamp(0.5rem,2vw,3rem)] py-2 sm:py-3 transition-colors duration-300 bg-background/80 dark:bg-black border-emerald-500/40 dark:border-emerald-600/30`}>
           {/* Animação de chuva no header */}
           {isRaining && <RainHeaderAnimation />}
           

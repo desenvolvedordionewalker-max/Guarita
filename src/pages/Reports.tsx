@@ -866,7 +866,7 @@ const Reports = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
-      <header className="border-b bg-background dark:bg-sidebar-background shadow-md sticky top-0 z-10">
+      <header className="border-b bg-background dark:bg-black shadow-md sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
             <ArrowLeft className="w-5 h-5" />
