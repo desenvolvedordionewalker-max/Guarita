@@ -919,7 +919,7 @@ const Reports = () => {
 
         {/* Movimentação Geral de Veículos */}
         <Card>
-          <CardHeader className="bg-background dark:bg-sidebar-background">
+          <CardHeader className="bg-background dark:bg-black">
             <CardTitle className="flex items-center justify-between text-base">
               <div className="flex items-center gap-2">
                 <Filter className="w-5 h-5" />
