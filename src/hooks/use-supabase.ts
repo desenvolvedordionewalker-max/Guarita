@@ -468,6 +468,7 @@ export const useEquipment = () => {
 
   const updateRecord = async (id: string, updates: Partial<Equipment>) => {
     try {
+      console.log('DEBUG: updating equipment', id, updates);
       const { data, error } = await supabase
         .from('equipment')
         .update(updates)
