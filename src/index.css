@@ -76,9 +76,9 @@ All colors MUST be HSL.
        --primary já está definido como 160 84% 39% (verde da logo) */
     --background: 160 84% 39%;
     --foreground: 0 0% 98%;
-    --card: 20 14% 10%;
+    --card: 0 0% 0%;
     --card-foreground: 0 0% 98%;
-    --popover: 20 14% 10%;
+    --popover: 0 0% 0%;
     --popover-foreground: 0 0% 98%;
     
     --primary: 160 84% 39%;
