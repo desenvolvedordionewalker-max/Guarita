@@ -78,7 +78,7 @@ const MotorCard = ({ barracao, index, activeEvent, onStart, onStop }: any) => {
 }
 
 const Aeracao = () => {
-  const { events, loading, startEvent, stopEvent, fetchEvents } = useAeration()
+  const { events, loading, startEvent, stopEvent, fetchEvents, updateEvent, deleteEvent } = useAeration()
   const { theme } = useTheme()
   const isDark = theme === 'dark'
   // Render all barracões and their motors
@@ -333,6 +333,64 @@ const Aeracao = () => {
 
   const navigate = useNavigate()
 
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editStart, setEditStart] = useState<string>('')
+  const [editEnd, setEditEnd] = useState<string>('')
+  const [editStatus, setEditStatus] = useState<string>('on')
+
+  const isoToLocalInput = (iso?: string) => {
+    if (!iso) return ''
+    const d = new Date(iso)
+    // returns yyyy-MM-DDTHH:mm
+    const pad = (n: number) => n.toString().padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  }
+
+  const localInputToIso = (val: string) => {
+    if (!val) return null
+    const d = new Date(val)
+    return d.toISOString()
+  }
+
+  const startEditing = (ev: any) => {
+    setEditingId(ev.id)
+    setEditStart(isoToLocalInput(ev.start_at))
+    setEditEnd(isoToLocalInput(ev.end_at))
+    setEditStatus(ev.status || (ev.end_at ? 'off' : 'on'))
+  }
+
+  const cancelEditing = () => {
+    setEditingId(null)
+    setEditStart('')
+    setEditEnd('')
+    setEditStatus('on')
+  }
+
+  const saveEditing = async (id: string) => {
+    try {
+      const updates: any = { status: editStatus }
+      const isoStart = localInputToIso(editStart)
+      const isoEnd = localInputToIso(editEnd)
+      if (isoStart) updates.start_at = isoStart
+      if (isoEnd) updates.end_at = isoEnd
+      await updateEvent(id, updates)
+      await fetchEvents()
+      cancelEditing()
+    } catch (err) {
+      console.error('Erro ao salvar edição:', err)
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Confirma exclusão deste evento?')) return
+    try {
+      await deleteEvent(id)
+      await fetchEvents()
+    } catch (err) {
+      console.error('Erro ao excluir evento:', err)
+    }
+  }
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       <Card>
@@ -402,6 +460,7 @@ const Aeracao = () => {
                     <th className="p-2 text-left">Fim</th>
                     <th className="p-2 text-left">Tempo ligado</th>
                     <th className="p-2 text-left">Status</th>
+                    <th className="p-2 text-left">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -409,14 +468,43 @@ const Aeracao = () => {
                     const rowClass = isDark ? '' : (ev.barracao === 1 ? 'bg-cyan-50' : 'bg-orange-50')
                     const statusText = ev.status || (ev.end_at ? 'off' : 'on')
                     return (
-                      <tr key={ev.id} className={`${rowClass} border-t`}>
-                        <td className="p-2">{ev.barracao}</td>
-                        <td className="p-2">{ev.motor_index}</td>
-                        <td className="p-2">{ev.start_at ? format(new Date(ev.start_at), 'dd/MM/yyyy HH:mm') : '-'}</td>
-                        <td className="p-2">{ev.end_at ? format(new Date(ev.end_at), 'dd/MM/yyyy HH:mm') : '-'}</td>
-                        <td className="p-2">{formatDuration(ev.start_at, ev.end_at)}</td>
-                        <td className="p-2">{statusText === 'off' ? <span className="text-red-600 font-semibold">Desligado</span> : (statusText === 'on' ? <span className="text-green-600 font-semibold">Ligado</span> : statusText)}</td>
-                      </tr>
+                              <tr key={ev.id} className={`${rowClass} border-t`}>
+                              <td className="p-2">{ev.barracao}</td>
+                              <td className="p-2">{ev.motor_index}</td>
+                              <td className="p-2">
+                                {editingId === ev.id ? (
+                                  <input type="datetime-local" value={editStart} onChange={(e) => setEditStart(e.target.value)} className="p-1 border rounded text-sm" />
+                                ) : (ev.start_at ? format(new Date(ev.start_at), 'dd/MM/yyyy HH:mm') : '-')}
+                              </td>
+                              <td className="p-2">
+                                {editingId === ev.id ? (
+                                  <input type="datetime-local" value={editEnd} onChange={(e) => setEditEnd(e.target.value)} className="p-1 border rounded text-sm" />
+                                ) : (ev.end_at ? format(new Date(ev.end_at), 'dd/MM/yyyy HH:mm') : '-')}
+                              </td>
+                              <td className="p-2">{editingId === ev.id ? formatDuration(localInputToIso(editStart) || undefined, localInputToIso(editEnd) || undefined) : formatDuration(ev.start_at, ev.end_at)}</td>
+                              <td className="p-2">
+                                {editingId === ev.id ? (
+                                  <select value={editStatus} onChange={(e) => setEditStatus(e.target.value)} className="p-1 border rounded text-sm">
+                                    <option value="on">Ligado</option>
+                                    <option value="off">Desligado</option>
+                                  </select>
+                                ) : (statusText === 'off' ? <span className="text-red-600 font-semibold">Desligado</span> : (statusText === 'on' ? <span className="text-green-600 font-semibold">Ligado</span> : statusText))}
+                              </td>
+                              <td className="p-2">
+                                {editingId === ev.id ? (
+                                  <div className="flex gap-2">
+                                    <button className="px-2 py-1 bg-green-600 text-white rounded text-sm" onClick={() => saveEditing(ev.id)}>Salvar</button>
+                                    <button className="px-2 py-1 bg-gray-300 rounded text-sm" onClick={cancelEditing}>Cancelar</button>
+                                    <button className="px-2 py-1 bg-red-600 text-white rounded text-sm" onClick={() => handleDelete(ev.id)}>Excluir</button>
+                                  </div>
+                                ) : (
+                                  <div className="flex gap-2">
+                                    <button className="px-2 py-1 bg-muted/10 rounded text-sm" onClick={() => startEditing(ev)}>Editar</button>
+                                    <button className="px-2 py-1 bg-red-600 text-white rounded text-sm" onClick={() => handleDelete(ev.id)}>Excluir</button>
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
                     )
                   })}
                 </tbody>

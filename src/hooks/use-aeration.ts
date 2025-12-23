@@ -52,6 +52,13 @@ export const useAeration = () => {
     return data as AerationEvent
   }
 
+  const deleteEvent = async (id: string) => {
+    const { data, error } = await supabase.from('aeration_events').delete().eq('id', id).select().single()
+    if (error) throw error
+    setEvents(prev => prev.filter(e => e.id !== id))
+    return data as AerationEvent
+  }
+
   useEffect(() => {
     fetchEvents()
   }, [fetchEvents])
@@ -63,5 +70,6 @@ export const useAeration = () => {
     startEvent,
     stopEvent,
     updateEvent,
+    deleteEvent,
   }
 }
