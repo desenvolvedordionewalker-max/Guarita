@@ -650,7 +650,7 @@ const Dashboard = () => {
   const [isGuardModalOpen, setIsGuardModalOpen] = useState(false)
   const [selectedNewGuard, setSelectedNewGuard] = useState(GUARDS[0])
   const [showGuardSelector, setShowGuardSelector] = useState(false)
-  const [tempSelectedGuard, setTempSelectedGuard] = useState(GUARDS[1] || GUARDS[0])
+  const [tempSelectedGuards, setTempSelectedGuards] = useState<string[]>(() => (guardsOnDuty && guardsOnDuty.length ? guardsOnDuty.slice(0,2) : [GUARDS[1] || GUARDS[0]]))
 
   const addGuard = (name: string) => {
     if (!name) return
@@ -693,28 +693,45 @@ const Dashboard = () => {
               {!showGuardSelector ? (
                 <button
                   onClick={() => {
-                    setTempSelectedGuard(guardsOnDuty[0] || GUARDS[1] || GUARDS[0])
+                    setTempSelectedGuards(guardsOnDuty && guardsOnDuty.length ? guardsOnDuty.slice(0,2) : [GUARDS[1] || GUARDS[0]])
                     setShowGuardSelector(true)
                   }}
                   className={`text-sm font-bold ${theme === 'dark' ? 'text-white' : 'text-green-800'} text-center`}
                 >
-                  {guardsOnDuty[0] || 'Raleudo'}
+                  {guardsOnDuty && guardsOnDuty.length > 0 ? guardsOnDuty.join(' / ') : 'Raleudo'}
                 </button>
               ) : (
-                <div className="flex items-center gap-2">
-                  <select className="text-sm p-1 rounded" value={tempSelectedGuard} onChange={(e) => setTempSelectedGuard(e.target.value)}>
-                    {GUARDS.map(g => <option key={g} value={g}>{g}</option>)}
-                  </select>
-                  <Button size="sm" onClick={() => {
-                    const next = tempSelectedGuard || (GUARDS[0])
-                    setGuardsOnDuty(prev => {
-                      const arr = Array.from(new Set([next, ...(prev.slice(0,1))])).slice(0,2)
-                      try { localStorage.setItem('guards_on_duty', JSON.stringify(arr)) } catch {}
-                      return arr
-                    })
-                    setShowGuardSelector(false)
-                  }}>OK</Button>
-                  <Button size="sm" variant="outline" onClick={() => setShowGuardSelector(false)}>Cancelar</Button>
+                <div className="flex flex-col items-center gap-2">
+                  <div className="flex gap-2 items-center">
+                    {GUARDS.map(g => (
+                      <label key={g} className="flex items-center gap-1 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={tempSelectedGuards.includes(g)}
+                          onChange={() => {
+                            setTempSelectedGuards(prev => {
+                              if (prev.includes(g)) return prev.filter(x => x !== g)
+                              // add: if already 2, drop the oldest then add
+                              if (prev.length >= 2) return [prev[1], g]
+                              return [...prev, g]
+                            })
+                          }}
+                        />
+                        <span className={`${theme === 'dark' ? 'text-white' : 'text-green-800'}`}>{g}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={() => {
+                      const arr = tempSelectedGuards.slice(0,2)
+                      setGuardsOnDuty(prev => {
+                        try { localStorage.setItem('guards_on_duty', JSON.stringify(arr)) } catch {}
+                        return arr
+                      })
+                      setShowGuardSelector(false)
+                    }}>OK</Button>
+                    <Button size="sm" variant="outline" onClick={() => setShowGuardSelector(false)}>Cancelar</Button>
+                  </div>
                 </div>
               )}
             </div>
