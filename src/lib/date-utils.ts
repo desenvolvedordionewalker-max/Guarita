@@ -79,3 +79,23 @@ export function convertIsoToLocalDateString(dateString: string | undefined | nul
     return null;
   }
 }
+
+/**
+ * Retorna uma string ISO com timezone local para uma data YYYY-MM-DD.
+ * Ex: "2025-12-22" -> "2025-12-22T00:00:00-03:00"
+ * Isso evita que o Postgres/REST interprete a data como UTC e a converta
+ * para o dia anterior dependendo do timezone.
+ */
+export function toLocalIsoWithOffset(dateString: string): string {
+  // Assume dateString no formato YYYY-MM-DD
+  const [year, month, day] = dateString.split('-').map((s) => parseInt(s, 10));
+  const d = new Date(year, month - 1, day, 0, 0, 0);
+
+  const offsetMinutes = d.getTimezoneOffset(); // minutes behind UTC (negative if ahead)
+  const offsetSign = offsetMinutes <= 0 ? '+' : '-';
+  const absOffset = Math.abs(offsetMinutes);
+  const offsetHours = String(Math.floor(absOffset / 60)).padStart(2, '0');
+  const offsetMins = String(absOffset % 60).padStart(2, '0');
+
+  return `${dateString}T00:00:00${offsetSign}${offsetHours}:${offsetMins}`;
+}

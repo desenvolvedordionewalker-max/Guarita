@@ -45,8 +45,8 @@ const QueueDisplay = ({ vehicles, loading }: QueueDisplayProps) => {
               key={vehicle.id}
               className={`p-3 rounded-lg border ${
                 index === 0 
-                  ? 'bg-green-50 border-green-200' 
-                  : 'bg-gray-50 border-gray-200'
+                  ? 'bg-green-50 dark:bg-green-900 border-green-200 dark:border-green-800' 
+                  : 'bg-muted/10 dark:bg-card border-border'
               }`}
             >
               <div className="flex items-center justify-between">

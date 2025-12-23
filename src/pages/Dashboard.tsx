@@ -27,6 +27,8 @@ import {
   Moon,
   Sun,
   Cloud
+  ,
+  Fan
 } from "lucide-react";
 import { useVehicles, useCottonPull, useRainRecords, useEquipment, useLoadingRecords } from "@/hooks/use-supabase";
 import { useRainAlert } from "@/hooks/use-rain-alert";
@@ -63,6 +65,8 @@ const Dashboard = () => {
   const [filtroFila, setFFiltroFila] = useState<string>("Todos");
   const [showAllVehicles, setShowAllVehicles] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<string | null>(null);
+  const [plateFilter, setPlateFilter] = useState<string>('');
+  const [driverFilter, setDriverFilter] = useState<string>('');
   const { theme, toggleTheme } = useTheme();
 
   const handleRegisterVehicleExit = async (id: string) => {
@@ -70,7 +74,21 @@ const Dashboard = () => {
     const exitTime = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     
     try {
-      await updateVehicle(id, { exit_time: exitTime });
+      // Try to send exit_date: prefer an existing exit_date on the vehicle (from edit), otherwise use today
+      const vehicle = allVehicles.find(v => v.id === id) as any;
+      const exitDateToSend = (vehicle && vehicle.exit_date) ? vehicle.exit_date : getTodayLocalDate();
+
+      try {
+        await updateVehicle(id, { exit_time: exitTime, exit_date: exitDateToSend });
+      } catch (err: any) {
+        const msg = err?.message || '';
+        // If DB doesn't have exit_date column yet, retry without it
+        if (msg.includes("Could not find the 'exit_date' column") || msg.includes('exit_date')) {
+          await updateVehicle(id, { exit_time: exitTime });
+        } else {
+          throw err;
+        }
+      }
     } catch (error) {
       console.error('Erro ao registrar saída:', error);
     }
@@ -96,6 +114,14 @@ const Dashboard = () => {
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
     return hours > 0 ? `${hours}h ${minutes}min` : `${minutes}min`;
+  };
+
+  const resolveTruckType = (plate?: string, fallback?: string) => {
+    if (!plate) return fallback || '-';
+    const norm = plate.trim().toUpperCase();
+    const found = vehicles?.find(v => v.plate && v.plate.trim().toUpperCase() === norm);
+    if (found) return (found.vehicle_type || found.type || fallback || '-');
+    return fallback || '-';
   };
 
   const handleLoadingCardClick = (loading: LoadingRecord) => {
@@ -266,21 +292,21 @@ const Dashboard = () => {
   const getProductColor = (product: string) => {
     switch (product) {
       case 'Pluma':
-        return 'border-l-yellow-500 bg-yellow-50 text-yellow-800';
+        return 'border-l-yellow-500 bg-yellow-50 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200';
       case 'Caroço':
-        return 'border-l-amber-600 bg-amber-50 text-amber-800';
+        return 'border-l-amber-600 bg-amber-50 dark:bg-amber-900 text-amber-800 dark:text-amber-200';
       case 'Fibrilha':
-        return 'border-l-green-500 bg-green-50 text-green-800';
+        return 'border-l-green-500 bg-green-50 dark:bg-green-900 text-green-800 dark:text-green-200';
       case 'Briquete':
-        return 'border-l-purple-500 bg-purple-50 text-purple-800';
+        return 'border-l-purple-500 bg-purple-50 dark:bg-purple-900 text-purple-800 dark:text-purple-200';
       case 'Reciclados':
-        return 'border-l-blue-500 bg-blue-50 text-blue-800';
+        return 'border-l-blue-500 bg-blue-50 dark:bg-blue-900 text-blue-800 dark:text-blue-200';
       case 'Cavaco':
-        return 'border-l-orange-500 bg-orange-50 text-orange-800';
+        return 'border-l-orange-500 bg-orange-50 dark:bg-orange-900 text-orange-800 dark:text-orange-200';
       case 'Outros':
-        return 'border-l-pink-500 bg-pink-50 text-pink-800';
+        return 'border-l-pink-500 bg-pink-50 dark:bg-pink-900 text-pink-800 dark:text-pink-200';
       default:
-        return 'border-l-gray-500 bg-gray-50 text-gray-800';
+        return 'border-l-gray-500 bg-muted/10 dark:bg-card text-muted-foreground';
     }
   };
 
@@ -372,6 +398,14 @@ const Dashboard = () => {
       color: "text-orange-600",
       bgColor: "bg-orange-50",
       route: "/materials",
+    },
+    {
+      title: "Aeração",
+      description: "Controle de aeradores",
+      icon: Fan,
+      color: "text-cyan-600",
+      bgColor: "bg-cyan-50",
+      route: "/aeracao",
     },
     {
       title: "Relatórios",
@@ -597,25 +631,24 @@ const Dashboard = () => {
   const username = localStorage.getItem("username") || "Usuário";
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-b from-white to-neutral-50 flex flex-col items-center">
+    <div className="min-h-screen w-full bg-background flex flex-col items-center">
       {/* Header */}
-      <header className="w-full px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 2xl:px-16 py-3 flex justify-between items-center bg-white dark:bg-neutral-900 shadow-md sticky top-0 z-50 border-b dark:border-neutral-700">
+      <header className="w-full px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 2xl:px-16 py-3 flex justify-between items-center bg-background dark:bg-black shadow-md sticky top-0 z-50 border-b">
         <div className="flex items-center gap-4">
-          <button 
+          <Button 
             onClick={toggleTheme}
-            className="w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden hover:opacity-80 transition-opacity cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary"
+            className="w-20 h-20 md:w-24 md:h-24 rounded-lg overflow-hidden bg-white dark:bg-black p-1 hover:opacity-80 transition-opacity cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary relative"
             aria-label="Alternar tema"
           >
-            {theme === "dark" ? (
-              <Moon className="w-full h-full p-4 text-yellow-400" />
-            ) : (
-              <img 
-                src={logo}
-                alt="Bom Futuro Logo" 
-                className="w-full h-full object-contain"
-              />
+            <img 
+              src={logo}
+              alt="Bom Futuro Logo" 
+              className="w-full h-full object-contain scale-105"
+            />
+            {theme === 'dark' && (
+              <Moon className="absolute top-1 right-1 text-yellow-400 w-5 h-5 p-0.5 bg-black/20 rounded-full" />
             )}
-          </button>
+          </Button>
           <div>
             <h1 className="text-lg md:text-xl lg:text-2xl font-bold tv-title">Controle Guarita</h1>
             <p className="text-sm text-muted-foreground">IBA Santa Luzia</p>
@@ -630,7 +663,7 @@ const Dashboard = () => {
                   variant="ghost"
                   size="sm"
                   onClick={() => navigate(module.route)}
-                  className="flex flex-col items-center gap-1 p-3 h-auto hover:bg-gray-50"
+                  className="flex flex-col items-center gap-1 p-3 h-auto hover:bg-sidebar-accent hover:text-sidebar-accent-foreground dark:hover:bg-sidebar-accent"
                 >
                   <module.icon className={`w-6 h-6 ${module.color}`} />
                   <span className="text-xs font-medium">{module.title}</span>
@@ -668,7 +701,7 @@ const Dashboard = () => {
         </div>
       </header>
 
-      <main className="w-full max-w-[1600px] flex-1 px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 py-8">
+      <main className="w-full max-w-[1600px] flex-1 px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 py-8 bg-transparent">
         {/* Enhanced Stats Cards with Product Details */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {/* Fila Hoje */}
@@ -896,7 +929,7 @@ const Dashboard = () => {
                   <div className="overflow-x-auto max-h-96 overflow-y-auto">
                     <table className="w-full text-xs border-collapse">
                       <thead>
-                        <tr className="border-b bg-gray-50">
+                        <tr className="border-b bg-muted/10 dark:bg-card">
                           <th className="p-2 font-semibold text-left">Placa</th>
                           <th className="p-2 font-semibold text-left">Motorista</th>
                           <th className="p-2 font-semibold text-left">Fazenda</th>
@@ -910,10 +943,10 @@ const Dashboard = () => {
                       <tbody>
                         {algodaoConcluido
                           .sort((a, b) => new Date(b.exit_time!).getTime() - new Date(a.exit_time!).getTime())
-                          .slice(0, 20)
+                            .slice(0, 20)
                           .map((cotton) => (
-                            <tr key={cotton.id} className="border-b hover:bg-green-50 transition-colors">
-                              <td className="p-2 font-medium border border-gray-200">{cotton.plate}</td>
+                            <tr key={cotton.id} className="border-b hover:bg-muted/40 dark:hover:bg-muted/30 transition-colors">
+                              <td className="p-2 font-medium border border-border">{cotton.plate}</td>
                               <td className="p-2 border border-gray-200 truncate max-w-24">{cotton.driver}</td>
                               <td className="p-2 border border-gray-200 truncate max-w-24">{cotton.farm}</td>
                               <td className="p-2 border border-gray-200">{cotton.talhao || '-'}</td>
@@ -1060,7 +1093,10 @@ const Dashboard = () => {
                                     </span>
                                   )}
                                 </div>
-                                <p className="font-semibold text-base">{loading.plate}</p>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-semibold text-base">{loading.plate}</p>
+                                  <span className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-800">{resolveTruckType(loading.plate, loading.truck_type)}</span>
+                                </div>
                                 <p className="text-xs text-muted-foreground truncate">{loading.driver}</p>
                                 <p className="text-xs font-medium text-purple-600 truncate">{loading.carrier}</p>
                                 <p className="text-xs font-medium text-blue-600 truncate">{loading.destination}</p>
@@ -1083,14 +1119,14 @@ const Dashboard = () => {
             </Card>
 
             {/* CARREGANDO */}
-            <Card className="lg:col-span-4 border-l-4 border-orange-500">
+            <Card className="lg:col-span-4 border-l-4 border-slate-500">
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Loader2 className="w-5 h-5 text-orange-600 animate-spin" />
+                    <Loader2 className="w-5 h-5 text-slate-600 animate-spin" />
                     <span>Carregando</span>
                   </div>
-                  <span className="text-sm font-normal bg-orange-100 text-orange-800 px-3 py-1 rounded-full">
+                  <span className="text-sm font-normal bg-slate-100 text-slate-800 px-3 py-1 rounded-full dark:bg-neutral-800 dark:text-gray-200">
                     {loadingCarregamentos ? '...' : loadingsCarregando.filter(l => filtroCarregando === "Todos" || l.product === filtroCarregando).length}
                   </span>
                 </CardTitle>
@@ -1103,7 +1139,7 @@ const Dashboard = () => {
                     onClick={() => setFiltroCarregando("Todos")}
                     className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
                       filtroCarregando === "Todos" 
-                        ? 'bg-orange-600 text-white' 
+                        ? 'bg-slate-600 text-white' 
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
@@ -1163,7 +1199,7 @@ const Dashboard = () => {
                     onClick={() => setFiltroCarregando("Cavaco")}
                     className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
                       filtroCarregando === "Cavaco" 
-                        ? 'bg-orange-600 text-white' 
+                        ? 'bg-slate-600 text-white' 
                         : 'bg-orange-100 text-orange-800 hover:bg-orange-200'
                     }`}
                   >
@@ -1176,14 +1212,13 @@ const Dashboard = () => {
                   <div className="space-y-2 max-h-64 overflow-y-auto">
                     {loadingsParaExibir
                       .filter(l => filtroCarregando === "Todos" || l.product === filtroCarregando)
-                      .map((loading) => (
+                        .map((loading) => (
                         <Card 
                           key={loading.id} 
                           className={`relative cursor-pointer hover:shadow-md transition-shadow ${getProductColor(loading.product)} ${
-                            loading.status === 'carregado' ? 'ring-2 ring-amber-400 bg-amber-50' : ''
+                            loading.status === 'carregado' ? 'ring-2 ring-amber-400 bg-amber-50 dark:bg-amber-900 dark:text-amber-200' : ''
                           }`}
-                          onClick={() => handleLoadingCardClick(loading)}
-                        >
+                          onClick={() => handleLoadingCardClick(loading)}>
                           <CardContent className="p-3">
                             {/* Badge de alerta para status "carregado" */}
                             {loading.status === 'carregado' && (
@@ -1195,14 +1230,14 @@ const Dashboard = () => {
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-2">
                                   <span className={`px-2 py-1 rounded text-xs font-bold ${
-                                    loading.product === 'Pluma' ? 'bg-yellow-100 text-yellow-800' :
-                                    loading.product === 'Caroço' ? 'bg-red-100 text-red-800' :
-                                    loading.product === 'Fibrilha' ? 'bg-green-100 text-green-800' :
-                                    loading.product === 'Briquete' ? 'bg-purple-100 text-purple-800' :
-                                    loading.product === 'Reciclados' ? 'bg-blue-100 text-blue-800' :
-                                    loading.product === 'Cavaco' ? 'bg-orange-100 text-orange-800' :
-                                    loading.product === 'Outros' ? 'bg-pink-100 text-pink-800' :
-                                    'bg-gray-100 text-gray-800'
+                                    loading.product === 'Pluma' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                                    loading.product === 'Caroço' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                                    loading.product === 'Fibrilha' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                                    loading.product === 'Briquete' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
+                                    loading.product === 'Reciclados' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                                    loading.product === 'Cavaco' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
+                                    loading.product === 'Outros' ? 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200' :
+                                    'bg-gray-100 text-gray-800 dark:bg-neutral-800 dark:text-gray-200'
                                   }`}>
                                     {loading.product}
                                   </span>
@@ -1223,7 +1258,10 @@ const Dashboard = () => {
                                     </span>
                                   )}
                                 </div>
-                                <p className="font-semibold">{loading.plate}</p>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-semibold">{loading.plate}</p>
+                                  <span className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-800 dark:bg-neutral-800 dark:text-gray-200">{resolveTruckType(loading.plate, loading.truck_type)}</span>
+                                </div>
                               </div>
                             </div>
                             <div className="text-xs text-muted-foreground">
@@ -1274,7 +1312,7 @@ const Dashboard = () => {
                 {!loadingCarregamentos && loadingsConcluidos.length > 0 ? (
                   <div className="overflow-x-auto max-h-96 overflow-y-auto">
                     <table className="w-full text-sm">
-                      <thead className="bg-green-50 sticky top-0">
+                      <thead className="bg-green-50 sticky top-0 dark:bg-black dark:text-white">
                         <tr>
                           <th className="p-2 text-left border text-xs">Placa</th>
                           <th className="p-2 text-left border text-xs">Motorista</th>
@@ -1297,7 +1335,6 @@ const Dashboard = () => {
                             const timeB = new Date(b.exit_date || b.loaded_at!).getTime();
                             return timeB - timeA;
                           })
-                          .slice(0, 10)
                           .map((loading) => {
                             const permanencia = calculateLoadingTime(
                               loading.entry_date,
@@ -1307,15 +1344,15 @@ const Dashboard = () => {
                             );
                             
                             return (
-                              <tr key={loading.id} className="border-b hover:bg-green-50 transition-colors">
+                              <tr key={loading.id} className="border-b hover:bg-green-50 dark:hover:bg-neutral-800 transition-colors">
                                 <td className="p-2 font-medium border border-gray-200">{loading.plate}</td>
                                 <td className="p-2 border border-gray-200 truncate max-w-24">{loading.driver}</td>
                                 <td className="p-2 border border-gray-200">
                                   <span className={`px-2 py-1 rounded text-xs ${
-                                    loading.product === 'Pluma' ? 'bg-yellow-100 text-yellow-800' :
-                                    loading.product === 'Caroço' ? 'bg-red-100 text-red-800' :
-                                    loading.product === 'Fibrilha' ? 'bg-green-100 text-green-800' :
-                                    'bg-gray-100 text-gray-800'
+                                    loading.product === 'Pluma' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                                    loading.product === 'Caroço' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                                    loading.product === 'Fibrilha' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                                    'bg-gray-100 text-gray-800 dark:bg-neutral-800 dark:text-gray-200'
                                   }`}>
                                     {loading.product}
                                   </span>
@@ -1367,6 +1404,16 @@ const Dashboard = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                <div className="space-y-2">
+                  <Label className="text-sm">Filtrar Placa</Label>
+                  <Input placeholder="Placa" value={plateFilter} onChange={(e) => setPlateFilter(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm">Filtrar Motorista</Label>
+                  <Input placeholder="Motorista" value={driverFilter} onChange={(e) => setDriverFilter(e.target.value)} />
+                </div>
+              </div>
               {!loadingVehicles && allVehicles.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">
@@ -1386,12 +1433,16 @@ const Dashboard = () => {
                     </thead>
                     <tbody>
                       {allVehicles
+                        .filter(v => (
+                          (!plateFilter || v.plate?.toLowerCase().includes(plateFilter.toLowerCase())) &&
+                          (!driverFilter || v.driver?.toLowerCase().includes(driverFilter.toLowerCase()))
+                        ))
                         .sort((a, b) => new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime())
                         .slice(0, showAllVehicles ? allVehicles.length : 20)
                         .map((vehicle) => {
                         const isExternalExit = vehicle.type === "Saída Externa";
                         return (
-                          <tr key={vehicle.id} className={`border-b hover:bg-gray-50 ${isExternalExit ? 'bg-orange-50' : ''}`}>
+                          <tr key={vehicle.id} className={`border-b hover:bg-muted/40 dark:hover:bg-muted/30 ${isExternalExit ? 'bg-orange-100 dark:bg-emerald-900' : ''}`}>
                             <td className="p-2 font-medium text-sm">
                               {vehicle.plate.toUpperCase()}
                               {isExternalExit && (
@@ -1401,14 +1452,14 @@ const Dashboard = () => {
                               )}
                             </td>
                             <td className="p-2 text-sm">{toTitleCase(vehicle.driver)}</td>
-                            <td className="p-2 text-sm">{toTitleCase(vehicle.type)}</td>
+                            <td className="p-2 text-sm">{toTitleCase(resolveTruckType(vehicle.plate, vehicle.vehicle_type || vehicle.type))}</td>
                             <td className="p-2 text-sm">{vehicle.company ? toTitleCase(vehicle.company) : '-'}</td>
                             <td className="p-2 text-sm">{toTitleCase(vehicle.purpose)}</td>
                             <td className="p-2 text-sm">
                               {vehicle.entry_time ? `${vehicle.date} ${vehicle.entry_time}` : '-'}
                             </td>
                             <td className="p-2 text-sm">
-                              {vehicle.exit_time ? `${vehicle.date} ${vehicle.exit_time}` : '-'}
+                              {vehicle.exit_time ? `${(vehicle.exit_date || vehicle.date)} ${vehicle.exit_time}` : '-'}
                             </td>
                             <td className="p-2 text-sm">
                               {isExternalExit 
@@ -1453,7 +1504,7 @@ const Dashboard = () => {
                                   size="sm"
                                   variant="ghost"
                                   onClick={() => setEditingVehicle(vehicle.id)}
-                                  className="text-gray-600 hover:text-gray-700 hover:bg-gray-50 text-xs"
+                                  className="text-gray-600 dark:text-muted-foreground hover:text-gray-700 dark:hover:text-muted-foreground hover:bg-muted/40 dark:hover:bg-muted/30 text-xs"
                                 >
                                   ✏️ Editar
                                 </Button>
@@ -1793,23 +1844,43 @@ const Dashboard = () => {
                 onSubmit={async (e) => {
                   e.preventDefault();
                   const formData = new FormData(e.currentTarget);
-                  
+
+                  const updates: any = {
+                    plate: (formData.get('plate') as string).toUpperCase(),
+                    date: (formData.get('entry_date') as string) || vehicle.date,
+                    driver: formData.get('driver') as string,
+                    type: formData.get('type') as string,
+                    company: formData.get('company') as string,
+                    purpose: formData.get('purpose') as string,
+                    entry_time: formData.get('entry_time') as string || undefined,
+                    exit_time: formData.get('exit_time') as string || undefined,
+                  };
+
+                  // include exit_date from form if provided
+                  const exitDateValue = formData.get('exit_date') as string;
+                  if (exitDateValue) updates.exit_date = exitDateValue;
+
                   try {
-                    await updateVehicle(editingVehicle, {
-                      plate: (formData.get('plate') as string).toUpperCase(),
-                      driver: formData.get('driver') as string,
-                      type: formData.get('type') as string,
-                      company: formData.get('company') as string,
-                      purpose: formData.get('purpose') as string,
-                      entry_time: formData.get('entry_time') as string || undefined,
-                      exit_time: formData.get('exit_time') as string || undefined,
-                    });
-                    
+                    // Try to update including exit_date (if present). If the DB doesn't have the column
+                    // PostgREST returns an error; in that case retry without exit_date.
+                    try {
+                      await updateVehicle(editingVehicle, updates);
+                    } catch (err: any) {
+                      const msg = err?.message || '';
+                      if (msg.includes("Could not find the 'exit_date' column") || msg.includes("exit_date")) {
+                        // remove exit_date and retry
+                        delete updates.exit_date;
+                        await updateVehicle(editingVehicle, updates);
+                      } else {
+                        throw err;
+                      }
+                    }
+
                     toast({
                       title: "✅ Veículo atualizado",
                       description: "As informações foram atualizadas com sucesso.",
                     });
-                    
+
                     setEditingVehicle(null);
                   } catch (error) {
                     console.error('Erro ao atualizar veículo:', error);
@@ -1831,6 +1902,30 @@ const Dashboard = () => {
                     required
                     className="h-9"
                   />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="edit-entry-date" className="text-sm">Data Entrada</Label>
+                    <Input
+                      id="edit-entry-date"
+                      name="entry_date"
+                      type="date"
+                      defaultValue={vehicle.date}
+                      className="h-9"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="edit-exit-date" className="text-sm">Data Saída</Label>
+                    <Input
+                      id="edit-exit-date"
+                      name="exit_date"
+                      type="date"
+                      defaultValue={(vehicle as any).exit_date || ''}
+                      className="h-9"
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-1">

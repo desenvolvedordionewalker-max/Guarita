@@ -12,6 +12,7 @@ export interface Vehicle {
   date: string
   entry_time?: string // Agora opcional para suportar saída externa
   exit_time?: string
+  exit_date?: string
   plate: string
   driver: string
   vehicle_type: string
@@ -132,6 +133,7 @@ export interface MaterialReceipt {
   date: string
   entry_time: string
   exit_time?: string
+  exit_date?: string
   material_type: string // Areia, Cascalho, Cavaco, Pedra Brita, Pó de Pedra, Álcool
   plate: string
   driver: string
@@ -140,7 +142,7 @@ export interface MaterialReceipt {
   volume_m3?: number
   volume_m2?: number
   volume_liters?: number
-  unit_type: 'KG' | 'M3' | 'M2' | 'LITROS'
+  unit_type: 'KG' | 'M3' | 'M2' | 'LITROS' | 'UN'
   observations?: string
   created_at?: string
   updated_at?: string
@@ -171,4 +173,16 @@ export interface RainAlert {
   updated_at?: string
   updated_by?: string
   created_at?: string
+}
+
+export interface AerationEvent {
+  id: string
+  barracao: number
+  motor_index: number
+  start_at: string
+  end_at?: string
+  status?: 'on' | 'off'
+  created_by?: string
+  created_at?: string
+  updated_at?: string
 }

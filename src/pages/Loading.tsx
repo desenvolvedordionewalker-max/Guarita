@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { ArrowLeft, Plus, Package, Clock, Edit2, Trash2, Crown, Users, Loader2, CheckCircle, UserPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useLoadingRecords } from "@/hooks/use-supabase";
+import { useLoadingRecords, useVehicles } from "@/hooks/use-supabase";
 import { LoadingRecord } from "@/lib/supabase";
 import { getTodayLocalDate, normalizeLocalDate, convertIsoToLocalDateString } from "@/lib/date-utils";
 import { calculateLoadingTime } from "@/lib/time-utils";
@@ -20,6 +20,7 @@ const Loading = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
   const { records: loadings, addRecord, updateRecord, deleteRecord, loading } = useLoadingRecords();
+  const { vehicles } = useVehicles();
   
   const today = getTodayLocalDate();
   
@@ -50,6 +51,9 @@ const Loading = () => {
 
   // Filtros para o Resumo Geral
   const [filterDate, setFilterDate] = useState<string>("");
+  // Novos: suporte a intervalo de data (inicial/final)
+  const [filterStartDate, setFilterStartDate] = useState<string>("");
+  const [filterEndDate, setFilterEndDate] = useState<string>("");
   const [filterProduct, setFilterProduct] = useState<string>("Todos");
   const [filterCarrier, setFilterCarrier] = useState<string>("Todos");
   const [filterStatus, setFilterStatus] = useState<string>("Todos");
@@ -420,9 +424,17 @@ const Loading = () => {
     }
   };
 
+  const resolveTruckType = (plate?: string, fallback?: string) => {
+    if (!plate) return fallback || '-';
+    const norm = plate.trim().toUpperCase();
+    const found = vehicles?.find(v => v.plate && v.plate.trim().toUpperCase() === norm);
+    if (found) return (found.vehicle_type || found.type || fallback || '-');
+    return fallback || '-';
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-accent/5 via-background to-secondary/5">
-      <header className="border-b bg-white shadow-md sticky top-0 z-10">
+      <header className="border-b bg-background dark:bg-black shadow-md sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}><ArrowLeft className="w-5 h-5" /></Button>
@@ -621,7 +633,10 @@ const Loading = () => {
                                 </div>
                               )}
                             </div>
-                            <p className="font-semibold text-base">{l.plate}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold text-base">{l.plate}</p>
+                              <span className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-800">{resolveTruckType(l.plate, l.truck_type)}</span>
+                            </div>
                             <p className="text-xs text-muted-foreground">{getPositionMessage(l)}</p>
                           </div>
                           <div className="flex flex-col gap-1">
@@ -644,6 +659,7 @@ const Loading = () => {
                           </div>
                         </div>
                         <div className="text-xs space-y-1">
+                          <p className="truncate"><span className="text-muted-foreground">Tipo:</span> {l.truck_type || '-'}</p>
                           <p className="truncate"><span className="text-muted-foreground">Transportadora:</span> {l.carrier}</p>
                           <p className="truncate"><span className="text-muted-foreground">Destino:</span> {l.destination}</p>
                           <p className="truncate"><span className="text-muted-foreground">Motorista:</span> {l.driver}</p>
@@ -711,7 +727,10 @@ const Loading = () => {
                                 </span>
                               </div>
                             </div>
-                            <p className="font-semibold text-base">{l.plate}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold text-base">{l.plate}</p>
+                              <span className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-800">{resolveTruckType(l.plate, l.truck_type)}</span>
+                            </div>
                           </div>
                           <div className="flex flex-col gap-1">
                             <Button
@@ -733,6 +752,7 @@ const Loading = () => {
                           </div>
                         </div>
                         <div className="text-xs space-y-1">
+                          <p className="truncate"><span className="text-muted-foreground">Tipo:</span> {l.truck_type || '-'}</p>
                           <p className="truncate"><span className="text-muted-foreground">Entrada:</span> {l.entry_date} {l.entry_time}</p>
                           <p className="truncate"><span className="text-muted-foreground">Motorista:</span> {l.driver}</p>
                         </div>
@@ -769,6 +789,7 @@ const Loading = () => {
                     <thead className="bg-green-50 sticky top-0">
                       <tr>
                         <th className="p-2 text-left border text-xs">Placa</th>
+                        <th className="p-2 text-left border text-xs">Tipo</th>
                         <th className="p-2 text-left border text-xs">Motorista</th>
                         <th className="p-2 text-left border text-xs">Produto</th>
                         <th className="p-2 text-left border text-xs">Entrada</th>
@@ -801,6 +822,7 @@ const Loading = () => {
                           return (
                             <tr key={loading.id} className="border-b hover:bg-green-50 transition-colors">
                               <td className="p-2 font-medium border border-gray-200">{loading.plate}</td>
+                              <td className="p-2 border border-gray-200 truncate max-w-24">{resolveTruckType(loading.plate, loading.truck_type)}</td>
                               <td className="p-2 border border-gray-200 truncate max-w-24">{loading.driver}</td>
                               <td className="p-2 border border-gray-200">
                                 <span className={`px-2 py-1 rounded text-xs ${
@@ -877,13 +899,24 @@ const Loading = () => {
               {/* Filtros Específicos */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-muted/30 rounded-lg">
                 <div className="space-y-2">
-                  <Label htmlFor="filterDate">Data</Label>
+                  <Label htmlFor="filterStartDate">Data Inicial</Label>
                   <Input
-                    id="filterDate"
+                    id="filterStartDate"
                     type="date"
-                    value={filterDate}
-                    onChange={(e) => setFilterDate(e.target.value)}
-                    placeholder="Filtrar por data"
+                    value={filterStartDate}
+                    onChange={(e) => setFilterStartDate(e.target.value)}
+                    placeholder="Data inicial"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="filterEndDate">Data Final</Label>
+                  <Input
+                    id="filterEndDate"
+                    type="date"
+                    value={filterEndDate}
+                    onChange={(e) => setFilterEndDate(e.target.value)}
+                    placeholder="Data final"
                   />
                 </div>
                 
@@ -942,6 +975,8 @@ const Loading = () => {
                   variant="outline"
                   onClick={() => {
                     setFilterDate("");
+                    setFilterStartDate("");
+                    setFilterEndDate("");
                     setFilterProduct("Todos");
                     setFilterCarrier("Todos");
                     setFilterStatus("Todos");
@@ -965,6 +1000,7 @@ const Loading = () => {
                     <tr>
                       <th className="p-2 text-left border">Status</th>
                       <th className="p-2 text-left border">Placa</th>
+                      <th className="p-2 text-left border">Tipo</th>
                       <th className="p-2 text-left border">Produto</th>
                       <th className="p-2 text-left border">Motorista</th>
                       <th className="p-2 text-left border">Transportadora</th>
@@ -1017,9 +1053,29 @@ const Loading = () => {
                         }
                         
                         // Aplicar filtros específicos
-                        const matchDate = !filterDate || loading.date === filterDate || 
-                                         loading.entry_date === filterDate || 
-                                         loading.exit_date === filterDate;
+                        // Date matching: support single-date filter (legacy) OR start/end range
+                        let matchDate = false;
+
+                        // Normalize candidate dates to YYYY-MM-DD using helper (handles ISO and DATE)
+                        const dDate = convertIsoToLocalDateString(loading.date as string | undefined) || '';
+                        const dEntry = convertIsoToLocalDateString(loading.entry_date as string | undefined) || '';
+                        const dExit = convertIsoToLocalDateString(loading.exit_date as string | undefined) || '';
+
+                        if (filterStartDate && filterEndDate) {
+                          // Range provided: check inclusive
+                          matchDate = (dDate >= filterStartDate && dDate <= filterEndDate) ||
+                                      (dEntry >= filterStartDate && dEntry <= filterEndDate) ||
+                                      (dExit >= filterStartDate && dExit <= filterEndDate);
+                        } else if (filterStartDate && !filterEndDate) {
+                          // Only start provided: treat as single-day filter for that date
+                          matchDate = dDate === filterStartDate || dEntry === filterStartDate || dExit === filterStartDate;
+                        } else if (!filterStartDate && filterEndDate) {
+                          // Only end provided: treat as single-day filter for that date
+                          matchDate = dDate === filterEndDate || dEntry === filterEndDate || dExit === filterEndDate;
+                        } else {
+                          // Legacy single-date filter (filterDate) or no date filter
+                          matchDate = !filterDate || loading.date === filterDate || loading.entry_date === filterDate || loading.exit_date === filterDate;
+                        }
                         const matchProduct = filterProduct === "Todos" || loading.product === filterProduct;
                         const matchCarrier = filterCarrier === "Todos" || loading.carrier === filterCarrier;
                         const matchStatus = filterStatus === "Todos" || status === filterStatus;
@@ -1054,6 +1110,7 @@ const Loading = () => {
                               <span className={`text-xs font-semibold ${statusColor}`}>{status}</span>
                             </td>
                             <td className="p-2 border font-medium">{loading.plate}</td>
+                            <td className="p-2 border truncate max-w-32">{resolveTruckType(loading.plate, loading.truck_type)}</td>
                             <td className="p-2 border">
                               <span className={`px-2 py-1 rounded text-xs ${
                                 loading.product === 'Pluma' ? 'bg-yellow-100 text-yellow-800' :

@@ -200,8 +200,8 @@ const Vehicles = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
-      <header className="border-b bg-white shadow-md sticky top-0 z-10">
+    <div className="min-h-screen bg-background">
+      <header className="border-b bg-background dark:bg-black shadow-md sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
             <ArrowLeft className="w-5 h-5" />
@@ -338,11 +338,11 @@ const Vehicles = () => {
                       </TableRow>
                     ) : (
                       todayVehicles.map((vehicle) => (
-                        <TableRow key={vehicle.id} className={vehicle.type === "Saída Externa" ? "bg-orange-50" : ""}>
+                        <TableRow key={vehicle.id} className={vehicle.type === "Saída Externa" ? "bg-orange-50 dark:bg-emerald-900" : ""}>
                           <TableCell className="font-medium">
                             {vehicle.plate}
                             {vehicle.type === "Saída Externa" && (
-                              <span className="ml-2 px-2 py-1 text-xs bg-orange-100 text-orange-700 rounded-full">
+                              <span className="ml-2 px-2 py-1 text-xs bg-orange-100 dark:bg-emerald-800 text-orange-700 dark:text-emerald-100 rounded-full">
                                 Externa
                               </span>
                             )}
@@ -365,7 +365,7 @@ const Vehicles = () => {
                                   variant="outline"
                                   size="sm"
                                   onClick={() => handleRegisterReturn(vehicle.id)}
-                                  className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                  className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-primary/20"
                                   title="Registrar Retorno"
                                 >
                                   <ArrowLeftCircle className="h-4 w-4" />
@@ -375,7 +375,7 @@ const Vehicles = () => {
                                   variant="outline"
                                   size="sm"
                                   onClick={() => handleRegisterExit(vehicle.id)}
-                                  className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                  className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-primary/20"
                                   title="Registrar Saída"
                                 >
                                   <Exit className="h-4 w-4" />

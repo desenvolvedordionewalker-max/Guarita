@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useTheme } from "@/lib/theme";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, CloudRain, Clock, Droplet, Timer, Leaf, Factory } from "lucide-react";
+import { Loader2, CloudRain, Clock, Droplet, Timer, Leaf, Factory, Fan } from "lucide-react";
 import { useVehicles, useCottonPull, useRainRecords, useLoadingRecords, useEquipment, useGestaoTempo, useGestaoTempoCargas } from "@/hooks/use-supabase";
 import { useRainAlert } from "@/hooks/use-rain-alert";
 import { useMaterialReceipts } from "@/hooks/use-material-receipts";
@@ -35,6 +36,17 @@ function DashboardPortariaTV() {
   // Salvar preferência de tema
   useEffect(() => {
     localStorage.setItem('tv-mode-theme', isDarkMode ? 'dark' : 'light');
+    // Atualizar ThemeProvider / classe root para aplicar variáveis CSS
+    try {
+      setTheme(isDarkMode ? 'dark' : 'light');
+    } catch (e) {
+      // se não houver ThemeProvider, fallback para manipular a classe diretamente
+      const root = window?.document?.documentElement;
+      if (root) {
+        root.classList.remove('light', 'dark');
+        root.classList.add(isDarkMode ? 'dark' : 'light');
+      }
+    }
   }, [isDarkMode]);
   
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -59,6 +71,18 @@ function DashboardPortariaTV() {
 
   // Estado para forçar re-render e atualização automática
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [aerationOn, setAerationOn] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('aeration_on') === 'true'
+    } catch (e) { return false }
+  })
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      try { setAerationOn(localStorage.getItem('aeration_on') === 'true') } catch (e) {}
+    }, 3000)
+    return () => clearInterval(t)
+  }, [])
 
   // Atualização automática do modo TV a cada 60 segundos sem piscar a tela
   useEffect(() => {
@@ -355,7 +379,7 @@ function DashboardPortariaTV() {
 
   const rankingDiaArray = Object.values(rankingDia)
     .sort((a, b) => b.rolos - a.rolos)
-    .slice(0, 10);
+    ;
 
   const totalRolosToday = rankingDiaArray.reduce((sum, r) => sum + (r.rolos || 0), 0);
   const totalViagensToday = rankingDiaArray.reduce((sum, r) => sum + (r.viagens || 0), 0);
@@ -457,7 +481,7 @@ function DashboardPortariaTV() {
 
   const rankingMesArray = Object.values(rankingMes)
     .sort((a, b) => b.rolos - a.rolos)
-    .slice(0, 10);
+    ;
 
   // Sistema responsivo otimizado para TVs
   const totalCards = produtosParaExibir.length;
@@ -546,28 +570,24 @@ function DashboardPortariaTV() {
 
   return (
     <ControleGuaritaFitScreen>
-      <div className={`fixed inset-0 w-screen h-screen flex flex-col overflow-y-auto transition-colors duration-300 ${
-        isDarkMode 
-          ? 'bg-[#0a0a0a] text-foreground' 
-          : 'bg-gray-50 text-gray-900'
-      }`}>
+      <div className={`fixed inset-0 w-screen h-screen flex flex-col overflow-y-auto transition-colors duration-300 ${isDarkMode ? 'bg-black text-emerald-100' : 'bg-background text-foreground'}`}>
         {/* HEADER - Fluido e Responsivo */}
-        <header className={`relative flex flex-wrap items-center justify-between gap-2 backdrop-blur-sm border-b px-[clamp(0.5rem,2vw,3rem)] py-2 sm:py-3 transition-colors duration-300 ${
-          isDarkMode 
-            ? 'bg-black/70 border-emerald-600/30' 
-            : 'bg-white/80 border-emerald-500/40'
-        }`}>
+        <header className={`relative flex flex-wrap items-center justify-between gap-2 backdrop-blur-sm border-b px-[clamp(0.5rem,2vw,3rem)] py-2 sm:py-3 transition-colors duration-300 bg-background/80 dark:bg-black border-transparent`}>
           {/* Animação de chuva no header */}
           {isRaining && <RainHeaderAnimation />}
           
           <div className="relative z-10 flex items-center gap-2">
-            <img 
-              src={logo} 
-              alt="Logo" 
-              className="h-[clamp(1.5rem,2vw,2.5rem)] w-auto cursor-pointer hover:scale-105 transition-transform duration-300" 
+            <button
               onClick={() => setIsDarkMode(!isDarkMode)}
               title={isDarkMode ? 'Clique para ativar modo claro' : 'Clique para ativar modo escuro'}
-            />
+              className="p-1 rounded-md bg-white dark:bg-black overflow-hidden hover:scale-105 transition-transform duration-300"
+            >
+              <img 
+                src={logo} 
+                alt="Logo" 
+                className="h-[clamp(1.9rem,2.8vw,3.4rem)] w-auto"
+              />
+            </button>
             <div>
               <h1 className={`text-[clamp(1rem,2vw,1.8rem)] font-semibold transition-colors duration-300 ${
                 isDarkMode ? 'text-emerald-400' : 'text-emerald-600'
@@ -611,6 +631,15 @@ function DashboardPortariaTV() {
                   minute: '2-digit' 
                 })}
               </p>
+            </div>
+            {/* Indicador de Aeradores (TV) */}
+            <div className="flex items-center gap-2 pl-4">
+              <Fan className={`w-5 h-5 ${aerationOn ? 'text-cyan-400 animate-spin' : 'text-red-400'}`} />
+              {aerationOn ? (
+                <span className="text-cyan-300 font-semibold">Ventilador ON</span>
+              ) : (
+                <span className="text-red-400 font-semibold">Ventilador OFF</span>
+              )}
             </div>
           </div>
         </header>
@@ -660,7 +689,7 @@ function DashboardPortariaTV() {
               <Card key={produto} className={`backdrop-blur-lg border flex flex-col transition-all duration-500 hover:shadow-xl ${
                 isDarkMode 
                   ? 'bg-black/60 border-emerald-600/30 text-emerald-100' 
-                  : 'bg-white/90 border-emerald-500/30 text-gray-900'
+                  : 'bg-background/90 dark:bg-sidebar-background/90 border-emerald-500/30 text-gray-900'
               }`}>
                 <CardHeader className={`border-b p-[clamp(0.4rem,0.8vw,0.8rem)] flex-shrink-0 transition-colors duration-300 ${
                   isDarkMode ? 'border-emerald-600/30' : 'border-emerald-500/30'
@@ -901,7 +930,7 @@ function DashboardPortariaTV() {
                 <h3 className={`text-[clamp(0.65rem,0.9vw,0.85rem)] font-semibold mb-[clamp(0.15rem,0.3vh,0.3rem)] border-b pb-[clamp(0.15rem,0.3vh,0.3rem)] ${
                   isDarkMode ? 'text-emerald-400 border-emerald-600/30' : 'text-white border-emerald-400/30'
                 }`}>
-                  HOJE
+                  HOJE {totalRolosToday > 0 ? `(${totalRolosToday.toLocaleString('pt-BR')} rolos)` : ''}
                 </h3>
                 <div className="space-y-[clamp(0.1rem,0.2vh,0.25rem)] flex-1 overflow-y-auto">
                   {rankingDiaArray.length > 0 ? (
@@ -1056,7 +1085,7 @@ function DashboardPortariaTV() {
                 }`}>
                   {/* Mostrar apenas ranking por placa com viagens do DIA (sem cards médios) */}
                   <div>
-                    <div className={`p-3 rounded-lg border ${isDarkMode ? 'bg-black/40 border-emerald-600/20' : 'bg-white/5 border-emerald-400/10'}`}>
+                    <div className={`p-3 rounded-lg border ${isDarkMode ? 'bg-black/40 border-emerald-600/20' : 'bg-background/5 border-emerald-400/10'}`}>
                       <p className="text-sm text-muted-foreground">Ranking de Placas (Hoje)</p>
                       {rankingDiaArray.length > 0 ? (
                         <div className="mt-2 grid grid-cols-1 gap-3">
@@ -1084,7 +1113,7 @@ function DashboardPortariaTV() {
                                 plateCargasColumns.push(plateCargasAll.slice(i, i + 3));
                               }
                               return (
-                                <div key={r.plate} className={`relative p-2 rounded-md border ${isDarkMode ? 'bg-black/30 border-emerald-600/10' : 'bg-white/3 border-emerald-400/5'}`}>
+                                <div key={r.plate} className={`relative p-2 rounded-md border ${isDarkMode ? 'bg-black/30 border-emerald-600/10' : 'bg-background/3 border-emerald-400/5'}`}>
                                   <div className="flex items-center justify-between">
                                     <div className="min-w-0">
                                       <div className="flex items-baseline gap-3">

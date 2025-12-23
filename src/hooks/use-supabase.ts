@@ -438,6 +438,7 @@ export const useEquipment = () => {
 
   const addRecord = async (recordData: Omit<Equipment, 'id' | 'created_at' | 'updated_at'>) => {
     try {
+      console.log('DEBUG: inserting equipment to supabase', recordData);
       const { data, error } = await supabase
         .from('equipment')
         .insert([recordData])
@@ -455,6 +456,7 @@ export const useEquipment = () => {
       return data
     } catch (error) {
       console.error('Erro ao adicionar equipamento:', error)
+      console.log('DEBUG: supabase add error', (error as any)?.message || error)
       toast({
         title: "Erro",
         description: "Não foi possível registrar o equipamento.",
@@ -466,6 +468,7 @@ export const useEquipment = () => {
 
   const updateRecord = async (id: string, updates: Partial<Equipment>) => {
     try {
+      console.log('DEBUG: updating equipment', id, updates);
       const { data, error } = await supabase
         .from('equipment')
         .update(updates)

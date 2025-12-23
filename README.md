@@ -91,3 +91,23 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+
+## Testar localmente (Windows)
+
+1. Copie o arquivo de exemplo e preencha suas credenciais Supabase (opcional):
+
+```powershell
+copy .env.local.example .env.local
+# Edite .env.local e cole seu VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY
+```
+
+2. Inicie o projeto usando o script local (carrega `.env.local` automaticamente):
+
+```powershell
+npm run dev:local
+```
+
+Observações:
+- Se não quiser usar Supabase real, deixe as variáveis em branco; o cliente usa valores padrão (útil para testes rápidos).
+- O script `scripts/start-local.ps1` apenas carrega variáveis de `.env.local` na sessão PowerShell e executa `npm run dev`.
+- Para macOS/Linux, você pode definir as variáveis de ambiente normalmente e rodar `npm run dev`.

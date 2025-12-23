@@ -106,6 +106,42 @@ export const useMaterialReceipts = () => {
       return data
     } catch (error) {
       console.error('Erro ao atualizar material:', error)
+
+      // Fallback: some Supabase/PostgREST instances may have schema cache without `exit_date`.
+      // Detect that situation and retry the update without the `exit_date` field.
+      try {
+          const msg = (error as any)?.message || ''
+          const code = (error as any)?.code || ''
+          // Trigger fallback only on explicit schema/cache errors
+          if (code === 'PGRST204' || msg.includes("Could not find the 'exit_date' column")) {
+          console.warn('Fallback: retrying update without exit_date due to schema cache issue')
+          const sanitized: any = { ...updateData }
+          delete sanitized.exit_date
+
+          const { data: retryData, error: retryError } = await supabase
+            .from('material_receipts')
+            .update(sanitized)
+            .eq('id', id)
+            .select()
+            .single()
+
+          if (retryError) {
+            console.error('Retry without exit_date failed:', retryError)
+            throw retryError
+          }
+
+          setRecords(prev => prev.map(record => record.id === id ? retryData : record))
+          toast({
+            title: "Material atualizado",
+            description: "Registro atualizado com sucesso (servidor não reconhece a coluna `exit_date`).",
+          })
+
+          return retryData
+        }
+      } catch (fallbackErr) {
+        console.error('Erro no fallback update:', fallbackErr)
+      }
+
       toast({
         title: "Erro",
         description: "Não foi possível atualizar o material.",

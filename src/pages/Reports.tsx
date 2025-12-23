@@ -5,10 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ArrowLeft, BarChart3, Download, Share2, Loader2, Filter, FileSpreadsheet, FileText, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useVehicles, useCottonPull, useRainRecords, useEquipment, useLoadingRecords } from "@/hooks/use-supabase";
+import { useVehicles, useCottonPull, useRainRecords, useEquipment, useLoadingRecords, useGestaoTempoCargas } from "@/hooks/use-supabase";
 import { useMaterialReceipts } from "@/hooks/use-material-receipts";
 import { calculateLoadingTime } from "@/lib/time-utils";
 import jsPDF from "jspdf";
@@ -37,7 +37,8 @@ const Reports = () => {
   const { records: cottonRecords, loading: loadingCotton } = useCottonPull();
   const { records: rainRecords, loading: loadingRain } = useRainRecords();
   const { records: equipmentRecords, loading: loadingEquipment } = useEquipment();
-  const { records: loadingRecords, loading: loadingLoadings } = useLoadingRecords();
+  const { records: loadingRecords, loading: loadingLoadings, updateRecord } = useLoadingRecords();
+  const { cargas: gestaoCargas, loading: loadingCargas } = useGestaoTempoCargas();
   const { records: materialRecords, loading: loadingMaterials } = useMaterialReceipts();
 
   // Estados dos filtros
@@ -56,8 +57,49 @@ const Reports = () => {
     product: '',
     driver: '',
     carrier: '',
-    destination: ''
+    destination: '',
+    type: ''
   });
+
+  // Edit modal states for loading record
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingLoading, setEditingLoading] = useState<any>(null);
+  const [editEntryDate, setEditEntryDate] = useState('');
+  const [editEntryTime, setEditEntryTime] = useState('');
+  const [editExitDate, setEditExitDate] = useState('');
+  const [editExitTime, setEditExitTime] = useState('');
+
+  const openEditModal = (loading: any) => {
+    setEditingLoading(loading);
+    setEditEntryDate(loading.entry_date || '');
+    setEditEntryTime(loading.entry_time || '');
+    setEditExitDate(loading.exit_date || '');
+    setEditExitTime(loading.exit_time || '');
+    setIsEditModalOpen(true);
+  }
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingLoading) return;
+    try {
+      await updateRecord(editingLoading.id, {
+        entry_date: editEntryDate === '' ? null : editEntryDate,
+        entry_time: editEntryTime === '' ? null : editEntryTime,
+        exit_date: editExitDate === '' ? null : editExitDate,
+        exit_time: editExitTime === '' ? null : editExitTime,
+      });
+      setIsEditModalOpen(false);
+      setEditingLoading(null);
+    } catch (err) {
+      console.error('Erro salvando edição:', err);
+    }
+  }
+
+  const getTypeFor = (plate: string, loadingType?: string) => {
+    if (!plate) return loadingType || '-'
+    const v = vehicles.find(v => v.plate?.toLowerCase() === plate.toLowerCase())
+    return v?.vehicle_type || loadingType || '-'
+  }
   
   // Estado para modal de visualização de mensagem
   const [messageModal, setMessageModal] = useState({ open: false, title: '', content: '' });
@@ -428,7 +470,10 @@ const Reports = () => {
           }
           // Acumular quantidade baseada no tipo de unidade
           if (material.unit_type === 'KG') {
-            acc[key].quantity += material.net_weight;
+            acc[key].quantity += material.net_weight || 0;
+          } else if (material.unit_type === 'UN') {
+            // Para 'UN' usamos net_weight como quantidade de unidades
+            acc[key].quantity += material.net_weight || 0;
           } else if (material.unit_type === 'M3' && material.volume_m3) {
             acc[key].quantity += material.volume_m3;
           } else if (material.unit_type === 'M2' && material.volume_m2) {
@@ -518,8 +563,8 @@ const Reports = () => {
     const monthStart = new Date(new Date(filterDateStr).getFullYear(), new Date(filterDateStr).getMonth(), 1).toISOString().split('T')[0];
     const chuvaMes = rainRecords.filter(r => r.date >= monthStart && r.date <= filterDateStr && r.millimeters !== null).reduce((sum, r) => sum + (r.millimeters || 0), 0);
 
-    // Dados reais da fila de carregamento
-    const filaCarregamento = loadingRecords.filter(l => !l.entry_date && (!dateFilter || l.date === filterDateStr));
+    // Dados reais da fila de carregamento (independente de data)
+    const filaCarregamento = loadingRecords.filter(l => !l.entry_date);
     
     // Agrupar por produto
     const filaPluma = filaCarregamento.filter(l => l.product === 'Pluma');
@@ -760,12 +805,23 @@ const Reports = () => {
     const avgMinutes = avgTripTime % 60;
     const avgTimeStr = avgHours > 0 ? `${avgHours}h ${avgMinutes}min` : `${avgMinutes}min`;
 
+    // Calcular média de tempo na lavoura (usando a view `view_gestao_tempo_cargas` via hook)
+    // Regras: desconsiderar zeros/nulls e valores extremos (>= 300 minutos)
+    const cargasHoje = (gestaoCargas || []).filter(c => !!c.placa);
+    const lavouraList = cargasHoje
+      .map(c => c.tempo_lavoura)
+      .filter(t => typeof t === 'number' && t > 0 && t < 300) as number[];
+    const avgLavouraTime = lavouraList.length > 0 ? Math.round(lavouraList.reduce((s, x) => s + x, 0) / lavouraList.length) : 0;
+    const lavouraHours = Math.floor(avgLavouraTime / 60);
+    const lavouraMinutes = avgLavouraTime % 60;
+    const lavouraTimeStr = lavouraHours > 0 ? `${lavouraHours}h ${lavouraMinutes}min` : `${lavouraMinutes}min`;
+
     message += `📊 RESUMO GERAL:\n`;
     message += `🚛 Veículos: ${vehiclesArray.length}\n`;
     message += ` Viagens: ${totalTrips}\n`;
     message += `📦 Rolos: ${totalRolls.toLocaleString('pt-BR')}\n`;
     message += `⏱️ Tempo Médio na Algodoeira: ${algodoeiraTimeStr}\n`;
-    message += `🚗 Tempo Médio de Viagem: ${avgTimeStr}\n\n`;
+    message += `🚜 Tempo Médio na Lavoura: ${lavouraTimeStr}\n\n`;
 
     message += `📋 DETALHAMENTO POR VEÍCULO:\n`;
     
@@ -813,7 +869,7 @@ const Reports = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
-      <header className="border-b bg-white shadow-md sticky top-0 z-10">
+      <header className="border-b bg-background dark:bg-black shadow-md sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
             <ArrowLeft className="w-5 h-5" />
@@ -866,7 +922,7 @@ const Reports = () => {
 
         {/* Movimentação Geral de Veículos */}
         <Card>
-          <CardHeader>
+          <CardHeader className="bg-background dark:bg-black">
             <CardTitle className="flex items-center justify-between text-base">
               <div className="flex items-center gap-2">
                 <Filter className="w-5 h-5" />
@@ -989,8 +1045,8 @@ const Reports = () => {
 
             {/* Tabela de Resultados Filtrados - SEMPRE VISÍVEL quando expandido */}
             {isExpanded && (
-              <div className="overflow-x-auto border-4 border-orange-500 rounded-lg p-4 bg-orange-50">
-                <div className="mb-4 p-3 bg-orange-100 rounded border-2 border-orange-600">
+              <div className="overflow-x-auto border-4 border-orange-500 rounded-lg p-4 bg-orange-50 dark:bg-muted/10">
+                <div className="mb-4 p-3 bg-orange-100 dark:bg-muted/10 rounded border-2 border-orange-600">
                   <h3 className="font-bold text-orange-900 text-lg mb-2">🎯 TABELA COM FILTROS ATIVA</h3>
                   <div className="flex items-center gap-4">
                     <Button
@@ -1014,9 +1070,9 @@ const Reports = () => {
                   💡 Use os filtros abaixo em cada coluna para refinar a busca
                 </div>
                 
-                <table className="w-full border-collapse border border-gray-300">
+                  <table className="w-full border-collapse border border-border">
                   <thead>
-                    <tr className="bg-gray-50">
+                    <tr className="bg-muted/10 dark:bg-card">
                       <th className="border border-gray-300 p-2 text-left text-sm">
                         <div className="space-y-1">
                           <div>Status</div>
@@ -1028,6 +1084,7 @@ const Reports = () => {
                           />
                         </div>
                       </th>
+
                       <th className="border border-gray-300 p-2 text-left text-sm">
                         <div className="space-y-1">
                           <div>Placa</div>
@@ -1039,6 +1096,19 @@ const Reports = () => {
                           />
                         </div>
                       </th>
+
+                      <th className="border border-gray-300 p-2 text-left text-sm">
+                        <div className="space-y-1">
+                          <div>Tipo</div>
+                          <Input 
+                            placeholder="Filtrar..."
+                            className="h-7 text-xs"
+                            value={columnFilters.type}
+                            onChange={(e) => setColumnFilters({...columnFilters, type: e.target.value})}
+                          />
+                        </div>
+                      </th>
+
                       <th className="border border-gray-300 p-2 text-left text-sm">
                         <div className="space-y-1">
                           <div>Produto</div>
@@ -1050,6 +1120,7 @@ const Reports = () => {
                           />
                         </div>
                       </th>
+
                       <th className="border border-gray-300 p-2 text-left text-sm">
                         <div className="space-y-1">
                           <div>Motorista</div>
@@ -1061,6 +1132,7 @@ const Reports = () => {
                           />
                         </div>
                       </th>
+
                       <th className="border border-gray-300 p-2 text-left text-sm">
                         <div className="space-y-1">
                           <div>Transportadora</div>
@@ -1072,6 +1144,7 @@ const Reports = () => {
                           />
                         </div>
                       </th>
+
                       <th className="border border-gray-300 p-2 text-left text-sm">
                         <div className="space-y-1">
                           <div>Destino</div>
@@ -1083,6 +1156,7 @@ const Reports = () => {
                           />
                         </div>
                       </th>
+
                       <th className="border border-gray-300 p-2 text-left text-sm">Marcação</th>
                       <th className="border border-gray-300 p-2 text-left text-sm">Entrada</th>
                       <th className="border border-gray-300 p-2 text-left text-sm">Saída</th>
@@ -1103,6 +1177,7 @@ const Reports = () => {
                           (!columnFilters.plate || l.plate?.toLowerCase().includes(columnFilters.plate.toLowerCase())) &&
                           (!columnFilters.product || l.product?.toLowerCase().includes(columnFilters.product.toLowerCase())) &&
                           (!columnFilters.driver || l.driver?.toLowerCase().includes(columnFilters.driver.toLowerCase())) &&
+                          (!columnFilters.type || ( (l.truck_type || '').toLowerCase().includes(columnFilters.type.toLowerCase()) || (vehicles.find(v => v.plate?.toLowerCase() === l.plate?.toLowerCase())?.vehicle_type || '').toLowerCase().includes(columnFilters.type.toLowerCase()) )) &&
                           (!columnFilters.carrier || l.carrier?.toLowerCase().includes(columnFilters.carrier.toLowerCase())) &&
                           (!columnFilters.destination || l.destination?.toLowerCase().includes(columnFilters.destination.toLowerCase()));
                         
@@ -1122,40 +1197,46 @@ const Reports = () => {
                         return (
                           <tr 
                             key={`loading-${loading.id}`} 
-                            className={`hover:bg-gray-100 ${isComplete ? 'bg-green-50 border-l-4 border-l-green-500' : hasMissingData ? 'bg-yellow-50 border-l-4 border-l-yellow-400' : ''}`}
+                            className={`hover:bg-muted/40 dark:hover:bg-muted/30 ${isComplete ? 'bg-green-100 dark:bg-green-900 border-l-4 border-l-green-500' : hasMissingData ? 'bg-yellow-100 dark:bg-yellow-900 border-l-4 border-l-yellow-400' : ''}`}
                           >
-                            <td className="border border-gray-300 p-2 text-sm">
+                            <td className="border border-border p-2 text-sm">
                               <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                loading.status === 'concluido' ? 'bg-green-100 text-green-800' :
-                                loading.status === 'carregado' ? 'bg-blue-100 text-blue-800' :
-                                loading.status === 'carregando' ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-gray-100 text-gray-800'
+                                loading.status === 'concluido' ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' :
+                                loading.status === 'carregado' ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200' :
+                                loading.status === 'carregando' ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200' :
+                                'bg-muted/10 dark:bg-card text-muted-foreground'
                               }`}>
                                 {loading.status ? toTitleCase(loading.status) : '-'}
                               </span>
                             </td>
-                            <td className="border border-gray-300 p-2 font-medium text-sm">{loading.plate.toUpperCase()}</td>
-                            <td className="border border-gray-300 p-2">
+                            <td className="border border-border p-2 font-medium text-sm">{loading.plate.toUpperCase()}</td>
+                            <td className="border border-border p-2 text-sm">{getTypeFor(loading.plate, loading.truck_type)}</td>
+                            <td className="border border-border p-2">
                               <span className={`px-2 py-1 rounded text-xs ${
-                                loading.product === 'Pluma' ? 'bg-yellow-100 text-yellow-800' :
-                                loading.product === 'Caroço' ? 'bg-brown-100 text-brown-800' :
-                                loading.product === 'Fibrilha' ? 'bg-green-100 text-green-800' :
-                                'bg-gray-100 text-gray-800'
+                                loading.product === 'Pluma' ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200' :
+                                loading.product === 'Caroço' ? 'bg-brown-100 text-brown-800 dark:bg-muted/10 dark:text-brown-100' :
+                                loading.product === 'Fibrilha' ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' :
+                                'bg-muted/10 dark:bg-card text-muted-foreground'
                               }`}>
                                 {toTitleCase(loading.product)}
                               </span>
                             </td>
-                            <td className="border border-gray-300 p-2 text-sm">{toTitleCase(loading.driver)}</td>
-                            <td className="border border-gray-300 p-2 text-sm">{toTitleCase(loading.carrier)}</td>
-                            <td className="border border-gray-300 p-2 text-sm">{toTitleCase(loading.destination)}</td>
-                            <td className="border border-gray-300 p-2 text-sm">{loading.date} {loading.time}</td>
-                            <td className="border border-gray-300 p-2 text-sm">
+                            <td className="border border-border p-2 text-sm">{toTitleCase(loading.driver)}</td>
+                            <td className="border border-border p-2 text-sm">{toTitleCase(loading.carrier)}</td>
+                            <td className="border border-border p-2 text-sm">{toTitleCase(loading.destination)}</td>
+                            <td className="border border-border p-2 text-sm flex items-center justify-between">
+                              <span>{loading.date} {loading.time}</span>
+                              <Button size="sm" variant="outline" onClick={() => openEditModal(loading)}>
+                                Editar
+                              </Button>
+                            </td>
+                            <td className="border border-border p-2 text-sm">
                               {loading.entry_date && loading.entry_time ? 
                                 `${loading.entry_date} ${loading.entry_time}` : 
                                 <span className="text-red-500 font-semibold">Pendente</span>
                               }
                             </td>
-                            <td className="border border-gray-300 p-2 text-sm">
+                            <td className="border border-border p-2 text-sm">
                               {loading.exit_date && loading.exit_time ? 
                                 `${loading.exit_date} ${loading.exit_time}` : 
                                 <span className="text-red-500 font-semibold">Pendente</span>
@@ -1228,7 +1309,7 @@ const Reports = () => {
                         </thead>
                         <tbody>
                           {sortedDrivers.map((driver, index) => (
-                            <tr key={`${driver.driver}-${driver.plate}`} className="border-b hover:bg-gray-50">
+                            <tr key={`${driver.driver}-${driver.plate}`} className="border-b hover:bg-muted/40 dark:hover:bg-muted/30">
                               <td className="p-2">
                                 <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
                                   index === 0 ? 'bg-yellow-500 text-white' :
@@ -1399,7 +1480,7 @@ const Reports = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Filtro de Data para Relatórios */}
-            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="p-4 bg-muted/10 dark:bg-card rounded-lg border border-border">
               <Label htmlFor="reportDateFilter" className="font-semibold">📅 Selecionar Data do Relatório</Label>
               <Input 
                 id="reportDateFilter"
@@ -1494,8 +1575,8 @@ const Reports = () => {
               Visualize a mensagem abaixo e clique em "Copiar" para copiar para a área de transferência
             </DialogDescription>
           </DialogHeader>
-          <div className="mt-4">
-            <pre className="bg-gray-50 p-4 rounded-lg overflow-auto max-h-[50vh] text-sm whitespace-pre-wrap font-mono">
+            <div className="mt-4">
+            <pre className="bg-muted/10 dark:bg-card p-4 rounded-lg overflow-auto max-h-[50vh] text-sm whitespace-pre-wrap font-mono">
               {messageModal.content}
             </pre>
           </div>
@@ -1519,6 +1600,46 @@ const Reports = () => {
               📋 Copiar
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+      {/* Modal de edição de Marcação (entrada/saída) */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Datas/Horários</DialogTitle>
+            <DialogDescription>Atualize a data e horário de entrada e saída.</DialogDescription>
+          </DialogHeader>
+
+          {editingLoading && (
+            <form onSubmit={handleSaveEdit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-entry-date">Data de Entrada</Label>
+                  <Input id="edit-entry-date" type="date" value={editEntryDate} onChange={(e) => setEditEntryDate(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-entry-time">Hora de Entrada</Label>
+                  <Input id="edit-entry-time" type="time" value={editEntryTime} onChange={(e) => setEditEntryTime(e.target.value)} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-exit-date">Data de Saída</Label>
+                  <Input id="edit-exit-date" type="date" value={editExitDate} onChange={(e) => setEditExitDate(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-exit-time">Hora de Saída</Label>
+                  <Input id="edit-exit-time" type="time" value={editExitTime} onChange={(e) => setEditExitTime(e.target.value)} />
+                </div>
+              </div>
+
+              <DialogFooter className="gap-2">
+                <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)}>Cancelar</Button>
+                <Button type="submit">Salvar</Button>
+              </DialogFooter>
+            </form>
+          )}
         </DialogContent>
       </Dialog>
     </div>

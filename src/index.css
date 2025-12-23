@@ -72,12 +72,13 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 20 14% 8%;
-    --foreground: 0 0% 98%;
-    --card: 20 14% 10%;
-    --card-foreground: 0 0% 98%;
-    --popover: 20 14% 10%;
-    --popover-foreground: 0 0% 98%;
+    /* No modo escuro usar fundo preto para páginas e navegação e texto todo em branco */
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
+    --card: 0 0% 0%;
+    --card-foreground: 0 0% 100%;
+    --popover: 0 0% 0%;
+    --popover-foreground: 0 0% 100%;
     
     --primary: 160 84% 39%;
     --primary-foreground: 0 0% 100%;
@@ -98,21 +99,21 @@ All colors MUST be HSL.
     --success: 142 76% 45%;
     --success-foreground: 0 0% 100%;
     
-    --muted: 20 14% 17%;
-    --muted-foreground: 20 14% 65%;
+    --muted: 0 0% 6%;
+    --muted-foreground: 0 0% 100%;
     --destructive: 0 62% 50%;
     --destructive-foreground: 0 0% 100%;
     --border: 20 14% 17%;
     --input: 20 14% 17%;
     --ring: 160 84% 39%;
     
-    --sidebar-background: 20 14% 10%;
-    --sidebar-foreground: 0 0% 95%;
+    --sidebar-background: 0 0% 0%;
+    --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 160 84% 39%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 20 14% 16%;
-    --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 20 14% 16%;
+    --sidebar-accent: 0 0% 0%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 0%;
     --sidebar-ring: 160 84% 39%;
   }
 }

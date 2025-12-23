@@ -6,10 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, Plus, Settings, Image as ImageIcon, CheckCircle, Loader2, Camera, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, Settings, Edit, CheckCircle, Loader2, Camera, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useEquipment } from "@/hooks/use-supabase";
+import { getTodayLocalDate, normalizeLocalDate, toLocalIsoWithOffset, convertIsoToLocalDateString, formatDateForDisplay } from "@/lib/date-utils";
 import type { Equipment as EquipmentType } from "@/lib/supabase";
 
 const Equipment = () => {
@@ -29,13 +30,75 @@ const Equipment = () => {
     }
   };
 
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editRecord, setEditRecord] = useState<EquipmentType | null>(null);
+  const [editPreview, setEditPreview] = useState<string | null>(null);
+
+  const openEdit = (record: EquipmentType) => {
+    setEditRecord(record);
+    setEditPreview(record.photo_url || null);
+    setIsEditOpen(true);
+  };
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setEditPreview(String(reader.result));
+    reader.readAsDataURL(file);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editRecord) return;
+
+    const fd = new FormData(e.currentTarget);
+    const name = (fd.get('name') as string) || editRecord.name;
+    const type = (fd.get('type') as string) || editRecord.type;
+    const destination = (fd.get('destination') as string) || editRecord.destination;
+    const purpose = (fd.get('purpose') as string) || editRecord.purpose || '';
+    const authorized_by = (fd.get('authorizedBy') as string) || editRecord.authorized_by;
+    const withdrawn_by = (fd.get('withdrawnBy') as string) || editRecord.withdrawn_by;
+    const dateRaw = fd.get('date') as string;
+
+    const rawDate = dateRaw ? normalizeLocalDate(dateRaw) : getTodayLocalDate();
+    const isoDate = toLocalIsoWithOffset(rawDate);
+
+    // use preview if user selected a new file, otherwise keep existing
+    const photo_url = editPreview ?? (editRecord.photo_url || '');
+
+    try {
+      await updateRecord(editRecord.id, {
+        name,
+        type,
+        destination,
+        purpose,
+        authorized_by,
+        withdrawn_by,
+        date: isoDate,
+        photo_url
+      });
+
+      setIsEditOpen(false);
+      setEditRecord(null);
+      toast({ title: 'Registro atualizado', description: `${name} atualizado com sucesso.` });
+    } catch (err) {
+      console.error('Erro ao editar equipamento:', err);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const purpose = formData.get("purpose") as string;
     
+    const recordDate = formData.get("date") as string;
+    const rawDate = recordDate ? normalizeLocalDate(recordDate) : getTodayLocalDate();
+    const isoDate = toLocalIsoWithOffset(rawDate);
+
     const recordData = {
-      date: formData.get("date") as string,
+      // send explicit ISO with timezone to prevent server UTC conversion
+      date: isoDate,
       photo_url: "https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400",
       name: formData.get("name") as string,
       type: formData.get("type") as string,
@@ -48,6 +111,7 @@ const Equipment = () => {
     };
     
     try {
+      console.log('DEBUG: equipment submit payload', recordData);
       await addRecord(recordData);
       e.currentTarget.reset();
     } catch (error) {
@@ -71,9 +135,13 @@ const Equipment = () => {
     }
     
     try {
+      const rawReturn = returnDate ? normalizeLocalDate(returnDate) : getTodayLocalDate();
+      const isoReturn = toLocalIsoWithOffset(rawReturn);
+
       await updateRecord(selectedEquipment.id, {
         status: "completed",
-        return_date: returnDate,
+        // send ISO with timezone for return date as well
+        return_date: isoReturn,
         return_notes: returnNotes
       });
       
@@ -104,7 +172,7 @@ const Equipment = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-secondary/5 via-background to-muted/5">
-      <header className="border-b bg-white shadow-md sticky top-0 z-10">
+      <header className="border-b bg-background dark:bg-black shadow-md sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
             <ArrowLeft className="w-5 h-5" />
@@ -136,7 +204,7 @@ const Equipment = () => {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="date">Data da Saída</Label>
-                  <Input type="date" name="date" required defaultValue={new Date().toISOString().split('T')[0]} />
+                  <Input type="date" name="date" required defaultValue={getTodayLocalDate()} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="photo">Foto do Item</Label>
@@ -149,7 +217,7 @@ const Equipment = () => {
                       className="flex-1 border-none p-0 h-auto" 
                     />
                     <div className="flex gap-1">
-                      <ImageIcon className="w-4 h-4 text-muted-foreground" />
+                      <Edit className="w-4 h-4 text-muted-foreground" />
                       <Camera className="w-4 h-4 text-muted-foreground" />
                     </div>
                   </div>
@@ -172,6 +240,8 @@ const Equipment = () => {
                         <SelectItem value="Equipamento">Equipamento</SelectItem>
                         <SelectItem value="Máquina">Máquina</SelectItem>
                         <SelectItem value="Peça">Peça</SelectItem>
+                        <SelectItem value="Veiculo">Veículo</SelectItem>
+                        <SelectItem value="Liquido">Líquido</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -242,8 +312,14 @@ const Equipment = () => {
                   >
                     <CardContent className="pt-6">
                       <div className="flex gap-4">
-                        <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center">
-                          <Settings className="h-8 w-8 text-gray-400" />
+                        <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
+                          {record.photo_url ? (
+                            // show image if available (data URL or remote)
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={record.photo_url} alt={record.name} className="w-20 h-20 object-cover" />
+                          ) : (
+                            <Settings className="h-8 w-8 text-gray-400" />
+                          )}
                         </div>
                         <div className="flex-1">
                           <div className="flex items-start justify-between mb-2">
@@ -260,19 +336,35 @@ const Equipment = () => {
                             </div>
                             <div className="flex items-start gap-2">
                               <p className="text-sm text-muted-foreground">
-                                {new Date(record.date).toLocaleDateString('pt-BR')}
+                                {(() => {
+                                  const conv = convertIsoToLocalDateString(record.date as any);
+                                  return conv ? formatDateForDisplay(conv) : new Date(record.date).toLocaleDateString('pt-BR');
+                                })()}
                               </p>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteEquipment(record.id, record.name);
-                                }}
-                                className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openEdit(record);
+                                  }}
+                                  className="h-6 w-6 p-0"
+                                >
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteEquipment(record.id, record.name);
+                                  }}
+                                  className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
                             </div>
                           </div>
                           <div className="space-y-1 text-sm mt-3">
@@ -367,7 +459,7 @@ const Equipment = () => {
 
       {/* Dialog for registering return */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[80vh] overflow-auto">
           <DialogHeader>
             <DialogTitle>Registrar Retorno</DialogTitle>
             <DialogDescription>
@@ -379,7 +471,7 @@ const Equipment = () => {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="returnDate">Data de Retorno</Label>
-                <Input type="date" id="returnDate" defaultValue={new Date().toISOString().split('T')[0]} />
+                <Input type="date" id="returnDate" defaultValue={getTodayLocalDate()} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="returnNotes">Observações (opcional)</Label>
@@ -393,6 +485,87 @@ const Equipment = () => {
                 Confirmar Retorno
               </Button>
             </div>
+          )}
+        </DialogContent>
+      </Dialog>
+      {/* Dialog for editing equipment (name, date, photo, etc) */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="max-w-2xl max-h-[70vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Equipamento</DialogTitle>
+            <DialogDescription>
+              {editRecord?.name}
+            </DialogDescription>
+          </DialogHeader>
+
+          {editRecord && (
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="date">Data</Label>
+                <Input id="date" name="date" type="date" defaultValue={convertIsoToLocalDateString(editRecord.date as any) || getTodayLocalDate()} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="photo">Foto (substitui)</Label>
+                  <Input id="photo" name="photo" type="file" accept="image/*" onChange={handlePhotoChange} />
+                {(editPreview || editRecord.photo_url) && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={editPreview ?? editRecord.photo_url} alt="preview" className="w-40 h-28 object-cover rounded mt-2" />
+                )}
+              </div>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Nome</Label>
+                  <Input id="name" name="name" defaultValue={editRecord.name} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="type">Tipo</Label>
+                  <Select id="type" name="type" defaultValue={editRecord.type}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Equipamento">Equipamento</SelectItem>
+                      <SelectItem value="Máquina">Máquina</SelectItem>
+                      <SelectItem value="Peça">Peça</SelectItem>
+                      <SelectItem value="Veiculo">Veículo</SelectItem>
+                      <SelectItem value="Liquido">Líquido</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="purpose">Finalidade</Label>
+                <Select id="purpose" name="purpose" defaultValue={editRecord.purpose}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Uso interno">Uso interno</SelectItem>
+                    <SelectItem value="Manutenção">Manutenção</SelectItem>
+                    <SelectItem value="Empréstimo">Empréstimo</SelectItem>
+                    <SelectItem value="Doação">Doação</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="destination">Destino</Label>
+                <Input id="destination" name="destination" defaultValue={editRecord.destination} />
+              </div>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="authorizedBy">Quem Autorizou</Label>
+                  <Input id="authorizedBy" name="authorizedBy" defaultValue={editRecord.authorized_by} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="withdrawnBy">Quem Retirou</Label>
+                  <Input id="withdrawnBy" name="withdrawnBy" defaultValue={editRecord.withdrawn_by} />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button type="submit" className="bg-secondary text-white">Salvar</Button>
+                <Button type="button" variant="outline" onClick={() => { setIsEditOpen(false); setEditRecord(null); }}>Cancelar</Button>
+              </div>
+            </form>
           )}
         </DialogContent>
       </Dialog>
