@@ -23,12 +23,12 @@ export const useAeration = () => {
     }
   }, [])
 
-  const startEvent = async (barracao: number, motor_index: number, created_by?: string) => {
+  const startEvent = async (barracao: number, motor_index: number, created_by?: string, status?: string) => {
     const record = {
       barracao,
       motor_index,
       start_at: new Date().toISOString(),
-      status: 'on',
+      status: status || 'on',
       created_by
     }
     const { data, error } = await supabase.from('aeration_events').insert([record]).select().single()

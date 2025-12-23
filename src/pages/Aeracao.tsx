@@ -13,7 +13,7 @@ const BARRACAO_CONFIG = {
   2: 5
 }
 
-const MotorCard = ({ barracao, index, activeEvent, onStart, onStop }: any) => {
+const MotorCard = ({ barracao, index, activeEvent, onStart, onStop, onMarkBroken }: any) => {
   const isActive = !!activeEvent
   const [elapsed, setElapsed] = useState<string>('')
 
@@ -70,7 +70,10 @@ const MotorCard = ({ barracao, index, activeEvent, onStart, onStop }: any) => {
         {isActive ? (
           <Button variant="destructive" className="w-full" onClick={() => onStop(activeEvent)}>Desligar</Button>
         ) : (
-          <Button className="w-full" onClick={() => onStart()}>Ligar</Button>
+          <>
+            <Button className="w-full" onClick={() => onStart()}>Ligar</Button>
+            <button className="mt-2 w-full px-3 py-2 text-sm border rounded text-red-600 bg-transparent hover:bg-red-50" onClick={() => onMarkBroken && onMarkBroken()}>Registrar avariado</button>
+          </>
         )}
       </div>
     </div>
@@ -228,15 +231,15 @@ const Aeracao = () => {
     return acc
   }, [activeByMotor, optimisticMap])
 
-  const handleStart = async (motorIndex: number, barracaoNumber?: number) => {
+  const handleStart = async (motorIndex: number, barracaoNumber?: number, status: string = 'on') => {
     const b = typeof barracaoNumber === 'number' ? barracaoNumber : 1
     const key = `m_${b}_${motorIndex}`
-    const temp = { id: `temp-${key}-${Date.now()}`, barracao: b, motor_index: motorIndex, start_at: new Date().toISOString(), status: 'on' }
+    const temp = { id: `temp-${key}-${Date.now()}`, barracao: b, motor_index: motorIndex, start_at: new Date().toISOString(), status }
     setOptimisticMap(prev => ({ ...prev, [key]: temp }))
     try {
-      const real = await startEvent(b, motorIndex)
-      // ensure global TV flag
-      try { localStorage.setItem('aeration_on', 'true') } catch (e) {}
+      const real = await startEvent(b, motorIndex, undefined, status)
+      // ensure global TV flag only for 'on'
+      try { if (status === 'on') localStorage.setItem('aeration_on', 'true') } catch (e) {}
       // remove optimistic entry (real event will be in `events` from hook)
       setOptimisticMap(prev => {
         const copy = { ...prev }
@@ -430,6 +433,7 @@ const Aeracao = () => {
                         index={i}
                         activeEvent={combinedActive(b, i)}
                         onStart={() => handleStart(i, b)}
+                        onMarkBroken={() => handleStart(i, b, 'avariado')}
                         onStop={(ev: any) => handleStop(ev)}
                       />
                     ))}
