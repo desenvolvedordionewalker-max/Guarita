@@ -13,8 +13,9 @@ const BARRACAO_CONFIG = {
   2: 5
 }
 
-const MotorCard = ({ barracao, index, activeEvent, onStart, onStop, onMarkBroken }: any) => {
-  const isActive = !!activeEvent
+const MotorCard = ({ barracao, index, activeEvent, onStart, onStop, onMarkMaintenance }: any) => {
+  const isActive = !!activeEvent && activeEvent.status === 'on' && !activeEvent.end_at
+  const isMaintenance = !!activeEvent && activeEvent.status === 'manutencao' && !activeEvent.end_at
   const [elapsed, setElapsed] = useState<string>('')
 
   useEffect(() => {
@@ -46,8 +47,11 @@ const MotorCard = ({ barracao, index, activeEvent, onStart, onStop, onMarkBroken
   return (
     <div className="border rounded p-3 flex flex-col items-start gap-2 min-w-[160px] flex-1">
       <div className="flex items-center justify-between w-full">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-accent/10 rounded"><Fan className="w-6 h-6 text-cyan-600" /></div>
+            <div className="flex items-center gap-3">
+            <div className="p-2 bg-accent/10 rounded"><Fan className="w-6 h-6 text-cyan-600" /></div>
+            <button title="Opções" onClick={() => onMarkMaintenance && onMarkMaintenance()} className={`p-2 rounded ${isMaintenance ? 'animate-pulse bg-yellow-100' : 'hover:bg-muted/10'}`}>
+              <svg xmlns="http://www.w3.org/2000/svg" className={`w-4 h-4 ${isMaintenance ? 'text-yellow-600' : 'text-muted-foreground'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"></path><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06A2 2 0 0 1 2.3 16.88l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09c.7 0 1.28-.44 1.51-1a1.65 1.65 0 0 0-.33-1.82L4.3 4.3A2 2 0 0 1 7.12 1.47l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V1a2 2 0 0 1 4 0v.09c0 .66.4 1.24 1 1.51h.01c.7 0 1.28.44 1.51 1 .16.36.5.62.9.72.4.1.82.06 1.18-.12l.06-.03A2 2 0 0 1 21.7 7.12l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c0 .66-.4 1.24-1 1.51H19a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            </button>
           <div>
             <div className="font-semibold">Motor {index}</div>
             <div className="text-sm text-muted-foreground">Barracão {barracao}</div>
@@ -63,8 +67,14 @@ const MotorCard = ({ barracao, index, activeEvent, onStart, onStop, onMarkBroken
           )}
         </div>
       </div>
-      <div className={isActive ? 'text-xs text-muted-foreground' : 'text-xs text-red-600'}>
-        {isActive ? `Ligado em ${format(new Date(activeEvent.start_at), 'dd/MM/yyyy HH:mm')} • ${elapsed}` : 'Desligado'}
+      <div className="text-xs">
+        {isActive ? (
+          <span className="text-muted-foreground">Ligado em {format(new Date(activeEvent.start_at), 'dd/MM/yyyy HH:mm')} • {elapsed}</span>
+        ) : isMaintenance ? (
+          <span className="text-yellow-600 font-semibold">Em manutenção</span>
+        ) : (
+          <span className="text-red-600">Desligado</span>
+        )}
       </div>
       <div className="mt-2 w-full">
         {isActive ? (
@@ -72,7 +82,6 @@ const MotorCard = ({ barracao, index, activeEvent, onStart, onStop, onMarkBroken
         ) : (
           <>
             <Button className="w-full" onClick={() => onStart()}>Ligar</Button>
-            <button className="mt-2 w-full px-3 py-2 text-sm border rounded text-red-600 bg-transparent hover:bg-red-50" onClick={() => onMarkBroken && onMarkBroken()}>Registrar avariado</button>
           </>
         )}
       </div>
@@ -231,13 +240,20 @@ const Aeracao = () => {
     return acc
   }, [activeByMotor, optimisticMap])
 
-  const handleStart = async (motorIndex: number, barracaoNumber?: number, status: string = 'on') => {
+  const handleStart = async (motorIndex: number, barracaoNumber?: number, status: string = 'on', note?: string) => {
     const b = typeof barracaoNumber === 'number' ? barracaoNumber : 1
     const key = `m_${b}_${motorIndex}`
     const temp = { id: `temp-${key}-${Date.now()}`, barracao: b, motor_index: motorIndex, start_at: new Date().toISOString(), status }
     setOptimisticMap(prev => ({ ...prev, [key]: temp }))
     try {
-      const real = await startEvent(b, motorIndex, undefined, status)
+      // if there's an existing maintenance event for this motor, close it before starting 'on'
+      if (status === 'on') {
+        const existingMaint = events.find(e => !e.end_at && e.barracao === b && e.motor_index === motorIndex && e.status === 'manutencao')
+        if (existingMaint && existingMaint.id) {
+          try { await stopEvent(existingMaint.id) } catch (e) { console.error('Erro ao fechar manutenção antes de ligar:', e) }
+        }
+      }
+      const real = await startEvent(b, motorIndex, note, status)
       // ensure global TV flag only for 'on'
       try { if (status === 'on') localStorage.setItem('aeration_on', 'true') } catch (e) {}
       // remove optimistic entry (real event will be in `events` from hook)
@@ -433,7 +449,10 @@ const Aeracao = () => {
                         index={i}
                         activeEvent={combinedActive(b, i)}
                         onStart={() => handleStart(i, b)}
-                        onMarkBroken={() => handleStart(i, b, 'avariado')}
+                        onMarkMaintenance={() => {
+                          const note = prompt('Observação (opcional) para manutenção:') || undefined
+                          handleStart(i, b, 'manutencao', note)
+                        }}
                         onStop={(ev: any) => handleStop(ev)}
                       />
                     ))}
@@ -477,12 +496,12 @@ const Aeracao = () => {
                               <td className="p-2">{ev.motor_index}</td>
                               <td className="p-2">
                                 {editingId === ev.id ? (
-                                  <input type="datetime-local" value={editStart} onChange={(e) => setEditStart(e.target.value)} className="p-1 border rounded text-sm" />
+                                  <input type="datetime-local" value={editStart} onChange={(e) => setEditStart(e.target.value)} className={`p-1 border rounded text-sm ${isDark ? 'bg-black text-white' : ''}`} />
                                 ) : (ev.start_at ? format(new Date(ev.start_at), 'dd/MM/yyyy HH:mm') : '-')}
                               </td>
                               <td className="p-2">
                                 {editingId === ev.id ? (
-                                  <input type="datetime-local" value={editEnd} onChange={(e) => setEditEnd(e.target.value)} className="p-1 border rounded text-sm" />
+                                  <input type="datetime-local" value={editEnd} onChange={(e) => setEditEnd(e.target.value)} className={`p-1 border rounded text-sm ${isDark ? 'bg-black text-white' : ''}`} />
                                 ) : (ev.end_at ? format(new Date(ev.end_at), 'dd/MM/yyyy HH:mm') : '-')}
                               </td>
                               <td className="p-2">{editingId === ev.id ? formatDuration(localInputToIso(editStart) || undefined, localInputToIso(editEnd) || undefined) : formatDuration(ev.start_at, ev.end_at)}</td>

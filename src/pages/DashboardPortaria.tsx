@@ -10,6 +10,7 @@ import { RainHeaderAnimation } from "@/components/RainHeaderAnimation";
 import ControleGuaritaFitScreen from "@/components/ControleGuaritaFitScreen";
 import logo from "@/assets/BF_logo.png";
 import { getTodayLocalDate, convertIsoToLocalDateString, toLocalDateString } from "@/lib/date-utils";
+import { useAeration } from '@/hooks/use-aeration'
 
 function DashboardPortariaTV() {
   const { vehicles, loading: loadingVehicles, refetch: refetchVehicles } = useVehicles();
@@ -71,18 +72,25 @@ function DashboardPortariaTV() {
 
   // Estado para forçar re-render e atualização automática
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [aerationOn, setAerationOn] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem('aeration_on') === 'true'
-    } catch (e) { return false }
-  })
+  const { events, fetchEvents: fetchAerationEvents } = useAeration()
+  const [aerationOn, setAerationOn] = useState<boolean>(false)
 
+  // derive aeration status from real events; fallback to localStorage if supabase not available
   useEffect(() => {
-    const t = setInterval(() => {
-      try { setAerationOn(localStorage.getItem('aeration_on') === 'true') } catch (e) {}
-    }, 3000)
+    const anyActive = events && events.some(e => !e.end_at)
+    if (typeof anyActive === 'boolean') {
+      setAerationOn(anyActive)
+    } else {
+      try { setAerationOn(localStorage.getItem('aeration_on') === 'true') } catch (e) { setAerationOn(false) }
+    }
+  }, [events])
+
+  // ensure aeration events are refreshed regularly (and on mount)
+  useEffect(() => {
+    fetchAerationEvents()
+    const t = setInterval(() => fetchAerationEvents(), 10000) // refresh every 10s
     return () => clearInterval(t)
-  }, [])
+  }, [fetchAerationEvents])
 
   // Atualização automática do modo TV a cada 60 segundos sem piscar a tela
   useEffect(() => {

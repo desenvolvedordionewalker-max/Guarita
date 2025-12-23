@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { useVehicles, useCottonPull, useRainRecords, useEquipment, useLoadingRecords } from "@/hooks/use-supabase";
 import { useRainAlert } from "@/hooks/use-rain-alert";
+import { useAeration } from '@/hooks/use-aeration'
 import { useMaterialReceipts } from "@/hooks/use-material-receipts";
 import { LoadingRecord } from "@/lib/supabase";
 import QueueDisplay from "@/components/QueueDisplay";
@@ -57,6 +58,18 @@ const Dashboard = () => {
   const { records: loadingRecords, loading: loadingCarregamentos, updateRecord } = useLoadingRecords();
   const { records: materialRecords, loading: loadingMaterials } = useMaterialReceipts();
   const { isRaining, toggleRainAlert } = useRainAlert();
+  const { events: aerEvents, fetchEvents: fetchAerationEvents } = useAeration()
+
+  const [aerationOn, setAerationOn] = useState<boolean>(false)
+  useEffect(() => {
+    const any = aerEvents && aerEvents.some(e => !e.end_at && e.status === 'on')
+    setAerationOn(!!any)
+  }, [aerEvents])
+  useEffect(() => {
+    fetchAerationEvents()
+    const t = setInterval(() => fetchAerationEvents(), 10000)
+    return () => clearInterval(t)
+  }, [fetchAerationEvents])
   
   const [selectedLoading, setSelectedLoading] = useState<LoadingRecord | null>(null);
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
@@ -630,30 +643,91 @@ const Dashboard = () => {
 
   const username = localStorage.getItem("username") || "Usuário";
 
+  const GUARDS = ["Jose Inacio", "Raleudo", "Rai"]
+  const [guardsOnDuty, setGuardsOnDuty] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('guards_on_duty') || '[]') } catch { return [] }
+  })
+  const [isGuardModalOpen, setIsGuardModalOpen] = useState(false)
+  const [selectedNewGuard, setSelectedNewGuard] = useState(GUARDS[0])
+  const [showGuardSelector, setShowGuardSelector] = useState(false)
+  const [tempSelectedGuard, setTempSelectedGuard] = useState(GUARDS[1] || GUARDS[0])
+
+  const addGuard = (name: string) => {
+    if (!name) return
+    setGuardsOnDuty(prev => {
+      const next = Array.from(new Set([...prev, name])).slice(0,2)
+      localStorage.setItem('guards_on_duty', JSON.stringify(next))
+      return next
+    })
+  }
+  const removeGuard = (name: string) => {
+    setGuardsOnDuty(prev => {
+      const next = prev.filter(x => x !== name)
+      localStorage.setItem('guards_on_duty', JSON.stringify(next))
+      return next
+    })
+  }
+
   return (
     <div className="min-h-screen w-full bg-background flex flex-col items-center">
       {/* Header */}
       <header className="w-full px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 2xl:px-16 py-3 flex justify-between items-center bg-background dark:bg-black shadow-md sticky top-0 z-50 border-b">
         <div className="flex items-center gap-4">
-          <Button 
-            onClick={toggleTheme}
-            className="w-20 h-20 md:w-24 md:h-24 rounded-lg overflow-hidden bg-white dark:bg-black p-1 hover:opacity-80 transition-opacity cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary relative"
-            aria-label="Alternar tema"
-          >
-            <img 
-              src={logo}
-              alt="Bom Futuro Logo" 
-              className="w-full h-full object-contain scale-105"
-            />
-            {theme === 'dark' && (
-              <Moon className="absolute top-1 right-1 text-yellow-400 w-5 h-5 p-0.5 bg-black/20 rounded-full" />
-            )}
-          </Button>
+          <div className="flex flex-col items-center">
+            <Button 
+              onClick={toggleTheme}
+              className="w-20 h-20 md:w-24 md:h-24 rounded-lg overflow-hidden bg-white dark:bg-black p-1 hover:opacity-80 transition-opacity cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary relative"
+              aria-label="Alternar tema"
+            >
+              <img 
+                src={logo}
+                alt="Bom Futuro Logo" 
+                className="w-full h-full object-contain scale-105"
+              />
+              {theme === 'dark' && (
+                <Moon className="absolute top-1 right-1 text-yellow-400 w-5 h-5 p-0.5 bg-black/20 rounded-full" />
+              )}
+            </Button>
+            <div className="mt-1 px-3 py-1 rounded bg-green-500/30 animate-pulse flex flex-col items-center justify-center gap-1">
+              <span className={`text-xs font-semibold ${theme === 'dark' ? 'text-white' : 'text-green-800'}`}>Guarda</span>
+              {!showGuardSelector ? (
+                <button
+                  onClick={() => {
+                    setTempSelectedGuard(guardsOnDuty[0] || GUARDS[1] || GUARDS[0])
+                    setShowGuardSelector(true)
+                  }}
+                  className={`text-sm font-bold ${theme === 'dark' ? 'text-white' : 'text-green-800'} text-center`}
+                >
+                  {guardsOnDuty[0] || 'Raleudo'}
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <select className="text-sm p-1 rounded" value={tempSelectedGuard} onChange={(e) => setTempSelectedGuard(e.target.value)}>
+                    {GUARDS.map(g => <option key={g} value={g}>{g}</option>)}
+                  </select>
+                  <Button size="sm" onClick={() => {
+                    const next = tempSelectedGuard || (GUARDS[0])
+                    setGuardsOnDuty(prev => {
+                      const arr = Array.from(new Set([next, ...(prev.slice(0,1))])).slice(0,2)
+                      try { localStorage.setItem('guards_on_duty', JSON.stringify(arr)) } catch {}
+                      return arr
+                    })
+                    setShowGuardSelector(false)
+                  }}>OK</Button>
+                  <Button size="sm" variant="outline" onClick={() => setShowGuardSelector(false)}>Cancelar</Button>
+                </div>
+              )}
+            </div>
+          </div>
           <div>
             <h1 className="text-lg md:text-xl lg:text-2xl font-bold tv-title">Controle Guarita</h1>
             <p className="text-sm text-muted-foreground">IBA Santa Luzia</p>
           </div>
         </div>
+
+        
+
+        
         <div className="flex items-center gap-2 md:gap-3">
             {/* Quick Action Modules */}
             <div className="hidden md:flex items-center gap-2 lg:gap-3">
@@ -665,7 +739,7 @@ const Dashboard = () => {
                   onClick={() => navigate(module.route)}
                   className="flex flex-col items-center gap-1 p-3 h-auto hover:bg-sidebar-accent hover:text-sidebar-accent-foreground dark:hover:bg-sidebar-accent"
                 >
-                  <module.icon className={`w-6 h-6 ${module.color}`} />
+                  <module.icon className={`w-6 h-6 ${module.color} ${module.route === '/aeracao' && aerationOn ? 'animate-spin' : ''}`} />
                   <span className="text-xs font-medium">{module.title}</span>
                 </Button>
               ))}
@@ -848,6 +922,8 @@ const Dashboard = () => {
             </Button>
           ))}
         </div>
+
+        
 
 
 
@@ -2011,6 +2087,46 @@ const Dashboard = () => {
               </form>
             );
           })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Gerenciamento de Guardas */}
+      <Dialog open={isGuardModalOpen} onOpenChange={setIsGuardModalOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Gerenciar Guardas</DialogTitle>
+            <DialogDescription>Escolha até 2 guardas para o plantão atual</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <Label className="text-sm">Selecionar Guarda</Label>
+              <div className="flex gap-2">
+                <select className="flex-1 px-3 py-2 border rounded" value={selectedNewGuard} onChange={(e) => setSelectedNewGuard(e.target.value)}>
+                  {GUARDS.map(g => <option key={g} value={g}>{g}</option>)}
+                </select>
+                <Button onClick={() => addGuard(selectedNewGuard)}>Adicionar</Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm">Guardas em Plantão</Label>
+              <div className="flex gap-2 flex-wrap">
+                {guardsOnDuty.length === 0 ? (
+                  <div className="text-sm text-muted-foreground">Nenhum</div>
+                ) : (
+                  guardsOnDuty.map(g => (
+                    <div key={g} className="px-3 py-1 bg-indigo-50 dark:bg-indigo-900 rounded-full flex items-center gap-2">
+                      <span className="font-medium">{g}</span>
+                      <Button size="xs" variant="ghost" onClick={() => removeGuard(g)} className="text-red-500">Encerrar</Button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsGuardModalOpen(false)}>Fechar</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
