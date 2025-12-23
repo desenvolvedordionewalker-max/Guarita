@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useTheme } from "@/lib/theme";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, CloudRain, Clock, Droplet, Timer, Leaf, Factory } from "lucide-react";
+import { Loader2, CloudRain, Clock, Droplet, Timer, Leaf, Factory, Fan } from "lucide-react";
 import { useVehicles, useCottonPull, useRainRecords, useLoadingRecords, useEquipment, useGestaoTempo, useGestaoTempoCargas } from "@/hooks/use-supabase";
 import { useRainAlert } from "@/hooks/use-rain-alert";
 import { useMaterialReceipts } from "@/hooks/use-material-receipts";
@@ -71,6 +71,18 @@ function DashboardPortariaTV() {
 
   // Estado para forçar re-render e atualização automática
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [aerationOn, setAerationOn] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('aeration_on') === 'true'
+    } catch (e) { return false }
+  })
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      try { setAerationOn(localStorage.getItem('aeration_on') === 'true') } catch (e) {}
+    }, 3000)
+    return () => clearInterval(t)
+  }, [])
 
   // Atualização automática do modo TV a cada 60 segundos sem piscar a tela
   useEffect(() => {
@@ -619,6 +631,15 @@ function DashboardPortariaTV() {
                   minute: '2-digit' 
                 })}
               </p>
+            </div>
+            {/* Indicador de Aeradores (TV) */}
+            <div className="flex items-center gap-2 pl-4">
+              <Fan className={`w-5 h-5 ${aerationOn ? 'text-cyan-400 animate-spin' : 'text-red-400'}`} />
+              {aerationOn ? (
+                <span className="text-cyan-300 font-semibold">Ventilador ON</span>
+              ) : (
+                <span className="text-red-400 font-semibold">Ventilador OFF</span>
+              )}
             </div>
           </div>
         </header>

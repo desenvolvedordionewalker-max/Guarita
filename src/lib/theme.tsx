@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useLayoutEffect, useState } from "react";
 
 type Theme = "light" | "dark";
 
@@ -32,8 +32,9 @@ export function ThemeProvider({
     () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
   );
 
-  useEffect(() => {
-    const root = window.document.documentElement;
+  useLayoutEffect(() => {
+    const root = window.document?.documentElement;
+    if (!root) return;
     root.classList.remove("light", "dark");
     root.classList.add(theme);
   }, [theme]);

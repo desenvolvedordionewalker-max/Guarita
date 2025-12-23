@@ -470,7 +470,10 @@ const Reports = () => {
           }
           // Acumular quantidade baseada no tipo de unidade
           if (material.unit_type === 'KG') {
-            acc[key].quantity += material.net_weight;
+            acc[key].quantity += material.net_weight || 0;
+          } else if (material.unit_type === 'UN') {
+            // Para 'UN' usamos net_weight como quantidade de unidades
+            acc[key].quantity += material.net_weight || 0;
           } else if (material.unit_type === 'M3' && material.volume_m3) {
             acc[key].quantity += material.volume_m3;
           } else if (material.unit_type === 'M2' && material.volume_m2) {

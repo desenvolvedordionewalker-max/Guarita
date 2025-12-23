@@ -110,9 +110,10 @@ export const useMaterialReceipts = () => {
       // Fallback: some Supabase/PostgREST instances may have schema cache without `exit_date`.
       // Detect that situation and retry the update without the `exit_date` field.
       try {
-        const msg = (error as any)?.message || ''
-        const code = (error as any)?.code || ''
-        if (code === 'PGRST204' || msg.includes("Could not find the 'exit_date' column") || (msg.includes('exit_date') && msg.includes('schema'))) {
+          const msg = (error as any)?.message || ''
+          const code = (error as any)?.code || ''
+          // Trigger fallback only on explicit schema/cache errors
+          if (code === 'PGRST204' || msg.includes("Could not find the 'exit_date' column")) {
           console.warn('Fallback: retrying update without exit_date due to schema cache issue')
           const sanitized: any = { ...updateData }
           delete sanitized.exit_date

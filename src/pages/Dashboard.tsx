@@ -27,6 +27,8 @@ import {
   Moon,
   Sun,
   Cloud
+  ,
+  Fan
 } from "lucide-react";
 import { useVehicles, useCottonPull, useRainRecords, useEquipment, useLoadingRecords } from "@/hooks/use-supabase";
 import { useRainAlert } from "@/hooks/use-rain-alert";
@@ -396,6 +398,14 @@ const Dashboard = () => {
       color: "text-orange-600",
       bgColor: "bg-orange-50",
       route: "/materials",
+    },
+    {
+      title: "Aeração",
+      description: "Controle de aeradores",
+      icon: Fan,
+      color: "text-cyan-600",
+      bgColor: "bg-cyan-50",
+      route: "/aeracao",
     },
     {
       title: "Relatórios",

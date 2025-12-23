@@ -120,7 +120,7 @@ const MaterialReceipts = () => {
       // Se o Supabase/PostgREST não reconhecer a coluna `exit_date` no cache,
       // fazemos uma tentativa de fallback atualizando apenas `exit_time`.
       const msg = (error as any)?.message || (error as any)?.details || '';
-      if (typeof msg === 'string' && (msg.includes("Could not find the 'exit_date' column") || msg.includes('exit_date'))) {
+      if (typeof msg === 'string' && msg.includes("Could not find the 'exit_date' column")) {
         try {
           await updateRecord(exitModalRecord.id, { exit_time });
           setIsExitModalOpen(false);
@@ -466,7 +466,7 @@ const MaterialReceipts = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Data de Saída</Label>
-                <Input name="exit_date" type="date" defaultValue={exitModalRecord?.date || getTodayLocalDate()} required />
+                <Input name="exit_date" type="date" defaultValue={exitModalRecord?.exit_date || getTodayLocalDate()} required />
               </div>
               <div>
                 <Label>Hora de Saída</Label>

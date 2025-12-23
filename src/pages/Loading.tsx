@@ -51,6 +51,9 @@ const Loading = () => {
 
   // Filtros para o Resumo Geral
   const [filterDate, setFilterDate] = useState<string>("");
+  // Novos: suporte a intervalo de data (inicial/final)
+  const [filterStartDate, setFilterStartDate] = useState<string>("");
+  const [filterEndDate, setFilterEndDate] = useState<string>("");
   const [filterProduct, setFilterProduct] = useState<string>("Todos");
   const [filterCarrier, setFilterCarrier] = useState<string>("Todos");
   const [filterStatus, setFilterStatus] = useState<string>("Todos");
@@ -896,13 +899,24 @@ const Loading = () => {
               {/* Filtros Específicos */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-muted/30 rounded-lg">
                 <div className="space-y-2">
-                  <Label htmlFor="filterDate">Data</Label>
+                  <Label htmlFor="filterStartDate">Data Inicial</Label>
                   <Input
-                    id="filterDate"
+                    id="filterStartDate"
                     type="date"
-                    value={filterDate}
-                    onChange={(e) => setFilterDate(e.target.value)}
-                    placeholder="Filtrar por data"
+                    value={filterStartDate}
+                    onChange={(e) => setFilterStartDate(e.target.value)}
+                    placeholder="Data inicial"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="filterEndDate">Data Final</Label>
+                  <Input
+                    id="filterEndDate"
+                    type="date"
+                    value={filterEndDate}
+                    onChange={(e) => setFilterEndDate(e.target.value)}
+                    placeholder="Data final"
                   />
                 </div>
                 
@@ -961,6 +975,8 @@ const Loading = () => {
                   variant="outline"
                   onClick={() => {
                     setFilterDate("");
+                    setFilterStartDate("");
+                    setFilterEndDate("");
                     setFilterProduct("Todos");
                     setFilterCarrier("Todos");
                     setFilterStatus("Todos");
@@ -1037,9 +1053,29 @@ const Loading = () => {
                         }
                         
                         // Aplicar filtros específicos
-                        const matchDate = !filterDate || loading.date === filterDate || 
-                                         loading.entry_date === filterDate || 
-                                         loading.exit_date === filterDate;
+                        // Date matching: support single-date filter (legacy) OR start/end range
+                        let matchDate = false;
+
+                        // Normalize candidate dates to YYYY-MM-DD using helper (handles ISO and DATE)
+                        const dDate = convertIsoToLocalDateString(loading.date as string | undefined) || '';
+                        const dEntry = convertIsoToLocalDateString(loading.entry_date as string | undefined) || '';
+                        const dExit = convertIsoToLocalDateString(loading.exit_date as string | undefined) || '';
+
+                        if (filterStartDate && filterEndDate) {
+                          // Range provided: check inclusive
+                          matchDate = (dDate >= filterStartDate && dDate <= filterEndDate) ||
+                                      (dEntry >= filterStartDate && dEntry <= filterEndDate) ||
+                                      (dExit >= filterStartDate && dExit <= filterEndDate);
+                        } else if (filterStartDate && !filterEndDate) {
+                          // Only start provided: treat as single-day filter for that date
+                          matchDate = dDate === filterStartDate || dEntry === filterStartDate || dExit === filterStartDate;
+                        } else if (!filterStartDate && filterEndDate) {
+                          // Only end provided: treat as single-day filter for that date
+                          matchDate = dDate === filterEndDate || dEntry === filterEndDate || dExit === filterEndDate;
+                        } else {
+                          // Legacy single-date filter (filterDate) or no date filter
+                          matchDate = !filterDate || loading.date === filterDate || loading.entry_date === filterDate || loading.exit_date === filterDate;
+                        }
                         const matchProduct = filterProduct === "Todos" || loading.product === filterProduct;
                         const matchCarrier = filterCarrier === "Todos" || loading.carrier === filterCarrier;
                         const matchStatus = filterStatus === "Todos" || status === filterStatus;

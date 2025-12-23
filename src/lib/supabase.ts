@@ -142,7 +142,7 @@ export interface MaterialReceipt {
   volume_m3?: number
   volume_m2?: number
   volume_liters?: number
-  unit_type: 'KG' | 'M3' | 'M2' | 'LITROS'
+  unit_type: 'KG' | 'M3' | 'M2' | 'LITROS' | 'UN'
   observations?: string
   created_at?: string
   updated_at?: string
@@ -173,4 +173,16 @@ export interface RainAlert {
   updated_at?: string
   updated_by?: string
   created_at?: string
+}
+
+export interface AerationEvent {
+  id: string
+  barracao: number
+  motor_index: number
+  start_at: string
+  end_at?: string
+  status?: 'on' | 'off'
+  created_by?: string
+  created_at?: string
+  updated_at?: string
 }
