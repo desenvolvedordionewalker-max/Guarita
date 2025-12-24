@@ -45,7 +45,7 @@ const BARRACAO_CONFIG = {
   }, [activeEvent, isActive])
 
   return (
-    <div className="border rounded p-3 flex flex-col items-start gap-2 min-w-[160px] flex-1">
+    <div className={`border rounded p-3 flex flex-col items-start gap-2 min-w-[160px] flex-1 ${isMaintenance ? 'bg-red-50 border-red-200 animate-pulse' : ''}`}>
       <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-3">
             <div className="p-2 bg-accent/10 rounded"><Fan className="w-6 h-6 text-cyan-600" /></div>
@@ -85,7 +85,7 @@ const BARRACAO_CONFIG = {
           <Button variant="destructive" className="w-full" onClick={() => onStop(activeEvent)}>Desligar</Button>
         ) : (
           <>
-            <Button className="w-full" onClick={() => onStart()}>Ligar</Button>
+            <Button className="w-full" onClick={() => onStart()}>{isMaintenance ? 'Em Manutenção' : 'Ligar'}</Button>
           </>
         )}
       </div>

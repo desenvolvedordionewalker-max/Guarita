@@ -77,7 +77,8 @@ function DashboardPortariaTV() {
 
   // derive aeration status from real events; fallback to localStorage if supabase not available
   useEffect(() => {
-    const anyActive = events && events.some(e => !e.end_at)
+    // consider only events with status 'on' as active for TV display
+    const anyActive = events && events.some(e => !e.end_at && e.status === 'on')
     if (typeof anyActive === 'boolean') {
       setAerationOn(anyActive)
     } else {
