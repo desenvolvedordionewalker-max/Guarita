@@ -10,6 +10,7 @@ import { ArrowLeft, Plus, Settings, Edit, CheckCircle, Loader2, Camera, Trash2 }
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useEquipment } from "@/hooks/use-supabase";
+import { supabase } from "@/lib/supabase";
 import { getTodayLocalDate, normalizeLocalDate, toLocalIsoWithOffset, convertIsoToLocalDateString, formatDateForDisplay } from "@/lib/date-utils";
 import type { Equipment as EquipmentType } from "@/lib/supabase";
 
@@ -64,20 +65,30 @@ const Equipment = () => {
     const rawDate = dateRaw ? normalizeLocalDate(dateRaw) : getTodayLocalDate();
     const isoDate = toLocalIsoWithOffset(rawDate);
 
-    // use preview if user selected a new file, otherwise keep existing
-    const photo_url = editPreview ?? (editRecord.photo_url || '');
+    // if the user provided a new file, upload it to storage and include photo_url
+    const file = fd.get('photo') as File | null;
+    const updates: Partial<EquipmentType> = {
+      name,
+      type,
+      destination,
+      purpose,
+      authorized_by,
+      withdrawn_by,
+      date: isoDate
+    };
 
     try {
-      await updateRecord(editRecord.id, {
-        name,
-        type,
-        destination,
-        purpose,
-        authorized_by,
-        withdrawn_by,
-        date: isoDate,
-        photo_url
-      });
+      if (file && file instanceof File) {
+        const ext = (file.name.split('.').pop() || 'jpg').split('?')[0];
+        const filePath = `equipment/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { data: uploadData, error: uploadError } = await supabase.storage.from('equipment-photos').upload(filePath, file);
+        if (uploadError) throw uploadError;
+        const { data: publicData } = await supabase.storage.from('equipment-photos').getPublicUrl(filePath);
+        const publicUrl = (publicData as any)?.publicUrl || (publicData as any)?.public_url;
+        if (publicUrl) updates.photo_url = publicUrl;
+      }
+
+      await updateRecord(editRecord.id, updates);
 
       setIsEditOpen(false);
       setEditRecord(null);
@@ -96,10 +107,9 @@ const Equipment = () => {
     const rawDate = recordDate ? normalizeLocalDate(recordDate) : getTodayLocalDate();
     const isoDate = toLocalIsoWithOffset(rawDate);
 
-    const recordData = {
+    const recordData: any = {
       // send explicit ISO with timezone to prevent server UTC conversion
       date: isoDate,
-      photo_url: "https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400",
       name: formData.get("name") as string,
       type: formData.get("type") as string,
       destination: formData.get("destination") as string,
@@ -109,6 +119,25 @@ const Equipment = () => {
       withdrawn_by: formData.get("withdrawnBy") as string,
       status: purpose === "Doação" ? "completed" as const : "pending" as const
     };
+
+    // if user provided a file, upload it and set `photo_url`
+    const file = formData.get('photo') as File | null;
+    if (file && file instanceof File) {
+      try {
+        const ext = (file.name.split('.').pop() || 'jpg').split('?')[0];
+        const filePath = `equipment/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { data: uploadData, error: uploadError } = await supabase.storage.from('equipment-photos').upload(filePath, file);
+        if (uploadError) throw uploadError;
+        const { data: publicData } = await supabase.storage.from('equipment-photos').getPublicUrl(filePath);
+        const publicUrl = (publicData as any)?.publicUrl || (publicData as any)?.public_url;
+        if (publicUrl) recordData.photo_url = publicUrl;
+      } catch (err) {
+        console.error('Erro ao fazer upload da foto:', err);
+      }
+    } else {
+      // fallback placeholder when no photo provided
+      recordData.photo_url = "https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400";
+    }
     
     try {
       console.log('DEBUG: equipment submit payload', recordData);

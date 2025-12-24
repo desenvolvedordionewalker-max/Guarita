@@ -35,6 +35,7 @@ import { useRainAlert } from "@/hooks/use-rain-alert";
 import { useAeration } from '@/hooks/use-aeration'
 import { useMaterialReceipts } from "@/hooks/use-material-receipts";
 import { LoadingRecord } from "@/lib/supabase";
+import { supabase } from '@/lib/supabase';
 import QueueDisplay from "@/components/QueueDisplay";
 import { useTheme } from "@/lib/theme";
 import { useToast } from "@/hooks/use-toast";
@@ -644,9 +645,7 @@ const Dashboard = () => {
   const username = localStorage.getItem("username") || "Usuário";
 
   const GUARDS = ["Jose Inacio", "Raleudo", "Rai"]
-  const [guardsOnDuty, setGuardsOnDuty] = useState<string[]>(() => {
-    try { return JSON.parse(localStorage.getItem('guards_on_duty') || '[]') } catch { return [] }
-  })
+  const [guardsOnDuty, setGuardsOnDuty] = useState<string[]>([])
   const [isGuardModalOpen, setIsGuardModalOpen] = useState(false)
   const [selectedNewGuard, setSelectedNewGuard] = useState(GUARDS[0])
   const [showGuardSelector, setShowGuardSelector] = useState(false)
@@ -654,19 +653,54 @@ const Dashboard = () => {
 
   const addGuard = (name: string) => {
     if (!name) return
-    setGuardsOnDuty(prev => {
-      const next = Array.from(new Set([...prev, name])).slice(0,2)
-      localStorage.setItem('guards_on_duty', JSON.stringify(next))
-      return next
-    })
+    const next = Array.from(new Set([...guardsOnDuty, name])).slice(0,2)
+    setGuardsOnDuty(next)
+    try { localStorage.setItem('guards_on_duty', JSON.stringify(next)) } catch {}
+    // persist to server
+    supabase.from('app_state').upsert({ key: 'guards_on_duty', value: next, updated_at: new Date().toISOString() }).catch(console.error)
   }
   const removeGuard = (name: string) => {
-    setGuardsOnDuty(prev => {
-      const next = prev.filter(x => x !== name)
-      localStorage.setItem('guards_on_duty', JSON.stringify(next))
-      return next
-    })
+    const next = guardsOnDuty.filter(x => x !== name)
+    setGuardsOnDuty(next)
+    try { localStorage.setItem('guards_on_duty', JSON.stringify(next)) } catch {}
+    supabase.from('app_state').upsert({ key: 'guards_on_duty', value: next, updated_at: new Date().toISOString() }).catch(console.error)
   }
+
+  // fetch initial guards and subscribe to changes so updates propagate to all clients
+  useEffect(() => {
+    let mounted = true
+    const fetchGuards = async () => {
+      try {
+        const { data, error } = await supabase.from('app_state').select('value').eq('key', 'guards_on_duty').single()
+        if (!error && data && mounted) {
+          const val = data.value || []
+          setGuardsOnDuty(val)
+          try { localStorage.setItem('guards_on_duty', JSON.stringify(val)) } catch {}
+        } else {
+          try { const local = JSON.parse(localStorage.getItem('guards_on_duty') || '[]'); if (mounted) setGuardsOnDuty(local) } catch {}
+        }
+      } catch (err) {
+        try { const local = JSON.parse(localStorage.getItem('guards_on_duty') || '[]'); if (mounted) setGuardsOnDuty(local) } catch {}
+      }
+    }
+    fetchGuards()
+
+    const channel = supabase
+      .channel('app_state_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'app_state' }, (payload: any) => {
+        if (payload.new?.key === 'guards_on_duty') {
+          const val = payload.new.value || []
+          setGuardsOnDuty(val)
+          try { localStorage.setItem('guards_on_duty', JSON.stringify(val)) } catch {}
+        }
+      })
+      .subscribe()
+
+    return () => {
+      try { channel.unsubscribe() } catch {}
+      mounted = false
+    }
+  }, [])
 
   return (
     <div className="min-h-screen w-full bg-background flex flex-col items-center">
