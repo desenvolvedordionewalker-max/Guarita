@@ -210,7 +210,19 @@ const Aeracao = () => {
   const activeByMotor = useMemo(() => {
     const map: Record<string, any> = {}
     events.forEach(e => {
-      if (!e.end_at) {
+      // only treat status 'on' as an active (counted) motor
+      if (!e.end_at && e.status === 'on') {
+        map[`m_${e.barracao}_${e.motor_index}`] = e
+      }
+    })
+    return map
+  }, [events])
+
+  // separate map for maintenance events so UI can show 'Em manutenção' without counting as 'on'
+  const maintenanceByMotor = useMemo(() => {
+    const map: Record<string, any> = {}
+    events.forEach(e => {
+      if (!e.end_at && e.status === 'manutencao') {
         map[`m_${e.barracao}_${e.motor_index}`] = e
       }
     })
@@ -222,7 +234,8 @@ const Aeracao = () => {
 
   const combinedActive = (b: number, i: number) => {
     const key = `m_${b}_${i}`
-    return activeByMotor[key] || optimisticMap[key]
+    // Prefer a real 'on' event, then a maintenance event, then optimistic local state
+    return activeByMotor[key] || maintenanceByMotor[key] || optimisticMap[key]
   }
 
   // active counts per barracao (includes optimistic starts)
@@ -235,10 +248,13 @@ const Aeracao = () => {
     })
     // optimistic
     Object.keys(optimisticMap).forEach(k => {
-      const parts = k.split('_') // m_<b>_<i>
-      if (parts.length === 3) {
-        const b = Number(parts[1])
-        acc[b] = (acc[b] || 0) + 1
+      const entry = optimisticMap[k]
+      if (entry && entry.status === 'on') {
+        const parts = k.split('_') // m_<b>_<i>
+        if (parts.length === 3) {
+          const b = Number(parts[1])
+          acc[b] = (acc[b] || 0) + 1
+        }
       }
     })
     return acc
