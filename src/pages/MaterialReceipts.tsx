@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { MaterialReceipt } from "@/lib/supabase";
 import { useMaterialReceipts } from "@/hooks/use-material-receipts";
-import { getTodayLocalDate, normalizeLocalDate, formatDateForDisplay } from "@/lib/date-utils";
+import { getTodayLocalDate, normalizeLocalDate, formatDateForDisplay, toLocalIsoWithOffset, convertIsoToLocalDateString } from "@/lib/date-utils";
 
 const MaterialReceipts = () => {
   const { records, loading, addRecord, updateRecord, deleteRecord } = useMaterialReceipts();
@@ -109,8 +109,10 @@ const MaterialReceipts = () => {
     const form = document.getElementById('exitForm') as HTMLFormElement | null;
     if (!form) return;
     const formData = new FormData(form);
-    const exit_date = normalizeLocalDate(formData.get('exit_date') as string);
+    const exit_date_raw = normalizeLocalDate(formData.get('exit_date') as string);
     const exit_time = formData.get('exit_time') as string;
+    // Convert date-only to a local ISO with offset to avoid timezone shifting when DB stores as timestamptz
+    const exit_date = toLocalIsoWithOffset(exit_date_raw);
     try {
       await updateRecord(exitModalRecord.id, { exit_date, exit_time });
       setIsExitModalOpen(false);
@@ -256,7 +258,7 @@ const MaterialReceipts = () => {
                           {record.exit_time ? "Concluído" : "Pendente"}
                         </Badge>
                         <span className="text-sm text-muted-foreground">
-                          {formatDateForDisplay(record.date)} às {record.entry_time}
+                          {formatDateForDisplay(convertIsoToLocalDateString(record.date) || record.date)} às {record.entry_time}
                         </span>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
@@ -265,7 +267,7 @@ const MaterialReceipts = () => {
                       </div>
                       {record.exit_time && (
                         <div className="text-sm text-green-600 bg-green-50 dark:bg-green-900 dark:text-green-200 p-2 rounded">
-                          <span className="font-medium">Saída:</span> {record.exit_date ? `${formatDateForDisplay(record.exit_date)} ` : ''}{record.exit_time}
+                          <span className="font-medium">Saída:</span> {record.exit_date ? `${formatDateForDisplay(convertIsoToLocalDateString(record.exit_date) || record.exit_date)} ` : ''}{record.exit_time}
                         </div>
                       )}
                       {record.observations && (
