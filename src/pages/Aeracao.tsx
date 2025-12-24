@@ -13,7 +13,7 @@ const BARRACAO_CONFIG = {
   2: 5
 }
 
-const MotorCard = ({ barracao, index, activeEvent, onStart, onStop, onMarkMaintenance }: any) => {
+  const MotorCard = ({ barracao, index, activeEvent, onStart, onStop, onMarkMaintenance }: any) => {
   const isActive = !!activeEvent && activeEvent.status === 'on' && !activeEvent.end_at
   const isMaintenance = !!activeEvent && activeEvent.status === 'manutencao' && !activeEvent.end_at
   const [elapsed, setElapsed] = useState<string>('')
@@ -62,6 +62,10 @@ const MotorCard = ({ barracao, index, activeEvent, onStart, onStop, onMarkMainte
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
             </div>
+          ) : isMaintenance ? (
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-red-500 animate-pulse" />
+            </div>
           ) : (
             <span className="w-3 h-3 rounded-full bg-gray-300" />
           )}
@@ -71,7 +75,7 @@ const MotorCard = ({ barracao, index, activeEvent, onStart, onStop, onMarkMainte
         {isActive ? (
           <span className="text-muted-foreground">Ligado em {format(new Date(activeEvent.start_at), 'dd/MM/yyyy HH:mm')} • {elapsed}</span>
         ) : isMaintenance ? (
-          <span className="text-yellow-600 font-semibold">Em manutenção</span>
+          <span className="text-red-600 font-semibold">Em manutenção</span>
         ) : (
           <span className="text-red-600">Desligado</span>
         )}
@@ -243,16 +247,21 @@ const Aeracao = () => {
   const handleStart = async (motorIndex: number, barracaoNumber?: number, status: string = 'on', note?: string) => {
     const b = typeof barracaoNumber === 'number' ? barracaoNumber : 1
     const key = `m_${b}_${motorIndex}`
+
+    // if trying to turn ON while there's an active maintenance event, ask confirmation
+    if (status === 'on') {
+      const existingMaint = events.find(e => !e.end_at && e.barracao === b && e.motor_index === motorIndex && e.status === 'manutencao')
+      if (existingMaint) {
+        const ok = confirm('Este motor está em manutenção; já foi consertado? Deseja realmente ligar?')
+        if (!ok) return
+        // if confirmed, close maintenance event first
+        try { await stopEvent(existingMaint.id) } catch (e) { console.error('Erro ao fechar manutenção antes de ligar:', e) }
+      }
+    }
+
     const temp = { id: `temp-${key}-${Date.now()}`, barracao: b, motor_index: motorIndex, start_at: new Date().toISOString(), status }
     setOptimisticMap(prev => ({ ...prev, [key]: temp }))
     try {
-      // if there's an existing maintenance event for this motor, close it before starting 'on'
-      if (status === 'on') {
-        const existingMaint = events.find(e => !e.end_at && e.barracao === b && e.motor_index === motorIndex && e.status === 'manutencao')
-        if (existingMaint && existingMaint.id) {
-          try { await stopEvent(existingMaint.id) } catch (e) { console.error('Erro ao fechar manutenção antes de ligar:', e) }
-        }
-      }
       const real = await startEvent(b, motorIndex, note, status)
       // ensure global TV flag only for 'on'
       try { if (status === 'on') localStorage.setItem('aeration_on', 'true') } catch (e) {}

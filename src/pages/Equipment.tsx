@@ -460,7 +460,10 @@ const Equipment = () => {
                               <p><span className="text-muted-foreground">Doado para:</span> {record.donation_to}</p>
                             )}
                             {record.return_date && (
-                              <p><span className="text-muted-foreground">Retorno:</span> {new Date(record.return_date).toLocaleDateString('pt-BR')}</p>
+                              <p><span className="text-muted-foreground">Retorno:</span> {(() => {
+                                const conv = convertIsoToLocalDateString(record.return_date as any)
+                                return conv ? formatDateForDisplay(conv) : new Date(record.return_date).toLocaleDateString('pt-BR')
+                              })()}</p>
                             )}
                             {record.return_notes && (
                               <p><span className="text-muted-foreground">Obs. retorno:</span> {record.return_notes}</p>
