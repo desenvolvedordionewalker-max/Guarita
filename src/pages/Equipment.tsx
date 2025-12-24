@@ -37,21 +37,20 @@ const Equipment = () => {
 
   const openEdit = (record: EquipmentType) => {
     setEditRecord(record);
-        // if user provided a file, read it as data URL for immediate display,
-        // create the record with that data URL, then try to upload to storage
+    setEditPreview(record.photo_url || null);
     setIsEditOpen(true);
   };
-          if (file && file instanceof File) {
-            const dataUrl = await new Promise<string>((resolve, reject) => {
-              const reader = new FileReader()
-              reader.onload = () => resolve(String(reader.result))
-              reader.onerror = (e) => reject(e)
-              reader.readAsDataURL(file)
-            })
-            recordData.photo_url = dataUrl
-          } else {
-            recordData.photo_url = "https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400";
-          }
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setEditPreview(String(reader.result));
+    reader.readAsDataURL(file);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     if (!editRecord) return;
 
     const fd = new FormData(e.currentTarget);
@@ -66,7 +65,6 @@ const Equipment = () => {
     const rawDate = dateRaw ? normalizeLocalDate(dateRaw) : getTodayLocalDate();
     const isoDate = toLocalIsoWithOffset(rawDate);
 
-    // if the user provided a new file, upload it to storage and include photo_url
     const file = fd.get('photo') as File | null;
     const updates: Partial<EquipmentType> = {
       name,
@@ -82,13 +80,14 @@ const Equipment = () => {
       if (file && file instanceof File) {
         const ext = (file.name.split('.').pop() || 'jpg').split('?')[0];
         const filePath = `equipment/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-        try {
-          // nothing else here; record creation handled above
-        } catch (error) {
-          // noop
-        }
-      await updateRecord(editRecord.id, updates);
+        const { data: uploadData, error: uploadError } = await supabase.storage.from('equipment-photos').upload(filePath, file);
+        if (uploadError) throw uploadError;
+        const { data: publicData } = await supabase.storage.from('equipment-photos').getPublicUrl(filePath);
+        const publicUrl = (publicData as any)?.publicUrl || (publicData as any)?.public_url;
+        if (publicUrl) updates.photo_url = publicUrl;
+      }
 
+      await updateRecord(editRecord.id, updates);
       setIsEditOpen(false);
       setEditRecord(null);
       toast({ title: 'Registro atualizado', description: `${name} atualizado com sucesso.` });
@@ -105,9 +104,7 @@ const Equipment = () => {
     const recordDate = formData.get("date") as string;
     const rawDate = recordDate ? normalizeLocalDate(recordDate) : getTodayLocalDate();
     const isoDate = toLocalIsoWithOffset(rawDate);
-
     const recordData: any = {
-      // send explicit ISO with timezone to prevent server UTC conversion
       date: isoDate,
       name: formData.get("name") as string,
       type: formData.get("type") as string,
@@ -119,9 +116,36 @@ const Equipment = () => {
       status: purpose === "Doação" ? "completed" as const : "pending" as const
     };
 
-    // if user provided a file, upload it and set `photo_url`
     const file = formData.get('photo') as File | null;
+
     if (file && file instanceof File) {
+      try {
+        // create data URL for immediate preview
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result));
+          reader.onerror = (e) => reject(e);
+          reader.readAsDataURL(file);
+        });
+        recordData.photo_url = dataUrl;
+      } catch (err) {
+        console.error('Erro ao ler arquivo para preview:', err);
+        recordData.photo_url = "https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400";
+      }
+    } else {
+      recordData.photo_url = "https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400";
+    }
+
+    let created: any = null;
+    try {
+      created = await addRecord(recordData);
+      e.currentTarget.reset();
+    } catch (err) {
+      console.error('Erro ao criar equipamento:', err);
+    }
+
+    // attempt upload and update created record with public url
+    if (file && file instanceof File && created && created.id) {
       try {
         const ext = (file.name.split('.').pop() || 'jpg').split('?')[0];
         const filePath = `equipment/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
@@ -129,21 +153,12 @@ const Equipment = () => {
         if (uploadError) throw uploadError;
         const { data: publicData } = await supabase.storage.from('equipment-photos').getPublicUrl(filePath);
         const publicUrl = (publicData as any)?.publicUrl || (publicData as any)?.public_url;
-        if (publicUrl) recordData.photo_url = publicUrl;
+        if (publicUrl) {
+          try { await updateRecord(created.id, { photo_url: publicUrl }) } catch (e) { console.error('Erro ao atualizar registro com publicUrl:', e) }
+        }
       } catch (err) {
         console.error('Erro ao fazer upload da foto:', err);
       }
-    } else {
-      // fallback placeholder when no photo provided
-      recordData.photo_url = "https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400";
-    }
-    
-    try {
-      console.log('DEBUG: equipment submit payload', recordData);
-      await addRecord(recordData);
-      e.currentTarget.reset();
-    } catch (error) {
-      // Erro já tratado no hook
     }
   };
 
