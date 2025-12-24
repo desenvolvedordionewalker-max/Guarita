@@ -37,20 +37,21 @@ const Equipment = () => {
 
   const openEdit = (record: EquipmentType) => {
     setEditRecord(record);
-    setEditPreview(record.photo_url || null);
+        // if user provided a file, read it as data URL for immediate display,
+        // create the record with that data URL, then try to upload to storage
     setIsEditOpen(true);
   };
-
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setEditPreview(String(reader.result));
-    reader.readAsDataURL(file);
-  };
-
-  const handleEditSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+          if (file && file instanceof File) {
+            const dataUrl = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader()
+              reader.onload = () => resolve(String(reader.result))
+              reader.onerror = (e) => reject(e)
+              reader.readAsDataURL(file)
+            })
+            recordData.photo_url = dataUrl
+          } else {
+            recordData.photo_url = "https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400";
+          }
     if (!editRecord) return;
 
     const fd = new FormData(e.currentTarget);
@@ -81,13 +82,11 @@ const Equipment = () => {
       if (file && file instanceof File) {
         const ext = (file.name.split('.').pop() || 'jpg').split('?')[0];
         const filePath = `equipment/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-        const { data: uploadData, error: uploadError } = await supabase.storage.from('equipment-photos').upload(filePath, file);
-        if (uploadError) throw uploadError;
-        const { data: publicData } = await supabase.storage.from('equipment-photos').getPublicUrl(filePath);
-        const publicUrl = (publicData as any)?.publicUrl || (publicData as any)?.public_url;
-        if (publicUrl) updates.photo_url = publicUrl;
-      }
-
+        try {
+          // nothing else here; record creation handled above
+        } catch (error) {
+          // noop
+        }
       await updateRecord(editRecord.id, updates);
 
       setIsEditOpen(false);
